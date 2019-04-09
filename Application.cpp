@@ -43,8 +43,8 @@ void Application::Init(HINSTANCE hInstance, const wchar_t* windowTitle) {
 	g_TearingSupported = gp_Window->CheckTearingSupport();
 	gp_Window->RegisterWindowClass(hInstance);
 	gp_Window->CreateWindow(hInstance, windowTitle, g_ClientWidth, g_ClientHeight);
-	gp_Window->SetUserPtr((void*)this);
-	gp_Window->SetCustomWndProc(Application::WndProc);
+	gp_Window->SetUserPtr((void*)this);					// inject Application pointer into window
+	gp_Window->SetCustomWndProc(Application::WndProc);  // reset the default WndProc of the window to app's static method
 	g_CommandQueue = CreateCommandQueue(g_Device, D3D12_COMMAND_LIST_TYPE_DIRECT);
 	g_SwapChain = gp_Window->CreateSwapChain(g_CommandQueue, g_ClientWidth, g_ClientHeight, g_NumFrames);
 	
