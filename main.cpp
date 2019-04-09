@@ -5,13 +5,10 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
 {
 	const wchar_t* windowTitle = L"Learning DirectX 12";
 
-	Application::Create();
-	{
-		Application::Get().Init(hInstance, windowTitle);
-		Application::Get().Run();
-		Application::Get().Finish();
-	}
-	Application::Destroy();
+	Application app;
+	app.Init(hInstance, windowTitle);
+	app.Run();
+	app.Finish();
 
 	return 0;
 }

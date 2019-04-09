@@ -64,6 +64,8 @@ public:
 	void RegisterWindowClass(HINSTANCE hInst);
 
 	HWND CreateWindow(HINSTANCE hInst, const wchar_t* windowTitle, UINT width, UINT height);
+	void SetUserPtr(void* userPtr);				// 
+	void SetCustomWndProc(WNDPROC wndProc);		// 
 
 	// The primary purpose of the swap chain is to present the rendered image to the screen. 
 	ComPtr<IDXGISwapChain4> CreateSwapChain(

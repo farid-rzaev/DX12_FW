@@ -46,18 +46,14 @@ using namespace Microsoft::WRL;
 class Application 
 {
 public:	
-	static void Create();
-	static Application & Get();
-	static void Destroy();
-
+	Application();
 	void Init(HINSTANCE hInstance, const wchar_t* windowTitle);
 	void Run();
 	void Finish();
 
 protected:
-	Application();
 
-	friend LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+	//friend LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 	void Update();
 	void Render();
 
@@ -95,6 +91,7 @@ private /*FUNCS*/ :
 private /*WINDOW*/ :
 	// Window class
 	std::shared_ptr<Window> gp_Window;
+	static LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
 private /*VARS*/ :
 	// The number of swap chain back buffers.
@@ -131,7 +128,6 @@ private /*VARS*/ :
 	uint64_t g_FenceValue = 0;
 	uint64_t g_FrameFenceValues[g_NumFrames] = {};
 	HANDLE g_FenceEvent;
-
 
 	// Variables to control the swap chain's present method:
 	// By default, enable V-Sync.

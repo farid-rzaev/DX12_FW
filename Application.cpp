@@ -10,29 +10,6 @@
 // Assert
 #include <cassert>
 
-static Application* gs_pSingelton = nullptr;
-
-void Application::Create()
-{
-	if (!gs_pSingelton) {
-		gs_pSingelton = new Application();
-	}
-}
-Application& Application::Get()
-{
-	assert(gs_pSingelton);
-	return *gs_pSingelton;
-}
-void Application::Destroy()
-{
-	if (gs_pSingelton)
-	{
-		delete gs_pSingelton;
-		gs_pSingelton = nullptr;
-	}
-}
-
-
 
 Application::Application()
 {
@@ -66,7 +43,8 @@ void Application::Init(HINSTANCE hInstance, const wchar_t* windowTitle) {
 	g_TearingSupported = gp_Window->CheckTearingSupport();
 	gp_Window->RegisterWindowClass(hInstance);
 	gp_Window->CreateWindow(hInstance, windowTitle, g_ClientWidth, g_ClientHeight);
-
+	gp_Window->SetUserPtr((void*)this);
+	gp_Window->SetCustomWndProc(Application::WndProc);
 	g_CommandQueue = CreateCommandQueue(g_Device, D3D12_COMMAND_LIST_TYPE_DIRECT);
 	g_SwapChain = gp_Window->CreateSwapChain(g_CommandQueue, g_ClientWidth, g_ClientHeight, g_NumFrames);
 	
@@ -692,22 +670,22 @@ void Application::Flush(ComPtr<ID3D12CommandQueue> commandQueue, ComPtr<ID3D12Fe
 
 
 // The window procedure handles any window messages sent to the application. 
-LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK Application::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	Application& app = Application::Get();
+	Application* app = (Application*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
 
 	// In order to prevent the application from handling events before the necessary 
 	// DirectX 12 objects are created, the g_IsInitialized flag is checked. This flag
 	// is set to true in the initialization function after all of the required assets 
 	// have been loaded. Trying to resize or render the screen before the swap chain, 
 	// command list and command allocators have been created would be disastrous.
-	if (app.g_IsInitialized)
+	if (app->g_IsInitialized)
 	{
 		switch (message)
 		{
 		case WM_PAINT:
-			app.Update();
-			app.Render();
+			app->Update();
+			app->Render();
 			break;
 		case WM_SYSKEYDOWN:
 		case WM_KEYDOWN:
@@ -726,7 +704,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 			switch (wParam)
 			{
 			case 'V':
-				app.g_VSync = !app.g_VSync;
+				app->g_VSync = !app->g_VSync;
 				break;
 			case VK_ESCAPE:
 				::PostQuitMessage(0);
@@ -735,8 +713,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 				if (alt)
 				{
 			case VK_F11:
-					app.ToggleFullscreen();
-					//app.Resize(1, 1);
+					app->ToggleFullscreen();
+					//app->Resize(1, 1);
 				}
 				break;
 			}
@@ -751,12 +729,12 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 		case WM_SIZE:
 		{
 			RECT clientRect = {};
-			::GetClientRect(app.gp_Window->GetHWND(), &clientRect);
+			::GetClientRect(app->gp_Window->GetHWND(), &clientRect);
 
 			int width = clientRect.right - clientRect.left;
 			int height = clientRect.bottom - clientRect.top;
 
-			app.Resize(width, height);
+			app->Resize(width, height);
 		}
 		break;
 		case WM_DESTROY:

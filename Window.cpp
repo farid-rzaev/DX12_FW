@@ -4,10 +4,6 @@
 #include <cassert>
 #include <algorithm> // std::min and  std::max.
 
-// Window callback function - handles window messages
-LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
-
-
 // Before creating an instance of an OS window, the window class corresponding to that window must be registered. 
 // The window class will be automatically unregistered when the application terminates.
 void Window::RegisterWindowClass(HINSTANCE hInst)
@@ -17,7 +13,8 @@ void Window::RegisterWindowClass(HINSTANCE hInst)
 
 	windowClass.cbSize = sizeof(WNDCLASSEX);
 	windowClass.style = CS_HREDRAW | CS_VREDRAW;
-	windowClass.lpfnWndProc = &WndProc;
+	//windowClass.lpfnWndProc = &WndProc;
+	windowClass.lpfnWndProc = DefWindowProc;
 	windowClass.cbClsExtra = 0;
 	windowClass.cbWndExtra = 0;
 	// hInstance - A handle to the instance that contains the window procedure for the class.
@@ -83,6 +80,18 @@ HWND Window::CreateWindow(HINSTANCE hInst,
 	::GetWindowRect(g_hWnd, &g_WindowRect);
 
 	return g_hWnd;
+}
+
+
+void Window::SetUserPtr(void* userPtr)
+{
+	SetWindowLongPtr(g_hWnd, GWLP_USERDATA, (LONG_PTR)userPtr);
+}
+
+
+void Window::SetCustomWndProc(WNDPROC wndProc)
+{
+	SetWindowLongPtr(g_hWnd, GWLP_WNDPROC, (LONG_PTR)wndProc);
 }
 
 
