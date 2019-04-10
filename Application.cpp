@@ -1,6 +1,5 @@
 #include "Application.h"
 
-#include <shellapi.h> // For CommandLineToArgvW
 #include <d3dcompiler.h>
 #include <DirectXMath.h>
 // D3D12 extension library.
@@ -25,8 +24,6 @@ Application::Application()
 	// when resizing the client area of the window instead of scaling the client 
 	// area based on the DPI scaling settings.
 	SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
-
-	ParseCommandLineArguments();
 
 	// Attempting to enable the debug layer after the Direct3D 12 device context
 	// has been created will cause the device to be released.
@@ -138,6 +135,7 @@ void Application::Update()
 		elapsedSeconds = 0.0;
 	}
 }
+
 
 // Resources must be transitioned from one state to another using a resource BARRIER
 //		and inserting that resource barrier into the command list.
@@ -318,34 +316,6 @@ void Application::Resize(uint32_t width, uint32_t height)
 		UpdateRenderTargetViews(g_Device, g_SwapChain, g_RTVDescriptorHeap);
 	}
 }
-
-void Application::ParseCommandLineArguments()
-{
-	// "::operator" notation is used to identify system functions that are defined in global scope. 
-	// I.e. it used to differentiate between locally defined functions and system functions.
-	int argc;
-	wchar_t** argv = ::CommandLineToArgvW(::GetCommandLineW(), &argc);
-
-	for (size_t i = 0; i < argc; ++i)
-	{
-		if (::wcscmp(argv[i], L"-w") == 0 || ::wcscmp(argv[i], L"--width") == 0)
-		{
-			g_ClientWidth = ::wcstol(argv[++i], nullptr, 10);
-		}
-		if (::wcscmp(argv[i], L"-h") == 0 || ::wcscmp(argv[i], L"--height") == 0)
-		{
-			g_ClientHeight = ::wcstol(argv[++i], nullptr, 10);
-		}
-		if (::wcscmp(argv[i], L"-warp") == 0 || ::wcscmp(argv[i], L"--warp") == 0)
-		{
-			g_UseWarp = true;
-		}
-	}
-
-	// Free memory allocated by CommandLineToArgvW
-	::LocalFree(argv);
-}
-
 
 void Application::EnableDebugLayer()
 {

@@ -61,7 +61,6 @@ protected:
 	void SetFullscreen(bool fullscreen);
 	void ToggleFullscreen();
 
-	void ParseCommandLineArguments();
 	void EnableDebugLayer();
 	ComPtr<IDXGIAdapter4> GetAdapter(bool useWarp);
 	ComPtr<ID3D12Device2> CreateDevice(ComPtr<IDXGIAdapter4> adapter);
