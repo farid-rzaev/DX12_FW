@@ -44,28 +44,30 @@ public:
 	//		tearing to be enabled in the DirectX 12 application to function correctly. 
 	// This feature is also known as "vsync-off".
 	bool CheckTearingSupport();
-	void SetFullscreen(bool fullscreen); 
-	void ToggleFullscreen() { SetFullscreen(!g_Fullscreen); };
 
-	// Before creating an instance of an OS window, the window class corresponding to that window must be registered. 
-	// The window class will be automatically unregistered when the application terminates.
+	// Before creating an instance of an OS window, the window class 
+	// corresponding to that window must be registered. 
+	// The window class will be automatically unregistered 
+	// when the application terminates.
 	void RegisterWindowClass(HINSTANCE hInst);
-
 	HWND CreateWindow(HINSTANCE hInst, const wchar_t* windowTitle, UINT width, UINT height);
-	void SetUserPtr(void* userPtr);				// 
-	void SetCustomWndProc(WNDPROC wndProc);		// 
-
-	// The primary purpose of the swap chain is to present the rendered image to the screen. 
-	ComPtr<IDXGISwapChain4> CreateSwapChain(
-		ComPtr<ID3D12CommandQueue> commandQueue,
-		UINT width, UINT height, UINT bufferCount);
+	void SetUserPtr(void* userPtr);			 //
+	void SetCustomWndProc(WNDPROC wndProc);  //  
 
 	HWND GetHWND() { return g_hWnd; }
 	void Show() { ::ShowWindow(g_hWnd, SW_SHOW); }
+	void SetFullscreen(bool fullscreen);
+	void ToggleFullscreen() { SetFullscreen(!g_Fullscreen); };
+
+	// The primary purpose of the swap chain is 
+	// to present the rendered image to the screen. 
+	ComPtr<IDXGISwapChain4> CreateSwapChain(ComPtr<ID3D12CommandQueue> commandQueue,
+		UINT width, UINT height, UINT bufferCount);
 
 private:
-	//Window(const Window& Window) = delete;
-	//Window& operator=(const Window& Window) = delete;
+	// Windows should not be copied.
+	Window(const Window& Window) = delete;
+	Window& operator=(const Window& Window) = delete;
 
 	// By default, use windowed mode.
 	// Can be toggled with the Alt+Enter or F11

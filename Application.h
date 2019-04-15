@@ -50,18 +50,16 @@ class Application
 {
 public:	
 	Application(HINSTANCE hInstance, const wchar_t* windowTitle, int width, int height, bool vSync);
-	virtual ~Application() {};
+	virtual ~Application();
 	
 	virtual void Init();
 	virtual void Run();
-	void Finish();
 
 	ComPtr<ID3D12Device2> GetDevice() const { return m_d3d12Device; }
 	ComPtr<ID3D12CommandQueue> GetCommantQueue() const { return m_CommandQueue; }
 	ComPtr<ID3D12CommandList> GetCommantList() const { return m_CommandList; }
 
 protected:
-	//friend LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 	void Update();
 	void Render();
 
@@ -122,6 +120,8 @@ private /*VARS*/ :
 	ComPtr<ID3D12Resource> m_BackBuffers[m_NumFrames];
 	ComPtr<ID3D12GraphicsCommandList> m_CommandList;
 	ComPtr<ID3D12CommandAllocator> m_CommandAllocators[m_NumFrames];
+
+
 	ComPtr<ID3D12DescriptorHeap> m_RTVDescriptorHeap;
 	// The size of a descriptor in a descriptor heap is vendor specific 
 	//   (Intel, NVidia, and AMD may store descriptors differently). 

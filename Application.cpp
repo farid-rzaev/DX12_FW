@@ -57,6 +57,20 @@ Application::Application(HINSTANCE hInstance, const wchar_t* windowTitle, int wi
 	}
 }
 
+Application::~Application() {
+	// Make sure the command queue has finished all commands before closing.
+	//
+	// It is important to make sure that any resources that may currently 
+	//		be "in-flight" on the GPU have finished processing before they are released.
+	// Since all DirectX 12 objects are held by ComPtr's, they will automatically 
+	//		be cleaned up when the application exits but this cleanup should not 
+	//		occur until the GPU is using them
+	Flush(m_CommandQueue, m_Fence, m_FenceValue, m_FenceEvent);
+
+	// Releasing the handle to the fence event object.
+	::CloseHandle(m_FenceEvent);
+}
+
 void Application::Init() 
 {
 	// The first back buffer index will very likely be 0, but it depends
@@ -100,23 +114,6 @@ void Application::Run() {
 		}
 	}
 }
-
-void Application::Finish()
-{
-	// Make sure the command queue has finished all commands before closing.
-	//
-	// It is important to make sure that any resources that may currently 
-	//		be "in-flight" on the GPU have finished processing before they are released.
-	// Since all DirectX 12 objects are held by ComPtr's, they will automatically 
-	//		be cleaned up when the application exits but this cleanup should not 
-	//		occur until the GPU is using them
-	Flush(m_CommandQueue, m_Fence, m_FenceValue, m_FenceEvent);
-
-	// Releasing the handle to the fence event object.
-	::CloseHandle(m_FenceEvent);
-}
-
-
 
 // For this lesson, the functuion ony display's the frame-rate each second in the debug output 
 //		in Visual Studio.
@@ -418,6 +415,7 @@ ComPtr<ID3D12Device2> Application::CreateDevice(ComPtr<IDXGIAdapter4> adapter)
 	//		required for successful device creation.
 	ComPtr<ID3D12Device2> d3d12Device2;
 	ThrowIfFailed(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&d3d12Device2)));
+
 
 	// 1) Enable debug messages in debug mode.
 	// 2) ID3D12InfoQueue interface is used to enable break points based on the severity

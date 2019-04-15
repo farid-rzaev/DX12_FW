@@ -85,12 +85,14 @@ HWND Window::CreateWindow(HINSTANCE hInst,
 
 void Window::SetUserPtr(void* userPtr)
 {
+	// inject Application pointer into window
 	SetWindowLongPtr(g_hWnd, GWLP_USERDATA, (LONG_PTR)userPtr);
 }
 
 
 void Window::SetCustomWndProc(WNDPROC wndProc)
 {
+	// Reset the Default WndProc of the window to app's static method
 	SetWindowLongPtr(g_hWnd, GWLP_WNDPROC, (LONG_PTR)wndProc);
 }
 
@@ -112,12 +114,8 @@ bool Window::CheckTearingSupport()
 		ComPtr<IDXGIFactory5> factory5;
 		if (SUCCEEDED(factory4.As(&factory5)))
 		{
-			if (FAILED(factory5->CheckFeatureSupport(
-				DXGI_FEATURE_PRESENT_ALLOW_TEARING,
-				&allowTearing, sizeof(allowTearing))))
-			{
-				allowTearing = FALSE;
-			}
+			factory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING,
+				&allowTearing, sizeof(allowTearing));
 		}
 	}
 
