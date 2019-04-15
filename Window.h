@@ -36,21 +36,9 @@ constexpr wchar_t WINDOW_CLASS_NAME[] = L"DX12RenderWindowClass";
 
 class Window 
 {
-private:
-	//Window(const Window& Window) = delete;
-	//Window& operator=(const Window& Window) = delete;
-
-	// By default, use windowed mode.
-	// Can be toggled with the Alt+Enter or F11
-	bool g_Fullscreen = false;
-	// Window rectangle (used to toggle fullscreen state).
-	RECT g_WindowRect;
-	// Window handle.
-	HWND g_hWnd;
-
 public:
 	Window() {};
-	~Window() {};
+	virtual ~Window() {};
 
 	// Variable refresh rate displays (NVidia's G-Sync and AMD's FreeSync) require 
 	//		tearing to be enabled in the DirectX 12 application to function correctly. 
@@ -74,4 +62,16 @@ public:
 
 	HWND GetHWND() { return g_hWnd; }
 	void Show() { ::ShowWindow(g_hWnd, SW_SHOW); }
+
+private:
+	//Window(const Window& Window) = delete;
+	//Window& operator=(const Window& Window) = delete;
+
+	// By default, use windowed mode.
+	// Can be toggled with the Alt+Enter or F11
+	bool g_Fullscreen = false;
+	// Window rectangle (used to toggle fullscreen state).
+	RECT g_WindowRect;
+	// Window handle.
+	HWND g_hWnd;
 };

@@ -39,20 +39,28 @@ using namespace Microsoft::WRL;
 
 // Helper functions
 #include "Helpers.h"
+// D3D12 extension library.
+#include "d3dx12.h"
 
 #include "Window.h"
 
+using Microsoft::WRL::ComPtr;
 
 class Application 
 {
 public:	
-	Application();
-	void Init(HINSTANCE hInstance, const wchar_t* windowTitle);
-	void Run();
+	Application(HINSTANCE hInstance, const wchar_t* windowTitle, int width, int height, bool vSync);
+	virtual ~Application() {};
+	
+	virtual void Init();
+	virtual void Run();
 	void Finish();
 
-protected:
+	ComPtr<ID3D12Device2> GetDevice() const { return g_Device; }
+	ComPtr<ID3D12CommandQueue> GetCommantQueue() const { return g_CommandQueue; }
+	ComPtr<ID3D12CommandList> GetCommantList() const { return g_CommandList; }
 
+protected:
 	//friend LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 	void Update();
 	void Render();
@@ -89,6 +97,7 @@ private /*FUNCS*/ :
 
 private /*WINDOW*/ :
 	// Window class
+	const wchar_t* m_WindowTitle;
 	std::shared_ptr<Window> gp_Window;
 	static LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
@@ -102,6 +111,9 @@ private /*VARS*/ :
 	uint32_t g_ClientHeight = 1080;
 	// Set to true once the DX12 objects have been initialized.
 	bool g_IsInitialized = false;
+
+	// The application instance handle that this application was created with.
+	HINSTANCE m_hInstance;
 
 	// DirectX 12 Objects
 	ComPtr<ID3D12Device2> g_Device;

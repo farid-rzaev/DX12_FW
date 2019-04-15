@@ -2,15 +2,18 @@
 
 #include <d3dcompiler.h>
 #include <DirectXMath.h>
-// D3D12 extension library.
-#include "d3dx12.h"
 // STL Headers
 #include <algorithm> // std::min and  std::max.
 // Assert
 #include <cassert>
 
 
-Application::Application()
+Application::Application(HINSTANCE hInstance, const wchar_t* windowTitle, int width, int height, bool vSync) :
+	m_hInstance (hInstance),
+	m_WindowTitle (windowTitle),
+	g_ClientWidth(width),
+	g_ClientHeight(height),
+	g_VSync(vSync)
 {
 	// Windows 10 Creators update adds Per Monitor V2 DPI awareness context.
 	// The SetThreadDpiAwarenessContext function sets the DPI awareness for the 
@@ -34,12 +37,11 @@ Application::Application()
 	g_Device = CreateDevice(dxgiAdapter4);
 }
 
-void Application::Init(HINSTANCE hInstance, const wchar_t* windowTitle) {
-	// hInstance - is an application instance
+void Application::Init() {
 	gp_Window = std::make_shared<Window>();
 	g_TearingSupported = gp_Window->CheckTearingSupport();
-	gp_Window->RegisterWindowClass(hInstance);
-	gp_Window->CreateWindow(hInstance, windowTitle, g_ClientWidth, g_ClientHeight);
+	gp_Window->RegisterWindowClass(m_hInstance);
+	gp_Window->CreateWindow(m_hInstance, m_WindowTitle, g_ClientWidth, g_ClientHeight);
 	gp_Window->SetUserPtr((void*)this);					// inject Application pointer into window
 	gp_Window->SetCustomWndProc(Application::WndProc);  // reset the default WndProc of the window to app's static method
 	g_CommandQueue = CreateCommandQueue(g_Device, D3D12_COMMAND_LIST_TYPE_DIRECT);
@@ -135,7 +137,6 @@ void Application::Update()
 		elapsedSeconds = 0.0;
 	}
 }
-
 
 // Resources must be transitioned from one state to another using a resource BARRIER
 //		and inserting that resource barrier into the command list.
@@ -263,14 +264,6 @@ void Application::Render()
 	}
 }
 
-void Application::SetFullscreen(bool fullscreen) {
-	gp_Window->SetFullscreen(fullscreen);
-}
-
-void Application::ToggleFullscreen() {
-	gp_Window->ToggleFullscreen();
-}
-
 
 
 // A resize event is triggered when the window is created the first time. 
@@ -317,6 +310,15 @@ void Application::Resize(uint32_t width, uint32_t height)
 	}
 }
 
+void Application::SetFullscreen(bool fullscreen) {
+	gp_Window->SetFullscreen(fullscreen);
+}
+void Application::ToggleFullscreen() {
+	gp_Window->ToggleFullscreen();
+}
+
+
+
 void Application::EnableDebugLayer()
 {
 #if defined(_DEBUG)
@@ -332,6 +334,7 @@ void Application::EnableDebugLayer()
 	// based on the type of the interface pointer used.
 #endif
 }
+
 
 
 ComPtr<IDXGIAdapter4> Application::GetAdapter(bool useWarp)
@@ -386,7 +389,6 @@ ComPtr<IDXGIAdapter4> Application::GetAdapter(bool useWarp)
 
 	return dxgiAdapter4;
 }
-
 
 // The DirectX 12 device is used to create resources (such as textures and buffers, command lists,
 //		command queues, fences, heaps, etc...). 
@@ -450,7 +452,6 @@ ComPtr<ID3D12Device2> Application::CreateDevice(ComPtr<IDXGIAdapter4> adapter)
 	return d3d12Device2;
 }
 
-
 // Before creating the swap chain, the command queue must be created first.
 ComPtr<ID3D12CommandQueue> Application::CreateCommandQueue(ComPtr<ID3D12Device2> device, D3D12_COMMAND_LIST_TYPE type)
 {
@@ -466,7 +467,6 @@ ComPtr<ID3D12CommandQueue> Application::CreateCommandQueue(ComPtr<ID3D12Device2>
 
 	return d3d12CommandQueue;
 }
-
 
 // A descriptor heap can be considered an array of resource VIEWs.
 //
@@ -485,7 +485,6 @@ ComPtr<ID3D12DescriptorHeap> Application::CreateDescriptorHeap(ComPtr<ID3D12Devi
 
 	return descriptorHeap;
 }
-
 
 // A render target view (RTV) describes a resource that can be attached to a 
 //		bind slot of the output merger stage
@@ -512,7 +511,6 @@ void Application::UpdateRenderTargetViews(ComPtr<ID3D12Device2> device,
 	}
 }
 
-
 // Command allocators and command lists are required to issue rendering commands to the GPU
 //		 A command allocator is the backing memory used by a command list.
 //		 A command allocator can only be used by a single command list at a time but 
@@ -533,7 +531,6 @@ ComPtr<ID3D12CommandAllocator> Application::CreateCommandAllocator(ComPtr<ID3D12
 	return commandAllocator;
 }
 
-
 // Note, the command list can be reused immediately after it has been executed on the command queue.
 //		the command list must be reset first before recording any new commands.
 ComPtr<ID3D12GraphicsCommandList> Application::CreateCommandList(ComPtr<ID3D12Device2> device,
@@ -546,6 +543,7 @@ ComPtr<ID3D12GraphicsCommandList> Application::CreateCommandList(ComPtr<ID3D12De
 
 	return commandList;
 }
+
 
 
 // The table summarizes the methods to use to synchronize with a FENCE object:
@@ -567,7 +565,6 @@ ComPtr<ID3D12Fence> Application::CreateFence(ComPtr<ID3D12Device2> device)
 	return fence;
 }
 
-
 // If the fence has not yet been signaled with specific value, the CPU thread will need to block any 
 //		further processing until the fence has been signaled with that value. 
 HANDLE Application::CreateEventHandle()
@@ -579,7 +576,6 @@ HANDLE Application::CreateEventHandle()
 
 	return fenceEvent;
 }
-
 
 // Signal() is used to signal the fence from the GPU. Should be noted that when using the ID3D12CommandQueue::Signal
 //		method to signal a fence from the GPU, the fence is not signaled immediatly but is only signaled once the GPU
@@ -615,7 +611,6 @@ void Application::WaitForFenceValue(ComPtr<ID3D12Fence> fence, uint64_t fenceVal
 	}
 }
 
-
 // It is sometimes useful to wait until all previously executed commands have finished
 //		executing before doing something (for example, resizing the swap chain buffers 
 //		requires any references to the buffers to be released). For this, the Flush 
@@ -637,6 +632,7 @@ void Application::Flush(ComPtr<ID3D12CommandQueue> commandQueue, ComPtr<ID3D12Fe
 	uint64_t fenceValueForSignal = Signal(commandQueue, fence, fenceValue);
 	WaitForFenceValue(fence, fenceValueForSignal, fenceEvent);
 }
+
 
 
 // The window procedure handles any window messages sent to the application. 
