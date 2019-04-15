@@ -9,6 +9,9 @@
       <Filter>Framework\SRC</Filter>
     </ClCompile>
     <ClCompile Include="Game.cpp" />
+    <ClCompile Include="CommandQueue.cpp">
+      <Filter>Framework\SRC</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="d3dx12.h">
@@ -27,6 +30,9 @@
       <Filter>Framework\H</Filter>
     </ClInclude>
     <ClInclude Include="Game.h" />
+    <ClInclude Include="CommandQueue.h">
+      <Filter>Framework\H</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="H_Helpers">

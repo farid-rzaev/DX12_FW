@@ -12,6 +12,6 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
 	Game qg (hInstance, windowTitle, 1920, 1080, false);
 	qg.Init();
 	qg.Run();
-	
+
 	return 0;
 }
