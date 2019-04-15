@@ -56,9 +56,9 @@ public:
 	virtual void Run();
 	void Finish();
 
-	ComPtr<ID3D12Device2> GetDevice() const { return g_Device; }
-	ComPtr<ID3D12CommandQueue> GetCommantQueue() const { return g_CommandQueue; }
-	ComPtr<ID3D12CommandList> GetCommantList() const { return g_CommandList; }
+	ComPtr<ID3D12Device2> GetDevice() const { return m_d3d12Device; }
+	ComPtr<ID3D12CommandQueue> GetCommantQueue() const { return m_CommandQueue; }
+	ComPtr<ID3D12CommandList> GetCommantList() const { return m_CommandList; }
 
 protected:
 	//friend LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
@@ -98,61 +98,61 @@ private /*FUNCS*/ :
 private /*WINDOW*/ :
 	// Window class
 	const wchar_t* m_WindowTitle;
-	std::shared_ptr<Window> gp_Window;
+	std::shared_ptr<Window> m_Window;
 	static LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
 private /*VARS*/ :
 	// The number of swap chain back buffers.
 	// Must not be less than 2 when using the flip presentation model.
-	static const uint8_t g_NumFrames = 3;
+	static const uint8_t m_NumFrames = 3;
 	// Use WARP adapter
-	bool g_UseWarp = false;
-	uint32_t g_ClientWidth = 1920;
-	uint32_t g_ClientHeight = 1080;
+	bool m_UseWarp = false;
+	uint32_t m_ClientWidth = 1920;
+	uint32_t m_ClientHeight = 1080;
 	// Set to true once the DX12 objects have been initialized.
-	bool g_IsInitialized = false;
+	bool m_IsInitialized = false;
 
 	// The application instance handle that this application was created with.
 	HINSTANCE m_hInstance;
 
 	// DirectX 12 Objects
-	ComPtr<ID3D12Device2> g_Device;
-	ComPtr<ID3D12CommandQueue> g_CommandQueue;
-	ComPtr<IDXGISwapChain4> g_SwapChain; // responsible for presenting the rendered image to the window
-	ComPtr<ID3D12Resource> g_BackBuffers[g_NumFrames];
-	ComPtr<ID3D12GraphicsCommandList> g_CommandList;
-	ComPtr<ID3D12CommandAllocator> g_CommandAllocators[g_NumFrames];
-	ComPtr<ID3D12DescriptorHeap> g_RTVDescriptorHeap;
+	ComPtr<ID3D12Device2> m_d3d12Device;
+	ComPtr<ID3D12CommandQueue> m_CommandQueue;
+	ComPtr<IDXGISwapChain4> m_SwapChain; // responsible for presenting the rendered image to the window
+	ComPtr<ID3D12Resource> m_BackBuffers[m_NumFrames];
+	ComPtr<ID3D12GraphicsCommandList> m_CommandList;
+	ComPtr<ID3D12CommandAllocator> m_CommandAllocators[m_NumFrames];
+	ComPtr<ID3D12DescriptorHeap> m_RTVDescriptorHeap;
 	// The size of a descriptor in a descriptor heap is vendor specific 
 	//   (Intel, NVidia, and AMD may store descriptors differently). 
 	// In order to correctly offset the index into the descriptor heap, 
 	//   the size of a single element in the descriptor heap needs 
-	//   to be queried during initialization - g_RTVDescriptorSize.
-	UINT g_RTVDescriptorSize;
+	//   to be queried during initialization - m_RTVDescriptorSize.
+	UINT m_RTVDescriptorSize;
 	// Depending on the flip model of the swap chain, the index of the
 	//   current back buffer in the swap chain may not be sequential
-	UINT g_CurrentBackBufferIndex;
+	UINT m_CurrentBackBufferIndex;
 
 
 	// Synchronization objects
-	ComPtr<ID3D12Fence> g_Fence;
-	uint64_t g_FenceValue = 0;
-	uint64_t g_FrameFenceValues[g_NumFrames] = {};
-	HANDLE g_FenceEvent;
+	ComPtr<ID3D12Fence> m_Fence;
+	uint64_t m_FenceValue = 0;
+	uint64_t m_FrameFenceValues[m_NumFrames] = {};
+	HANDLE m_FenceEvent;
 
 	// Variables to control the swap chain's present method:
 	// By default, enable V-Sync.
 	// Can be toggled with the V key.
-	//   The g_VSync variable controls whether the swap chain's present 
+	//   The m_VSync variable controls whether the swap chain's present 
 	//   method should wait for the next vertical refresh before presenting
 	//   the rendered image to the screen. By default, the swap chain's present 
 	//   method will block until the next vertical refresh of the screen.This will 
 	//   cap the framerate of the application to the refresh rate of the screen/monitor.
 	// 
-	//   Setting  g_VSync variable to false will cause the swap chain to present the 
+	//   Setting  m_VSync variable to false will cause the swap chain to present the 
 	//   rendered image to the screen as fast as possible which will allow the application 
 	//   to render at an unthrottled frame rate but may cause visual artifacts in the 
 	//   form of screen tearing.
-	bool g_VSync = true;
-	bool g_TearingSupported = false;
+	bool m_VSync = true;
+	bool m_TearingSupported = false;
 };

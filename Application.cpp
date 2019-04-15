@@ -11,16 +11,16 @@
 Application::Application(HINSTANCE hInstance, const wchar_t* windowTitle, int width, int height, bool vSync) :
 	m_hInstance (hInstance),
 	m_WindowTitle (windowTitle),
-	g_ClientWidth(width),
-	g_ClientHeight(height),
-	g_VSync(vSync)
+	m_ClientWidth(width),
+	m_ClientHeight(height),
+	m_VSync(vSync)
 {
 	// Windows 10 Creators update adds Per Monitor V2 DPI awareness context.
 	// The SetThreadDpiAwarenessContext function sets the DPI awareness for the 
 	// current thread. The DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 is an improved 
 	// per - monitor DPI awarenes mode which provides new DPI - related scaling behaviours
 	// on a per top - level window basis[35]. Using this DPI awareness mode, the 
-	// application is able to achieve 100 % pixel scaling for the client area of 
+	// application is able to achieve 100% pixel scaling for the client area of 
 	// the window while still allowing for DPI scaling for non - client areas 
 	// (such as the title bar and menus). This means that the swap chain buffers 
 	// will be resized to fill the total number of screen pixels (true 4K or 8K resolutions)
@@ -28,49 +28,62 @@ Application::Application(HINSTANCE hInstance, const wchar_t* windowTitle, int wi
 	// area based on the DPI scaling settings.
 	SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
-	// Attempting to enable the debug layer after the Direct3D 12 device context
-	// has been created will cause the device to be released.
 	EnableDebugLayer();
+	
+	// Window
+	{
+		m_Window = std::make_shared<Window>();
+		m_TearingSupported = m_Window->CheckTearingSupport();
+		m_Window->RegisterWindowClass(m_hInstance);
+		m_Window->CreateWindow(m_hInstance, m_WindowTitle, m_ClientWidth, m_ClientHeight);
+		// Pointer ijections for WndProc
+		m_Window->SetUserPtr((void*)this);					// - inject Application pointer into window
+		m_Window->SetCustomWndProc(Application::WndProc);   // - reset the Default WndProc of the 
+															//   window to app's static method
+	}
 
-	// Creating DirectX 12 objects below
-	ComPtr<IDXGIAdapter4> dxgiAdapter4 = GetAdapter(g_UseWarp);
-	g_Device = CreateDevice(dxgiAdapter4);
+	// DirectX 12 objects
+	{	
+		ComPtr<IDXGIAdapter4> dxgiAdapter4 = GetAdapter(m_UseWarp);
+
+		if (dxgiAdapter4)
+			m_d3d12Device = CreateDevice(dxgiAdapter4);
+
+		if (m_d3d12Device)
+			m_CommandQueue = CreateCommandQueue(m_d3d12Device, D3D12_COMMAND_LIST_TYPE_DIRECT);
+
+		if (m_CommandQueue && m_Window)
+			m_SwapChain = m_Window->CreateSwapChain(m_CommandQueue, m_ClientWidth, m_ClientHeight, m_NumFrames);
+	}
 }
 
-void Application::Init() {
-	gp_Window = std::make_shared<Window>();
-	g_TearingSupported = gp_Window->CheckTearingSupport();
-	gp_Window->RegisterWindowClass(m_hInstance);
-	gp_Window->CreateWindow(m_hInstance, m_WindowTitle, g_ClientWidth, g_ClientHeight);
-	gp_Window->SetUserPtr((void*)this);					// inject Application pointer into window
-	gp_Window->SetCustomWndProc(Application::WndProc);  // reset the default WndProc of the window to app's static method
-	g_CommandQueue = CreateCommandQueue(g_Device, D3D12_COMMAND_LIST_TYPE_DIRECT);
-	g_SwapChain = gp_Window->CreateSwapChain(g_CommandQueue, g_ClientWidth, g_ClientHeight, g_NumFrames);
-	
+void Application::Init() 
+{
 	// The first back buffer index will very likely be 0, but it depends
-	g_CurrentBackBufferIndex = g_SwapChain->GetCurrentBackBufferIndex();
+	m_CurrentBackBufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
 
-	g_RTVDescriptorHeap = CreateDescriptorHeap(g_Device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, g_NumFrames);
-	g_RTVDescriptorSize = g_Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	m_RTVDescriptorHeap = CreateDescriptorHeap(m_d3d12Device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, m_NumFrames);
+	m_RTVDescriptorSize = m_d3d12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	// Render target views are fill into the descriptor heap
-	UpdateRenderTargetViews(g_Device, g_SwapChain, g_RTVDescriptorHeap);
+	UpdateRenderTargetViews(m_d3d12Device, m_SwapChain, m_RTVDescriptorHeap);
 
 	// Since there needs to be at least as many allocators as in-flight render frames, 
 	// an allocator is created for the each frame (number of swap chain back buffers). 
 	// However since a single command list is used to record all rendering commands 
 	// for this simple demo, only a single command list is required. 
-	for (int i = 0; i < g_NumFrames; ++i)
+	for (int i = 0; i < m_NumFrames; ++i)
 	{
-		g_CommandAllocators[i] = CreateCommandAllocator(g_Device, D3D12_COMMAND_LIST_TYPE_DIRECT);
+		m_CommandAllocators[i] = CreateCommandAllocator(m_d3d12Device, D3D12_COMMAND_LIST_TYPE_DIRECT);
 	}
-	g_CommandList = CreateCommandList(g_Device, g_CommandAllocators[g_CurrentBackBufferIndex], D3D12_COMMAND_LIST_TYPE_DIRECT);
+	m_CommandList = CreateCommandList(m_d3d12Device, m_CommandAllocators[m_CurrentBackBufferIndex], D3D12_COMMAND_LIST_TYPE_DIRECT);
 
-	g_Fence = CreateFence(g_Device);
-	g_FenceEvent = CreateEventHandle();
+	m_Fence = CreateFence(m_d3d12Device);
+	m_FenceEvent = CreateEventHandle();
 
-	g_IsInitialized = true;
+	//m_IsInitialized = true;
+
 	// Show Window
-	gp_Window->Show();
+	m_Window->Show();
 }
 
 void Application::Run() {
@@ -97,10 +110,10 @@ void Application::Finish()
 	// Since all DirectX 12 objects are held by ComPtr's, they will automatically 
 	//		be cleaned up when the application exits but this cleanup should not 
 	//		occur until the GPU is using them
-	Flush(g_CommandQueue, g_Fence, g_FenceValue, g_FenceEvent);
+	Flush(m_CommandQueue, m_Fence, m_FenceValue, m_FenceEvent);
 
 	// Releasing the handle to the fence event object.
-	::CloseHandle(g_FenceEvent);
+	::CloseHandle(m_FenceEvent);
 }
 
 
@@ -167,13 +180,13 @@ void Application::Update()
 //						read - only(Read > Read) resource between draw or dispatches.
 void Application::Render()
 {
-	auto commandAllocator = g_CommandAllocators[g_CurrentBackBufferIndex];
-	auto backBuffer = g_BackBuffers[g_CurrentBackBufferIndex];
+	auto commandAllocator = m_CommandAllocators[m_CurrentBackBufferIndex];
+	auto backBuffer = m_BackBuffers[m_CurrentBackBufferIndex];
 
 	// !!! Before any commands can be recorded into the command list, 
 	// the command allocator and command list needs to be reset to its initial state.
 	commandAllocator->Reset();
-	g_CommandList->Reset(commandAllocator.Get(), nullptr);
+	m_CommandList->Reset(commandAllocator.Get(), nullptr);
 
 	// Clear the render target:
 	//		Before the render target can be cleared, it must be transitioned
@@ -196,14 +209,14 @@ void Application::Render()
 			backBuffer.Get(),
 			D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET
 		);
-		g_CommandList->ResourceBarrier(1, &barrier);
+		m_CommandList->ResourceBarrier(1, &barrier);
 
 		FLOAT clearColor[] = { 0.4f, 0.6f, 0.9f, 1.0f };
 		CD3DX12_CPU_DESCRIPTOR_HANDLE rtv(
-			g_RTVDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
-			g_CurrentBackBufferIndex, g_RTVDescriptorSize
+			m_RTVDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
+			m_CurrentBackBufferIndex, m_RTVDescriptorSize
 		);
-		g_CommandList->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
+		m_CommandList->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
 	}
 
 	// After rendering the scene, the current back buffer is PRESENTed 
@@ -215,19 +228,19 @@ void Application::Render()
 		CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
 			backBuffer.Get(),
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-		g_CommandList->ResourceBarrier(1, &barrier);
+		m_CommandList->ResourceBarrier(1, &barrier);
 
 
 		// After transitioning to the correct state, the command list 
 		// that contains the resource transition barrier must be executed
 		// on the command queue.
-		ThrowIfFailed(g_CommandList->Close());
+		ThrowIfFailed(m_CommandList->Close());
 
 		// Execute
 		ID3D12CommandList* const commandLists[] = {
-			g_CommandList.Get()
+			m_CommandList.Get()
 		};
-		g_CommandQueue->ExecuteCommandLists(_countof(commandLists), commandLists);
+		m_CommandQueue->ExecuteCommandLists(_countof(commandLists), commandLists);
 
 
 		// If tearing is supported, it is recommended to always use the 
@@ -243,24 +256,24 @@ void Application::Render()
 		//			full screen Win32 apps, the application should present 
 		//			to a fullscreen borderless window and disable automatic Alt + Enter 
 		//			fullscreen switching using  IDXGIFactory::MakeWindowAssociation.
-		UINT syncInterval = g_VSync ? 1 : 0;
-		UINT presentFlags = g_TearingSupported && !g_VSync ? DXGI_PRESENT_ALLOW_TEARING : 0;
-		ThrowIfFailed(g_SwapChain->Present(syncInterval, presentFlags));
+		UINT syncInterval = m_VSync ? 1 : 0;
+		UINT presentFlags = m_TearingSupported && !m_VSync ? DXGI_PRESENT_ALLOW_TEARING : 0;
+		ThrowIfFailed(m_SwapChain->Present(syncInterval, presentFlags));
 
 		// Immediately after presenting the rendered frame to the screen, a signal is inserted
 		// The fence value returned from the Signal function is used to stall the CPU thread 
 		// until any (writeable - such as render targets) resources are finished being used.
-		g_FrameFenceValues[g_CurrentBackBufferIndex] = Signal(g_CommandQueue, g_Fence, g_FenceValue);
+		m_FrameFenceValues[m_CurrentBackBufferIndex] = Signal(m_CommandQueue, m_Fence, m_FenceValue);
 
 		// Updating current back buffer index:
 		// When using the DXGI_SWAP_EFFECT_FLIP_DISCARD flip model, the order of 
 		//     back buffer indicies is not guaranteed to be sequential. 
 		//	   The IDXGISwapChain3::GetCurrentBackBufferIndex method is used to 
 		//     get the index of the swap chain's current back buffer.
-		g_CurrentBackBufferIndex = g_SwapChain->GetCurrentBackBufferIndex();
+		m_CurrentBackBufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
 
 		// ????-TODO-???? Why are we waiting for the next frame but not for the previous ?????
-		WaitForFenceValue(g_Fence, g_FrameFenceValues[g_CurrentBackBufferIndex], g_FenceEvent);
+		WaitForFenceValue(m_Fence, m_FrameFenceValues[m_CurrentBackBufferIndex], m_FenceEvent);
 	}
 }
 
@@ -273,54 +286,56 @@ void Application::Render()
 // the window changes.
 void Application::Resize(uint32_t width, uint32_t height)
 {
-	if (g_ClientWidth != width || g_ClientHeight != height)
+	if (m_ClientWidth != width || m_ClientHeight != height)
 	{
 		// Don't allow 0 size swap chain back buffers.
-		g_ClientWidth = std::max(1u, width);
-		g_ClientHeight = std::max(1u, height);
+		m_ClientWidth = std::max(1u, width);
+		m_ClientHeight = std::max(1u, height);
 
 		// Flush the GPU Command Queue to make sure the swap chain's back buffers
 		// are not being referenced by an in-flight command list.
-		Flush(g_CommandQueue, g_Fence, g_FenceValue, g_FenceEvent);
+		Flush(m_CommandQueue, m_Fence, m_FenceValue, m_FenceEvent);
 
-		for (int i = 0; i < g_NumFrames; ++i)
+		for (int i = 0; i < m_NumFrames; ++i)
 		{
 			// Releasing local references to the swap chain's back buffers
 			// as after Resize we'll get the new ones.
 			// Any references to the back buffers must be released
 			// before the swap chain can be resized.
-			g_BackBuffers[i].Reset();
+			m_BackBuffers[i].Reset();
 			// The per-frame fence values are also reset to the fence 
 			// value of the current back buffer index.
-			g_FrameFenceValues[i] = g_FrameFenceValues[g_CurrentBackBufferIndex];
+			m_FrameFenceValues[i] = m_FrameFenceValues[m_CurrentBackBufferIndex];
 		}
 
 		DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
-		ThrowIfFailed(g_SwapChain->GetDesc(&swapChainDesc));
-		ThrowIfFailed(g_SwapChain->ResizeBuffers(g_NumFrames, g_ClientWidth, g_ClientHeight,
+		ThrowIfFailed(m_SwapChain->GetDesc(&swapChainDesc));
+		ThrowIfFailed(m_SwapChain->ResizeBuffers(m_NumFrames, m_ClientWidth, m_ClientHeight,
 			swapChainDesc.BufferDesc.Format, swapChainDesc.Flags));
 
 		// Since the index of back buffer may not be the same, it is important
 		// to update the current back buffer index as known by the application.
-		g_CurrentBackBufferIndex = g_SwapChain->GetCurrentBackBufferIndex();
+		m_CurrentBackBufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
 
 		// After the swap chain buffers have been resized, the descriptors 
 		// that refer to those buffers needs to be updated. 
-		UpdateRenderTargetViews(g_Device, g_SwapChain, g_RTVDescriptorHeap);
+		UpdateRenderTargetViews(m_d3d12Device, m_SwapChain, m_RTVDescriptorHeap);
 	}
 }
 
 void Application::SetFullscreen(bool fullscreen) {
-	gp_Window->SetFullscreen(fullscreen);
+	m_Window->SetFullscreen(fullscreen);
 }
 void Application::ToggleFullscreen() {
-	gp_Window->ToggleFullscreen();
+	m_Window->ToggleFullscreen();
 }
 
 
 
 void Application::EnableDebugLayer()
 {
+	// Attempting to enable the debug layer after the Direct3D 12 device context
+	// has been created will cause the device to be released.
 #if defined(_DEBUG)
 	// Always enable the debug layer before doing anything DX12 related
 	// so all possible errors generated while creating DX12 objects
@@ -497,7 +512,7 @@ void Application::UpdateRenderTargetViews(ComPtr<ID3D12Device2> device,
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(descriptorHeap->GetCPUDescriptorHandleForHeapStart());
 
-	for (int i = 0; i < g_NumFrames; ++i)
+	for (int i = 0; i < m_NumFrames; ++i)
 	{
 		ComPtr<ID3D12Resource> backBuffer;
 		ThrowIfFailed(swapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
@@ -505,7 +520,7 @@ void Application::UpdateRenderTargetViews(ComPtr<ID3D12Device2> device,
 		// nullptr - description is used to create a default descriptor for the resource
 		device->CreateRenderTargetView(backBuffer.Get(), nullptr, rtvHandle);
 
-		g_BackBuffers[i] = backBuffer;
+		m_BackBuffers[i] = backBuffer;
 
 		rtvHandle.Offset(rtvDescriptorSize);
 	}
@@ -641,11 +656,12 @@ LRESULT CALLBACK Application::WndProc(HWND hwnd, UINT message, WPARAM wParam, LP
 	Application* app = (Application*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
 
 	// In order to prevent the application from handling events before the necessary 
-	// DirectX 12 objects are created, the g_IsInitialized flag is checked. This flag
+	// DirectX 12 objects are created, the m_IsInitialized flag is checked. This flag
 	// is set to true in the initialization function after all of the required assets 
 	// have been loaded. Trying to resize or render the screen before the swap chain, 
 	// command list and command allocators have been created would be disastrous.
-	if (app->g_IsInitialized)
+	if (app)
+	//if (app->m_IsInitialized)
 	{
 		switch (message)
 		{
@@ -670,7 +686,7 @@ LRESULT CALLBACK Application::WndProc(HWND hwnd, UINT message, WPARAM wParam, LP
 			switch (wParam)
 			{
 			case 'V':
-				app->g_VSync = !app->g_VSync;
+				app->m_VSync = !app->m_VSync;
 				break;
 			case VK_ESCAPE:
 				::PostQuitMessage(0);
@@ -695,7 +711,7 @@ LRESULT CALLBACK Application::WndProc(HWND hwnd, UINT message, WPARAM wParam, LP
 		case WM_SIZE:
 		{
 			RECT clientRect = {};
-			::GetClientRect(app->gp_Window->GetHWND(), &clientRect);
+			::GetClientRect(app->m_Window->GetHWND(), &clientRect);
 
 			int width = clientRect.right - clientRect.left;
 			int height = clientRect.bottom - clientRect.top;
