@@ -59,6 +59,7 @@ public:
 protected:
 	virtual void Render();
 	void Update();
+	void Flush();
 
 	void Resize(uint32_t width, uint32_t height);
 	void SetFullscreen(bool fullscreen);
@@ -67,23 +68,9 @@ protected:
 	void EnableDebugLayer();
 	ComPtr<IDXGIAdapter4> GetAdapter(bool useWarp);
 	ComPtr<ID3D12Device2> CreateDevice(ComPtr<IDXGIAdapter4> adapter);
-	ComPtr<ID3D12CommandQueue> CreateCommandQueue(ComPtr<ID3D12Device2> device, D3D12_COMMAND_LIST_TYPE type);
-	ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(ComPtr<ID3D12Device2> device,
-		D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors);
-	void UpdateRenderTargetViews(ComPtr<ID3D12Device2> device,
-		ComPtr<IDXGISwapChain4> swapChain, ComPtr<ID3D12DescriptorHeap> descriptorHeap);
-	ComPtr<ID3D12CommandAllocator> CreateCommandAllocator(ComPtr<ID3D12Device2> device,
-		D3D12_COMMAND_LIST_TYPE type);
-	ComPtr<ID3D12GraphicsCommandList> CreateCommandList(ComPtr<ID3D12Device2> device,
-		ComPtr<ID3D12CommandAllocator> commandAllocator, D3D12_COMMAND_LIST_TYPE type);
 
-	ComPtr<ID3D12Fence> CreateFence(ComPtr<ID3D12Device2> device);
-	HANDLE CreateEventHandle();
-	uint64_t Signal(ComPtr<ID3D12CommandQueue> commandQueue, ComPtr<ID3D12Fence> fence,
-		uint64_t& fenceValue);
-	void WaitForFenceValue(ComPtr<ID3D12Fence> fence, uint64_t fenceValue, HANDLE fenceEvent,
-		std::chrono::milliseconds duration = std::chrono::milliseconds::max());
-	void Flush();
+	ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(ComPtr<ID3D12Device2> device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors);
+	void UpdateRenderTargetViews(ComPtr<ID3D12Device2> device, ComPtr<IDXGISwapChain4> swapChain, ComPtr<ID3D12DescriptorHeap> descriptorHeap);
 
 private /*CONSTRUCTORS*/ :
 	Application(const Application& app) = delete;
@@ -106,8 +93,7 @@ private /*WINDOW*/ :
 	ComPtr<ID3D12Resource> m_BackBuffers[m_NumFrames];
 
 	UINT m_CurrentBackBufferIndex;
-	uint32_t m_ClientWidth = 1920;
-	uint32_t m_ClientHeight = 1080;
+
 
 	// Variables to control the swap chain's present method:
 	// By default, enable V-Sync.

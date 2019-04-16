@@ -4,6 +4,14 @@
 #include <cassert>
 #include <algorithm> // std::min and  std::max.
 
+
+Window::Window(UINT32 width, UINT32 height) 
+	: m_ClientWidth(width)
+	, m_ClientHeight(height)
+{
+}
+
+
 // Before creating an instance of an OS window, the window class corresponding to that window must be registered. 
 // The window class will be automatically unregistered when the application terminates.
 void Window::RegisterWindowClass(HINSTANCE hInst)
@@ -36,8 +44,7 @@ void Window::RegisterWindowClass(HINSTANCE hInst)
 }
 
 
-HWND Window::CreateWindow(HINSTANCE hInst,
-	const wchar_t* windowTitle, UINT width, UINT height)
+HWND Window::CreateWindow(HINSTANCE hInst, const wchar_t* windowTitle)
 {
 	// The GetSystemMetrics() - retrieves specific system metric information. 
 	// the SM_CXSCREEN and SM_CYSCREEN system metric are used to retrieve 
@@ -49,7 +56,7 @@ HWND Window::CreateWindow(HINSTANCE hInst,
 	//		based on the desired client-rectangle size, the AdjustWindowRect function is used.
 	// The WS_OVERLAPPEDWINDOW window style describes a window that can be 
 	//		minimized, and maximized, and has a thick window frame.
-	RECT windowRect = { 0, 0, static_cast<LONG>(width), static_cast<LONG>(height) };
+	RECT windowRect = { 0, 0, static_cast<LONG>(m_ClientWidth), static_cast<LONG>(m_ClientHeight) };
 	::AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW, FALSE);
 
 	int windowWidth = windowRect.right - windowRect.left;
@@ -124,9 +131,7 @@ bool Window::CheckTearingSupport()
 
 
 // The primary purpose of the swap chain is to present the rendered image to the screen. 
-ComPtr<IDXGISwapChain4> Window::CreateSwapChain(
-	ComPtr<ID3D12CommandQueue> commandQueue,
-	UINT width, UINT height, UINT bufferCount)
+ComPtr<IDXGISwapChain4> Window::CreateSwapChain(ComPtr<ID3D12CommandQueue> commandQueue, UINT bufferCount)
 {
 	ComPtr<IDXGISwapChain4> dxgiSwapChain4;
 	ComPtr<IDXGIFactory4> dxgiFactory4;
@@ -150,8 +155,8 @@ ComPtr<IDXGISwapChain4> Window::CreateSwapChain(
 	//		utilize as the next back buffer(the IDXGISwapChain1::Present1 method will likely block the calling 
 	//		thread until a buffer can be made available).
 	DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-	swapChainDesc.Width = width;
-	swapChainDesc.Height = height;
+	swapChainDesc.Width = m_ClientWidth;
+	swapChainDesc.Height = m_ClientHeight;
 	swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	swapChainDesc.Stereo = FALSE;
 	// Describes multi-sampling parameters:	

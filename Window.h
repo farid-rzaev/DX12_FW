@@ -37,7 +37,7 @@ constexpr wchar_t WINDOW_CLASS_NAME[] = L"DX12RenderWindowClass";
 class Window 
 {
 public:
-	Window() {};
+	Window(UINT32 width, UINT32 height);
 	virtual ~Window() {};
 
 	// Variable refresh rate displays (NVidia's G-Sync and AMD's FreeSync) require 
@@ -50,7 +50,7 @@ public:
 	// The window class will be automatically unregistered 
 	// when the application terminates.
 	void RegisterWindowClass(HINSTANCE hInst);
-	HWND CreateWindow(HINSTANCE hInst, const wchar_t* windowTitle, UINT width, UINT height);
+	HWND CreateWindow(HINSTANCE hInst, const wchar_t* windowTitle);
 	void SetUserPtr(void* userPtr);			 //
 	void SetCustomWndProc(WNDPROC wndProc);  //  
 
@@ -61,19 +61,29 @@ public:
 
 	// The primary purpose of the swap chain is 
 	// to present the rendered image to the screen. 
-	ComPtr<IDXGISwapChain4> CreateSwapChain(ComPtr<ID3D12CommandQueue> commandQueue,
-		UINT width, UINT height, UINT bufferCount);
+	ComPtr<IDXGISwapChain4> CreateSwapChain(ComPtr<ID3D12CommandQueue> commandQueue, UINT bufferCount);
+
+public:
+	UINT32 GetClientWidth() const { return m_ClientWidth; }
+	UINT32 GetClientHeight() const { return m_ClientHeight; }
+	void SetClientWidth(UINT32 width) { m_ClientWidth = width; }
+	void SetClientHeight(UINT32 height) { m_ClientHeight = height; }
 
 private:
 	// Windows should not be copied.
 	Window(const Window& Window) = delete;
 	Window& operator=(const Window& Window) = delete;
 
+	// Client Size
+	UINT32 m_ClientWidth = 1920;
+	UINT32 m_ClientHeight = 1080;
+
 	// By default, use windowed mode.
 	// Can be toggled with the Alt+Enter or F11
 	bool g_Fullscreen = false;
 	// Window rectangle (used to toggle fullscreen state).
 	RECT g_WindowRect;
+
 	// Window handle.
 	HWND g_hWnd;
 };

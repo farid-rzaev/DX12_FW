@@ -10,8 +10,6 @@
 
 Application::Application(HINSTANCE hInstance, const wchar_t* windowTitle, int width, int height, bool vSync) :
 	m_hInstance (hInstance),
-	m_ClientWidth(width),
-	m_ClientHeight(height),
 	m_VSync(vSync)
 {
 	// Windows 10 Creators update adds Per Monitor V2 DPI awareness context.
@@ -31,10 +29,10 @@ Application::Application(HINSTANCE hInstance, const wchar_t* windowTitle, int wi
 	
 	// Window
 	{
-		m_Window = std::make_shared<Window>();
+		m_Window = std::make_shared<Window>(width, height);
 		m_TearingSupported = m_Window->CheckTearingSupport();
 		m_Window->RegisterWindowClass(m_hInstance);
-		m_Window->CreateWindow(m_hInstance, windowTitle, m_ClientWidth, m_ClientHeight);
+		m_Window->CreateWindow(m_hInstance, windowTitle);
 		// Pointer ijections for WndProc
 		m_Window->SetUserPtr((void*)this);					// - inject Application pointer into window
 		m_Window->SetCustomWndProc(Application::WndProc);   // - reset the Default WndProc of the 
@@ -54,7 +52,7 @@ Application::Application(HINSTANCE hInstance, const wchar_t* windowTitle, int wi
 			m_CopyCommandQueue    = std::make_shared<CommandQueue> (m_d3d12Device, D3D12_COMMAND_LIST_TYPE_COPY);
 
 		if (m_DirectCommandQueue && m_Window)
-			m_SwapChain = m_Window->CreateSwapChain(m_DirectCommandQueue->GetD3D12CommandQueue(), m_ClientWidth, m_ClientHeight, m_NumFrames);
+			m_SwapChain = m_Window->CreateSwapChain(m_DirectCommandQueue->GetD3D12CommandQueue(), m_NumFrames);
 	}
 
 	//  Create RTV (DescriptorHeap) and update it's endtries 
@@ -70,9 +68,12 @@ Application::Application(HINSTANCE hInstance, const wchar_t* windowTitle, int wi
 	{
 		m_Window->Show();
 	}
-
-	// The first back buffer index will very likely be 0, but it depends
-	m_CurrentBackBufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
+	
+	// Current Buffer
+	{
+		// The first back buffer index will very likely be 0, but it depends
+		m_CurrentBackBufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
+	}
 }
 
 Application::~Application() {
@@ -189,7 +190,7 @@ void Application::Update()
 void Application::Render()
 {
 	auto commandQueue = GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
-	auto commandList = m_DirectCommandQueue->GetCommandList();
+	auto commandList = commandQueue->GetCommandList();
 	auto backBuffer = m_BackBuffers[m_CurrentBackBufferIndex];
 
 	// Clear the render target:
@@ -267,6 +268,28 @@ void Application::Render()
 	}
 }
 
+// It is sometimes useful to wait until all previously executed commands have finished
+//		executing before doing something (for example, resizing the swap chain buffers 
+//		requires any references to the buffers to be released). For this, the Flush 
+//		function is used to ensure the GPU has finished processing all commands before
+//		continuing.
+// The Flush function is used to ensure that any commands previously executed on the GPU
+//		have finished executing before the CPU thread is allowed to continue processing. 
+// This is useful for ensuring that any back buffer resources being referenced by a command 
+//		that is currently "in-flight" on the GPU have finished executing before being resized.
+// It is also strongly advisable to flush the GPU command queue before releasing any resources
+//		that might be referenced by a command list that is currently "in-flight" on the command 
+//		queue (for example, before closing the application). The Flush function will block the 
+//		calling thread until the fence value has been reached. After this function returns, it is
+//		safe to release any resources that were referenced by the GPU.
+// The Flush function is simply a Signal followed by a WaitForFenceValue.)))
+void Application::Flush()
+{
+	m_DirectCommandQueue->Flush();
+	m_ComputeCommandQueue->Flush();
+	m_CopyCommandQueue->Flush();
+}
+
 
 
 // A resize event is triggered when the window is created the first time. 
@@ -276,11 +299,11 @@ void Application::Render()
 // the window changes.
 void Application::Resize(uint32_t width, uint32_t height)
 {
-	if (m_ClientWidth != width || m_ClientHeight != height)
+	if (m_Window->GetClientWidth() != width || m_Window->GetClientHeight() != height)
 	{
 		// Don't allow 0 size swap chain back buffers.
-		m_ClientWidth = std::max(1u, width);
-		m_ClientHeight = std::max(1u, height);
+		m_Window->SetClientWidth( std::max(1u, width) );
+		m_Window->SetClientHeight( std::max(1u, height) );
 
 		// Flush the GPU Command Queue to make sure the swap chain's back buffers
 		// are not being referenced by an in-flight command list.
@@ -297,7 +320,7 @@ void Application::Resize(uint32_t width, uint32_t height)
 
 		DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
 		ThrowIfFailed(m_SwapChain->GetDesc(&swapChainDesc));
-		ThrowIfFailed(m_SwapChain->ResizeBuffers(m_NumFrames, m_ClientWidth, m_ClientHeight,
+		ThrowIfFailed(m_SwapChain->ResizeBuffers(m_NumFrames, m_Window->GetClientWidth(), m_Window->GetClientHeight(),
 			swapChainDesc.BufferDesc.Format, swapChainDesc.Flags));
 
 		// Since the index of back buffer may not be the same, it is important
@@ -313,6 +336,7 @@ void Application::Resize(uint32_t width, uint32_t height)
 void Application::SetFullscreen(bool fullscreen) {
 	m_Window->SetFullscreen(fullscreen);
 }
+
 void Application::ToggleFullscreen() {
 	m_Window->ToggleFullscreen();
 }
@@ -455,22 +479,6 @@ ComPtr<ID3D12Device2> Application::CreateDevice(ComPtr<IDXGIAdapter4> adapter)
 	return d3d12Device2;
 }
 
-// Before creating the swap chain, the command queue must be created first.
-ComPtr<ID3D12CommandQueue> Application::CreateCommandQueue(ComPtr<ID3D12Device2> device, D3D12_COMMAND_LIST_TYPE type)
-{
-	ComPtr<ID3D12CommandQueue> d3d12CommandQueue;
-
-	D3D12_COMMAND_QUEUE_DESC desc = {};
-	desc.Type = type;
-	desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
-	desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-	desc.NodeMask = 0;
-
-	ThrowIfFailed(device->CreateCommandQueue(&desc, IID_PPV_ARGS(&d3d12CommandQueue)));
-
-	return d3d12CommandQueue;
-}
-
 // A descriptor heap can be considered an array of resource VIEWs.
 //
 // CBV, SRV, and UAV can be stored in the same heap but
@@ -513,129 +521,6 @@ void Application::UpdateRenderTargetViews(ComPtr<ID3D12Device2> device,
 		rtvHandle.Offset(rtvDescriptorSize);
 	}
 }
-
-// Command allocators and command lists are required to issue rendering commands to the GPU
-//		 A command allocator is the backing memory used by a command list.
-//		 A command allocator can only be used by a single command list at a time but 
-//		 can be reused after the commands that were recorded into the command list 
-//		 have finished executing on the GPU (a GPU fence is used to check).
-// The memory allocated by the command allocator is reclaimed using the  
-//		ID3D12CommandAllocator::Reset method. A command allocator can only be reset after 
-//		the commands recorded in the command list have finished executing on the GPU
-//		(a GPU fence is used to check).
-// In order to achieve maximum frame-rates for the application, one command allocator per
-//		"in-flight" command list should be created.
-ComPtr<ID3D12CommandAllocator> Application::CreateCommandAllocator(ComPtr<ID3D12Device2> device,
-	D3D12_COMMAND_LIST_TYPE type)
-{
-	ComPtr<ID3D12CommandAllocator> commandAllocator;
-	ThrowIfFailed(device->CreateCommandAllocator(type, IID_PPV_ARGS(&commandAllocator)));
-
-	return commandAllocator;
-}
-
-// Note, the command list can be reused immediately after it has been executed on the command queue.
-//		the command list must be reset first before recording any new commands.
-ComPtr<ID3D12GraphicsCommandList> Application::CreateCommandList(ComPtr<ID3D12Device2> device,
-	ComPtr<ID3D12CommandAllocator> commandAllocator, D3D12_COMMAND_LIST_TYPE type)
-{
-	ComPtr<ID3D12GraphicsCommandList> commandList;
-	ThrowIfFailed(device->CreateCommandList(0, type, commandAllocator.Get(), nullptr, IID_PPV_ARGS(&commandList)));
-
-	ThrowIfFailed(commandList->Close());
-
-	return commandList;
-}
-
-
-
-// The table summarizes the methods to use to synchronize with a FENCE object:
-//
-//					CPU															GPU
-//		Signal		ID3D12Fence::Signal											ID3D12CommandQueue::Signal
-//		Wait		ID3D12Fence::SetEventOnCompletion, WaitForSingleObject		ID3D12CommandQueue::Wait
-// 
-// Note:
-//		Each thread or GPU queue should have at least one fence object and a corresponding fence value.
-//		!!! The same fence object should not be signaled from more than one thread or GPU queue  !!!
-//				but more than one thread or queue can wait on the same fence to be signaled.
-ComPtr<ID3D12Fence> Application::CreateFence(ComPtr<ID3D12Device2> device)
-{
-	ComPtr<ID3D12Fence> fence;
-
-	ThrowIfFailed(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence)));
-
-	return fence;
-}
-
-// If the fence has not yet been signaled with specific value, the CPU thread will need to block any 
-//		further processing until the fence has been signaled with that value. 
-HANDLE Application::CreateEventHandle()
-{
-	HANDLE fenceEvent;
-
-	fenceEvent = ::CreateEvent(NULL, FALSE, FALSE, NULL);
-	assert(fenceEvent && "Failed to create fence event.");
-
-	return fenceEvent;
-}
-
-// Signal() is used to signal the fence from the GPU. Should be noted that when using the ID3D12CommandQueue::Signal
-//		method to signal a fence from the GPU, the fence is not signaled immediatly but is only signaled once the GPU
-//		command queue has reached that point during execution. Any commands that have been queued before the signal 
-//		method was invoked must complete execution before the fence will be signaled.
-// Signal() returns the fence value that the CPU thread should wait for before reusing any resources that are "in-flight"
-//		for that frame on the GPU.
-uint64_t Application::Signal(ComPtr<ID3D12CommandQueue> commandQueue, ComPtr<ID3D12Fence> fence,
-	uint64_t& fenceValue)
-{
-	uint64_t fenceValueForSignal = ++fenceValue;
-	ThrowIfFailed(commandQueue->Signal(fence.Get(), fenceValueForSignal));
-
-	return fenceValueForSignal;
-}
-
-// It is possible that the CPU thread will need to stall to wait for the GPU queue to finish
-// 		executing commands that write to resources before being reused.
-// For example, before reusing a swap chain's back buffer resource, any commands that are 
-//		using that resource as a render target must be complete before that back buffer 
-//		resource can be reused.
-// Any resources that are never used as a writeable target (for example material textures) 
-// 		do not need to be double buffered and do not require stalling the CPU thread before 
-//		being reused as read-only resources in a shader. 
-void Application::WaitForFenceValue(ComPtr<ID3D12Fence> fence, uint64_t fenceValue, HANDLE fenceEvent,
-	std::chrono::milliseconds duration)
-{
-	UINT64 ___fenceCompVal_debug = fence->GetCompletedValue();
-	if (fence->GetCompletedValue() < fenceValue)
-	{
-		ThrowIfFailed(fence->SetEventOnCompletion(fenceValue, fenceEvent));
-		::WaitForSingleObject(fenceEvent, static_cast<DWORD>(duration.count()));
-	}
-}
-
-// It is sometimes useful to wait until all previously executed commands have finished
-//		executing before doing something (for example, resizing the swap chain buffers 
-//		requires any references to the buffers to be released). For this, the Flush 
-//		function is used to ensure the GPU has finished processing all commands before
-//		continuing.
-// The Flush function is used to ensure that any commands previously executed on the GPU
-//		have finished executing before the CPU thread is allowed to continue processing. 
-// This is useful for ensuring that any back buffer resources being referenced by a command 
-//		that is currently "in-flight" on the GPU have finished executing before being resized.
-// It is also strongly advisable to flush the GPU command queue before releasing any resources
-//		that might be referenced by a command list that is currently "in-flight" on the command 
-//		queue (for example, before closing the application). The Flush function will block the 
-//		calling thread until the fence value has been reached. After this function returns, it is
-//		safe to release any resources that were referenced by the GPU.
-// The Flush function is simply a Signal followed by a WaitForFenceValue.)))
-void Application::Flush()
-{
-	m_DirectCommandQueue->Flush();
-	m_ComputeCommandQueue->Flush();
-	m_CopyCommandQueue->Flush();
-}
-
 
 
 // The window procedure handles any window messages sent to the application. 
