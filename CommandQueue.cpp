@@ -25,7 +25,10 @@ CommandQueue::CommandQueue(ComPtr<ID3D12Device2> device, D3D12_COMMAND_LIST_TYPE
 
 CommandQueue::~CommandQueue()
 {
+	// Releasing the handle to the fence event object.
+	::CloseHandle(m_FenceEvent);
 }
+
 
 UINT64 CommandQueue::Signal() {
 	UINT64 fenceValue = ++m_FenceValue;
@@ -33,10 +36,12 @@ UINT64 CommandQueue::Signal() {
 	return fenceValue;
 }
 
+
 bool CommandQueue::IsFenceComplete(UINT64 fenceValue)
 {
 	return m_d3d12Fence->GetCompletedValue() >= fenceValue;
 }
+
 
 void CommandQueue::WaitForFanceValue(UINT64 fenceValue) 
 {
@@ -47,10 +52,12 @@ void CommandQueue::WaitForFanceValue(UINT64 fenceValue)
 	}
 }
 
+
 void CommandQueue::Flush()
 {
 	WaitForFanceValue(Signal());
 }
+
 
 ComPtr<ID3D12CommandAllocator> CommandQueue::CreateCommandAllocator()
 {
@@ -62,6 +69,7 @@ ComPtr<ID3D12CommandAllocator> CommandQueue::CreateCommandAllocator()
 	return commandAllocator;
 }
 
+
 ComPtr<ID3D12GraphicsCommandList2> CommandQueue::CreateCommandList(ComPtr<ID3D12CommandAllocator> allocator)
 {
 	ComPtr<ID3D12GraphicsCommandList2> commandList;
@@ -71,6 +79,7 @@ ComPtr<ID3D12GraphicsCommandList2> CommandQueue::CreateCommandList(ComPtr<ID3D12
 
 	return commandList;
 }
+
 
 // This method returns a command list that can be directly used to issue GPU drawing (or dispatch) commands.
 //		The command list will be in the recording state so there is no need for the user to reset the command list
@@ -129,6 +138,7 @@ ComPtr<ID3D12GraphicsCommandList2> CommandQueue::GetCommandList()
 	return commandList;
 }
 
+
 UINT64 CommandQueue::ExecuteCommandList(ComPtr<ID3D12GraphicsCommandList2> commandList)
 {
 	commandList->Close();
@@ -158,6 +168,7 @@ UINT64 CommandQueue::ExecuteCommandList(ComPtr<ID3D12GraphicsCommandList2> comma
 
 	return fenceValue;
 }
+
 
 ComPtr<ID3D12CommandQueue> CommandQueue::GetD3D12CommandQueue() const
 {

@@ -37,12 +37,12 @@ using namespace Microsoft::WRL;
 // shared_ptr 
 #include <memory>
 
-// Helper functions
-#include "Helpers.h"
 // D3D12 extension library.
 #include "d3dx12.h"
-
+// Framework
+#include "Helpers.h"
 #include "Window.h"
+#include "CommandQueue.h"
 
 using Microsoft::WRL::ComPtr;
 
@@ -56,8 +56,7 @@ public:
 	virtual void Run();
 
 	ComPtr<ID3D12Device2> GetDevice() const { return m_d3d12Device; }
-	ComPtr<ID3D12CommandQueue> GetCommantQueue() const { return m_CommandQueue; }
-	ComPtr<ID3D12CommandList> GetCommantList() const { return m_CommandList; }
+	std::shared_ptr<CommandQueue> GetCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT) const;
 
 protected:
 	void Update();
@@ -86,59 +85,26 @@ protected:
 		uint64_t& fenceValue);
 	void WaitForFenceValue(ComPtr<ID3D12Fence> fence, uint64_t fenceValue, HANDLE fenceEvent,
 		std::chrono::milliseconds duration = std::chrono::milliseconds::max());
-	void Flush(ComPtr<ID3D12CommandQueue> commandQueue, ComPtr<ID3D12Fence> fence,
-		uint64_t& fenceValue, HANDLE fenceEvent);
+	void Flush();
 
-private /*FUNCS*/ :
+private /*CONSTRUCTORS*/ :
 	Application(const Application& app) = delete;
 	Application& operator=(const Application& app) = delete;
 
 private /*WINDOW*/ :
 	// Window class
-	const wchar_t* m_WindowTitle;
 	std::shared_ptr<Window> m_Window;
 	static LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
-private /*VARS*/ :
-	// The number of swap chain back buffers.
-	// Must not be less than 2 when using the flip presentation model.
+	// Num of SwapChain BackBuffers.
+	// Must not be less than 2 when 
+	// using the flip presentation model.
 	static const uint8_t m_NumFrames = 3;
-	// Use WARP adapter
-	bool m_UseWarp = false;
+	// Depending on the flip model of the swap chain, the index of 
+	// the current back buffer in the swap chain may not be sequential
+	UINT m_CurrentBackBufferIndex;
 	uint32_t m_ClientWidth = 1920;
 	uint32_t m_ClientHeight = 1080;
-	// Set to true once the DX12 objects have been initialized.
-	bool m_IsInitialized = false;
-
-	// The application instance handle that this application was created with.
-	HINSTANCE m_hInstance;
-
-	// DirectX 12 Objects
-	ComPtr<ID3D12Device2> m_d3d12Device;
-	ComPtr<ID3D12CommandQueue> m_CommandQueue;
-	ComPtr<IDXGISwapChain4> m_SwapChain; // responsible for presenting the rendered image to the window
-	ComPtr<ID3D12Resource> m_BackBuffers[m_NumFrames];
-	ComPtr<ID3D12GraphicsCommandList> m_CommandList;
-	ComPtr<ID3D12CommandAllocator> m_CommandAllocators[m_NumFrames];
-
-
-	ComPtr<ID3D12DescriptorHeap> m_RTVDescriptorHeap;
-	// The size of a descriptor in a descriptor heap is vendor specific 
-	//   (Intel, NVidia, and AMD may store descriptors differently). 
-	// In order to correctly offset the index into the descriptor heap, 
-	//   the size of a single element in the descriptor heap needs 
-	//   to be queried during initialization - m_RTVDescriptorSize.
-	UINT m_RTVDescriptorSize;
-	// Depending on the flip model of the swap chain, the index of the
-	//   current back buffer in the swap chain may not be sequential
-	UINT m_CurrentBackBufferIndex;
-
-
-	// Synchronization objects
-	ComPtr<ID3D12Fence> m_Fence;
-	uint64_t m_FenceValue = 0;
-	uint64_t m_FrameFenceValues[m_NumFrames] = {};
-	HANDLE m_FenceEvent;
 
 	// Variables to control the swap chain's present method:
 	// By default, enable V-Sync.
@@ -155,4 +121,32 @@ private /*VARS*/ :
 	//   form of screen tearing.
 	bool m_VSync = true;
 	bool m_TearingSupported = false;
+
+private /*MAIN*/ :
+	// APP instance handle that 
+	// this APP was created with.
+	HINSTANCE m_hInstance;
+
+	// Heap with RTVs
+	ComPtr<ID3D12DescriptorHeap> m_RTVDescriptorHeap;
+	// The size of a descriptor in a descriptor heap is vendor specific 
+	//   (Intel, NVidia, and AMD may store descriptors differently). 
+	// In order to correctly offset the index into the descriptor heap, 
+	//   the size of a single element in the descriptor heap needs 
+	//   to be queried during initialization - m_RTVDescriptorSize.
+	UINT m_RTVDescriptorSize;
+
+	// DirectX 12 Objects
+	ComPtr<ID3D12Device2> m_d3d12Device;
+	ComPtr<IDXGISwapChain4> m_SwapChain;  // responsible for presenting the rendered image to the window
+	ComPtr<ID3D12Resource> m_BackBuffers[m_NumFrames];
+
+	// Command Queues
+	std::shared_ptr<CommandQueue> m_DirectCommandQueue;
+	std::shared_ptr<CommandQueue> m_ComputeCommandQueue;
+	std::shared_ptr<CommandQueue> m_CopyCommandQueue;
+
+private /*GAME*/:
+	uint64_t m_FenceValues[m_NumFrames] = {};
+
 };

@@ -10,7 +10,6 @@
 
 Application::Application(HINSTANCE hInstance, const wchar_t* windowTitle, int width, int height, bool vSync) :
 	m_hInstance (hInstance),
-	m_WindowTitle (windowTitle),
 	m_ClientWidth(width),
 	m_ClientHeight(height),
 	m_VSync(vSync)
@@ -35,7 +34,7 @@ Application::Application(HINSTANCE hInstance, const wchar_t* windowTitle, int wi
 		m_Window = std::make_shared<Window>();
 		m_TearingSupported = m_Window->CheckTearingSupport();
 		m_Window->RegisterWindowClass(m_hInstance);
-		m_Window->CreateWindow(m_hInstance, m_WindowTitle, m_ClientWidth, m_ClientHeight);
+		m_Window->CreateWindow(m_hInstance, windowTitle, m_ClientWidth, m_ClientHeight);
 		// Pointer ijections for WndProc
 		m_Window->SetUserPtr((void*)this);					// - inject Application pointer into window
 		m_Window->SetCustomWndProc(Application::WndProc);   // - reset the Default WndProc of the 
@@ -44,16 +43,18 @@ Application::Application(HINSTANCE hInstance, const wchar_t* windowTitle, int wi
 
 	// DirectX 12 objects
 	{	
-		ComPtr<IDXGIAdapter4> dxgiAdapter4 = GetAdapter(m_UseWarp);
+		ComPtr<IDXGIAdapter4> dxgiAdapter4 = GetAdapter(false);
 
 		if (dxgiAdapter4)
 			m_d3d12Device = CreateDevice(dxgiAdapter4);
 
 		if (m_d3d12Device)
-			m_CommandQueue = CreateCommandQueue(m_d3d12Device, D3D12_COMMAND_LIST_TYPE_DIRECT);
+			m_DirectCommandQueue  = std::make_shared<CommandQueue> (m_d3d12Device, D3D12_COMMAND_LIST_TYPE_DIRECT);
+			m_ComputeCommandQueue = std::make_shared<CommandQueue> (m_d3d12Device, D3D12_COMMAND_LIST_TYPE_COMPUTE);
+			m_CopyCommandQueue    = std::make_shared<CommandQueue> (m_d3d12Device, D3D12_COMMAND_LIST_TYPE_COPY);
 
-		if (m_CommandQueue && m_Window)
-			m_SwapChain = m_Window->CreateSwapChain(m_CommandQueue, m_ClientWidth, m_ClientHeight, m_NumFrames);
+		if (m_DirectCommandQueue && m_Window)
+			m_SwapChain = m_Window->CreateSwapChain(m_DirectCommandQueue->GetD3D12CommandQueue(), m_ClientWidth, m_ClientHeight, m_NumFrames);
 	}
 }
 
@@ -65,10 +66,7 @@ Application::~Application() {
 	// Since all DirectX 12 objects are held by ComPtr's, they will automatically 
 	//		be cleaned up when the application exits but this cleanup should not 
 	//		occur until the GPU is using them
-	Flush(m_CommandQueue, m_Fence, m_FenceValue, m_FenceEvent);
-
-	// Releasing the handle to the fence event object.
-	::CloseHandle(m_FenceEvent);
+	Flush();
 }
 
 void Application::Init() 
@@ -80,21 +78,6 @@ void Application::Init()
 	m_RTVDescriptorSize = m_d3d12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	// Render target views are fill into the descriptor heap
 	UpdateRenderTargetViews(m_d3d12Device, m_SwapChain, m_RTVDescriptorHeap);
-
-	// Since there needs to be at least as many allocators as in-flight render frames, 
-	// an allocator is created for the each frame (number of swap chain back buffers). 
-	// However since a single command list is used to record all rendering commands 
-	// for this simple demo, only a single command list is required. 
-	for (int i = 0; i < m_NumFrames; ++i)
-	{
-		m_CommandAllocators[i] = CreateCommandAllocator(m_d3d12Device, D3D12_COMMAND_LIST_TYPE_DIRECT);
-	}
-	m_CommandList = CreateCommandList(m_d3d12Device, m_CommandAllocators[m_CurrentBackBufferIndex], D3D12_COMMAND_LIST_TYPE_DIRECT);
-
-	m_Fence = CreateFence(m_d3d12Device);
-	m_FenceEvent = CreateEventHandle();
-
-	//m_IsInitialized = true;
 
 	// Show Window
 	m_Window->Show();
@@ -113,6 +96,27 @@ void Application::Run() {
 			::DispatchMessage(&msg);
 		}
 	}
+}
+
+std::shared_ptr<CommandQueue> Application::GetCommandQueue(D3D12_COMMAND_LIST_TYPE type) const 
+{
+	std::shared_ptr<CommandQueue> commandQueue;
+	switch (type)
+	{
+	case D3D12_COMMAND_LIST_TYPE_DIRECT:
+		commandQueue = m_DirectCommandQueue;
+		break;
+	case D3D12_COMMAND_LIST_TYPE_COMPUTE:
+		commandQueue = m_ComputeCommandQueue;
+		break;
+	case D3D12_COMMAND_LIST_TYPE_COPY:
+		commandQueue = m_CopyCommandQueue;
+		break;
+	default:
+		assert(false && "Invalid command queue type.");
+	}
+
+	return commandQueue;
 }
 
 // For this lesson, the functuion ony display's the frame-rate each second in the debug output 
@@ -177,13 +181,9 @@ void Application::Update()
 //						read - only(Read > Read) resource between draw or dispatches.
 void Application::Render()
 {
-	auto commandAllocator = m_CommandAllocators[m_CurrentBackBufferIndex];
+	auto commandQueue = GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
+	auto commandList = m_DirectCommandQueue->GetCommandList();
 	auto backBuffer = m_BackBuffers[m_CurrentBackBufferIndex];
-
-	// !!! Before any commands can be recorded into the command list, 
-	// the command allocator and command list needs to be reset to its initial state.
-	commandAllocator->Reset();
-	m_CommandList->Reset(commandAllocator.Get(), nullptr);
 
 	// Clear the render target:
 	//		Before the render target can be cleared, it must be transitioned
@@ -206,38 +206,29 @@ void Application::Render()
 			backBuffer.Get(),
 			D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET
 		);
-		m_CommandList->ResourceBarrier(1, &barrier);
+		commandList->ResourceBarrier(1, &barrier);
 
 		FLOAT clearColor[] = { 0.4f, 0.6f, 0.9f, 1.0f };
 		CD3DX12_CPU_DESCRIPTOR_HANDLE rtv(
 			m_RTVDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
 			m_CurrentBackBufferIndex, m_RTVDescriptorSize
 		);
-		m_CommandList->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
+		commandList->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
 	}
 
-	// After rendering the scene, the current back buffer is PRESENTed 
-	// to the screen.
-	// 
-	// !!! Before presenting, the back buffer resource must be 
-	// transitioned to the PRESENT state.
+	// PRESENT image to the screen
 	{
+		// After rendering the scene, the current back buffer is PRESENTed 
+		//     to the screen.
+		// !!! Before presenting, the back buffer resource must be 
+		//     transitioned to the PRESENT state.
 		CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
 			backBuffer.Get(),
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-		m_CommandList->ResourceBarrier(1, &barrier);
-
-
-		// After transitioning to the correct state, the command list 
-		// that contains the resource transition barrier must be executed
-		// on the command queue.
-		ThrowIfFailed(m_CommandList->Close());
+		commandList->ResourceBarrier(1, &barrier);
 
 		// Execute
-		ID3D12CommandList* const commandLists[] = {
-			m_CommandList.Get()
-		};
-		m_CommandQueue->ExecuteCommandLists(_countof(commandLists), commandLists);
+		m_FenceValues[m_CurrentBackBufferIndex] = commandQueue->ExecuteCommandList(commandList);
 
 
 		// If tearing is supported, it is recommended to always use the 
@@ -257,10 +248,6 @@ void Application::Render()
 		UINT presentFlags = m_TearingSupported && !m_VSync ? DXGI_PRESENT_ALLOW_TEARING : 0;
 		ThrowIfFailed(m_SwapChain->Present(syncInterval, presentFlags));
 
-		// Immediately after presenting the rendered frame to the screen, a signal is inserted
-		// The fence value returned from the Signal function is used to stall the CPU thread 
-		// until any (writeable - such as render targets) resources are finished being used.
-		m_FrameFenceValues[m_CurrentBackBufferIndex] = Signal(m_CommandQueue, m_Fence, m_FenceValue);
 
 		// Updating current back buffer index:
 		// When using the DXGI_SWAP_EFFECT_FLIP_DISCARD flip model, the order of 
@@ -269,8 +256,7 @@ void Application::Render()
 		//     get the index of the swap chain's current back buffer.
 		m_CurrentBackBufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
 
-		// ????-TODO-???? Why are we waiting for the next frame but not for the previous ?????
-		WaitForFenceValue(m_Fence, m_FrameFenceValues[m_CurrentBackBufferIndex], m_FenceEvent);
+		commandQueue->WaitForFanceValue(m_FenceValues[m_CurrentBackBufferIndex]);
 	}
 }
 
@@ -291,7 +277,7 @@ void Application::Resize(uint32_t width, uint32_t height)
 
 		// Flush the GPU Command Queue to make sure the swap chain's back buffers
 		// are not being referenced by an in-flight command list.
-		Flush(m_CommandQueue, m_Fence, m_FenceValue, m_FenceEvent);
+		Flush();
 
 		for (int i = 0; i < m_NumFrames; ++i)
 		{
@@ -300,9 +286,6 @@ void Application::Resize(uint32_t width, uint32_t height)
 			// Any references to the back buffers must be released
 			// before the swap chain can be resized.
 			m_BackBuffers[i].Reset();
-			// The per-frame fence values are also reset to the fence 
-			// value of the current back buffer index.
-			m_FrameFenceValues[i] = m_FrameFenceValues[m_CurrentBackBufferIndex];
 		}
 
 		DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
@@ -639,11 +622,11 @@ void Application::WaitForFenceValue(ComPtr<ID3D12Fence> fence, uint64_t fenceVal
 //		calling thread until the fence value has been reached. After this function returns, it is
 //		safe to release any resources that were referenced by the GPU.
 // The Flush function is simply a Signal followed by a WaitForFenceValue.)))
-void Application::Flush(ComPtr<ID3D12CommandQueue> commandQueue, ComPtr<ID3D12Fence> fence,
-	uint64_t& fenceValue, HANDLE fenceEvent)
+void Application::Flush()
 {
-	uint64_t fenceValueForSignal = Signal(commandQueue, fence, fenceValue);
-	WaitForFenceValue(fence, fenceValueForSignal, fenceEvent);
+	m_DirectCommandQueue->Flush();
+	m_ComputeCommandQueue->Flush();
+	m_CopyCommandQueue->Flush();
 }
 
 

@@ -13,13 +13,6 @@ Game::~Game()
 
 }
 
-void Game::Init() {
-	Application::Init();
-}
-
-void Game::Run() {
-	Application::Run();
-}
 
 bool Game::LoadContent() {
 	

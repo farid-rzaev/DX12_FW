@@ -7,9 +7,6 @@ class Game : public Application
 public:
 	Game(HINSTANCE hInstance, const wchar_t * windowTitle, int width, int height, bool vSync);
 	virtual ~Game();
-	
-	virtual void Init();
-	virtual void Run();
 
 private:
 	bool LoadContent();
