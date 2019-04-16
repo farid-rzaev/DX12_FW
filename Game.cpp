@@ -12,10 +12,3 @@ Game::~Game()
 {
 
 }
-
-
-bool Game::LoadContent() {
-	
-}
-
-

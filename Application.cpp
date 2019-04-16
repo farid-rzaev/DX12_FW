@@ -56,6 +56,23 @@ Application::Application(HINSTANCE hInstance, const wchar_t* windowTitle, int wi
 		if (m_DirectCommandQueue && m_Window)
 			m_SwapChain = m_Window->CreateSwapChain(m_DirectCommandQueue->GetD3D12CommandQueue(), m_ClientWidth, m_ClientHeight, m_NumFrames);
 	}
+
+	//  Create RTV (DescriptorHeap) and update it's endtries 
+	{
+		m_RTVDescriptorHeap = CreateDescriptorHeap(m_d3d12Device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, m_NumFrames);
+		m_RTVDescriptorSize = m_d3d12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
+		// Render target views are fill into the descriptor heap
+		UpdateRenderTargetViews(m_d3d12Device, m_SwapChain, m_RTVDescriptorHeap);
+	}
+
+	// Show Window
+	{
+		m_Window->Show();
+	}
+
+	// The first back buffer index will very likely be 0, but it depends
+	m_CurrentBackBufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
 }
 
 Application::~Application() {
@@ -67,20 +84,6 @@ Application::~Application() {
 	//		be cleaned up when the application exits but this cleanup should not 
 	//		occur until the GPU is using them
 	Flush();
-}
-
-void Application::Init() 
-{
-	// The first back buffer index will very likely be 0, but it depends
-	m_CurrentBackBufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
-
-	m_RTVDescriptorHeap = CreateDescriptorHeap(m_d3d12Device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, m_NumFrames);
-	m_RTVDescriptorSize = m_d3d12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-	// Render target views are fill into the descriptor heap
-	UpdateRenderTargetViews(m_d3d12Device, m_SwapChain, m_RTVDescriptorHeap);
-
-	// Show Window
-	m_Window->Show();
 }
 
 void Application::Run() {
@@ -97,6 +100,8 @@ void Application::Run() {
 		}
 	}
 }
+
+
 
 std::shared_ptr<CommandQueue> Application::GetCommandQueue(D3D12_COMMAND_LIST_TYPE type) const 
 {
@@ -118,6 +123,8 @@ std::shared_ptr<CommandQueue> Application::GetCommandQueue(D3D12_COMMAND_LIST_TY
 
 	return commandQueue;
 }
+
+
 
 // For this lesson, the functuion ony display's the frame-rate each second in the debug output 
 //		in Visual Studio.

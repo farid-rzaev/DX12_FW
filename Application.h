@@ -51,16 +51,14 @@ class Application
 public:	
 	Application(HINSTANCE hInstance, const wchar_t* windowTitle, int width, int height, bool vSync);
 	virtual ~Application();
-	
-	virtual void Init();
 	virtual void Run();
-
+	
 	ComPtr<ID3D12Device2> GetDevice() const { return m_d3d12Device; }
 	std::shared_ptr<CommandQueue> GetCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT) const;
 
 protected:
+	virtual void Render();
 	void Update();
-	void Render();
 
 	void Resize(uint32_t width, uint32_t height);
 	void SetFullscreen(bool fullscreen);
@@ -93,15 +91,20 @@ private /*CONSTRUCTORS*/ :
 
 private /*WINDOW*/ :
 	// Window class
-	std::shared_ptr<Window> m_Window;
+	// Making window a member (not inhereting from it)
+	// as there could be multiple Windows in future.
+	std::shared_ptr<Window> m_Window; 
 	static LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
 	// Num of SwapChain BackBuffers.
 	// Must not be less than 2 when 
 	// using the flip presentation model.
-	static const uint8_t m_NumFrames = 3;
 	// Depending on the flip model of the swap chain, the index of 
 	// the current back buffer in the swap chain may not be sequential
+	static const uint8_t m_NumFrames = 3;
+	ComPtr<IDXGISwapChain4> m_SwapChain;  // responsible for presenting the rendered image to the window
+	ComPtr<ID3D12Resource> m_BackBuffers[m_NumFrames];
+
 	UINT m_CurrentBackBufferIndex;
 	uint32_t m_ClientWidth = 1920;
 	uint32_t m_ClientHeight = 1080;
@@ -138,8 +141,7 @@ private /*MAIN*/ :
 
 	// DirectX 12 Objects
 	ComPtr<ID3D12Device2> m_d3d12Device;
-	ComPtr<IDXGISwapChain4> m_SwapChain;  // responsible for presenting the rendered image to the window
-	ComPtr<ID3D12Resource> m_BackBuffers[m_NumFrames];
+
 
 	// Command Queues
 	std::shared_ptr<CommandQueue> m_DirectCommandQueue;

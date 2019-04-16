@@ -8,11 +8,11 @@ public:
 	Game(HINSTANCE hInstance, const wchar_t * windowTitle, int width, int height, bool vSync);
 	virtual ~Game();
 
-private:
-	bool LoadContent();
-	void UnloadContent();
-
-	//void TransitionResource();
+protected:
+	//virtual void Render();
+	
+	bool LoadContent() {};
+	void UnloadContent() {};
 
 private:
 	D3D12_VIEWPORT m_Viewport;
