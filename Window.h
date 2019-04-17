@@ -37,38 +37,44 @@ constexpr wchar_t WINDOW_CLASS_NAME[] = L"DX12RenderWindowClass";
 class Window 
 {
 public:
-	Window(UINT32 width, UINT32 height);
+	Window(UINT32 width, UINT32 height, bool vSync);
 	virtual ~Window() {};
-
-	// Variable refresh rate displays (NVidia's G-Sync and AMD's FreeSync) require 
-	//		tearing to be enabled in the DirectX 12 application to function correctly. 
-	// This feature is also known as "vsync-off".
-	bool CheckTearingSupport();
-
+	   
 	// Before creating an instance of an OS window, the window class 
 	// corresponding to that window must be registered. 
 	// The window class will be automatically unregistered 
 	// when the application terminates.
 	void RegisterWindowClass(HINSTANCE hInst);
 	HWND CreateWindow(HINSTANCE hInst, const wchar_t* windowTitle);
-	void SetUserPtr(void* userPtr);			 //
-	void SetCustomWndProc(WNDPROC wndProc);  //  
+	void CreateSwapChain(ComPtr<ID3D12CommandQueue> commandQueue, UINT bufferCount);
+	
+	UINT8 Present();
+	void ResizeBackBuffers();
+	ComPtr<ID3D12Resource> GetBackBuffer(UINT8 index);
 
-	HWND GetHWND() { return g_hWnd; }
+
 	void Show() { ::ShowWindow(g_hWnd, SW_SHOW); }
 	void SetFullscreen(bool fullscreen);
-	void ToggleFullscreen() { SetFullscreen(!g_Fullscreen); };
-
-	// The primary purpose of the swap chain is 
-	// to present the rendered image to the screen. 
-	ComPtr<IDXGISwapChain4> CreateSwapChain(ComPtr<ID3D12CommandQueue> commandQueue, UINT bufferCount);
+	void ToggleFullscreen() { SetFullscreen(!g_Fullscreen); }
+	void ToggleVSync() { m_VSync = !m_VSync; }
 
 public:
+	HWND GetHWND() { return g_hWnd; }
+	// Poiter injections
+	void SetUserPtr(void* userPtr);
+	void SetCustomWndProc(WNDPROC wndProc);
 	UINT32 GetClientWidth() const { return m_ClientWidth; }
 	UINT32 GetClientHeight() const { return m_ClientHeight; }
 	void SetClientWidth(UINT32 width) { m_ClientWidth = width; }
 	void SetClientHeight(UINT32 height) { m_ClientHeight = height; }
+	
+	UINT8 GetCurrentBackBufferIndex() const { return m_SwapChain->GetCurrentBackBufferIndex(); }
 
+protected:
+	// Variable refresh rate displays (NVidia's G-Sync and AMD's FreeSync) require 
+	//		tearing to be enabled in the DirectX 12 application to function correctly. 
+	// This feature is also known as "vsync-off".
+	bool CheckTearingSupport();
 private:
 	// Windows should not be copied.
 	Window(const Window& Window) = delete;
@@ -86,5 +92,11 @@ private:
 
 	// Window handle.
 	HWND g_hWnd;
+
+
+
+	ComPtr<IDXGISwapChain4> m_SwapChain;
+	bool m_TearingSupported = false;
+	bool m_VSync = true;
 
 };

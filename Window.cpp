@@ -5,10 +5,12 @@
 #include <algorithm> // std::min and  std::max.
 
 
-Window::Window(UINT32 width, UINT32 height) 
+Window::Window(UINT32 width, UINT32 height, bool vSync) 
 	: m_ClientWidth(width)
 	, m_ClientHeight(height)
+	, m_VSync(vSync)
 {
+	m_TearingSupported = CheckTearingSupport();
 }
 
 
@@ -89,49 +91,8 @@ HWND Window::CreateWindow(HINSTANCE hInst, const wchar_t* windowTitle)
 	return g_hWnd;
 }
 
-
-void Window::SetUserPtr(void* userPtr)
-{
-	// inject Application pointer into window
-	SetWindowLongPtr(g_hWnd, GWLP_USERDATA, (LONG_PTR)userPtr);
-}
-
-
-void Window::SetCustomWndProc(WNDPROC wndProc)
-{
-	// Reset the Default WndProc of the window to app's static method
-	SetWindowLongPtr(g_hWnd, GWLP_WNDPROC, (LONG_PTR)wndProc);
-}
-
-
-// Variable refresh rate displays (NVidia's G-Sync and AMD's FreeSync) require 
-//		tearing to be enabled in the DirectX 12 application to function correctly. 
-// This feature is also known as "vsync-off" 
-bool Window::CheckTearingSupport()
-{
-	BOOL allowTearing = FALSE;
-
-	// Rather than create the DXGI 1.5 factory interface directly, we create the
-	// DXGI 1.4 interface and query for the 1.5 interface. This is to enable the 
-	// graphics debugging tools which will not support the 1.5 factory interface 
-	// until a future update.
-	ComPtr<IDXGIFactory4> factory4;
-	if (SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(&factory4))))
-	{
-		ComPtr<IDXGIFactory5> factory5;
-		if (SUCCEEDED(factory4.As(&factory5)))
-		{
-			factory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING,
-				&allowTearing, sizeof(allowTearing));
-		}
-	}
-
-	return allowTearing == TRUE;
-}
-
-
 // The primary purpose of the swap chain is to present the rendered image to the screen. 
-ComPtr<IDXGISwapChain4> Window::CreateSwapChain(ComPtr<ID3D12CommandQueue> commandQueue, UINT bufferCount)
+void Window::CreateSwapChain(ComPtr<ID3D12CommandQueue> commandQueue, UINT bufferCount)
 {
 	ComPtr<IDXGISwapChain4> dxgiSwapChain4;
 	ComPtr<IDXGIFactory4> dxgiFactory4;
@@ -187,12 +148,99 @@ ComPtr<IDXGISwapChain4> Window::CreateSwapChain(ComPtr<ID3D12CommandQueue> comma
 	// will be handled manually.
 	ThrowIfFailed(dxgiFactory4->MakeWindowAssociation(g_hWnd, DXGI_MWA_NO_ALT_ENTER));
 
-	ThrowIfFailed(swapChain1.As(&dxgiSwapChain4));
+	ThrowIfFailed(swapChain1.As(&m_SwapChain));
 
 	// To render to the swap chain's back buffers, a render target view (RTV) 
 	//		needs to be created for each of the swap chain's back buffers.
+}
 
-	return dxgiSwapChain4;
+
+UINT8 Window::Present()
+{
+	// If tearing is supported, it is recommended to always use the 
+	// DXGI_PRESENT_ALLOW_TEARING flag when presenting with a sync interval of 0.
+	// The requirements for using the DXGI_PRESENT_ALLOW_TEARING flag when 
+	// presenting are :
+	//
+	//		- The swap chain must be created with the DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING flag.
+	//		- The sync interval passed into Present(or Present1) must be 0.
+	//		- The DXGI_PRESENT_ALLOW_TEARING flag cannot be used in an application that is 
+	//			currently in full screen exclusive mode (set by calling SetFullscreenState(TRUE)).
+	//			It can only be used in windowed mode.To use this flag in 
+	//			full screen Win32 apps, the application should present 
+	//			to a fullscreen borderless window and disable automatic Alt + Enter 
+	//			fullscreen switching using  IDXGIFactory::MakeWindowAssociation.
+	UINT syncInterval = m_VSync ? 1 : 0;
+	UINT presentFlags = m_TearingSupported && !m_VSync ? DXGI_PRESENT_ALLOW_TEARING : 0;
+	ThrowIfFailed(m_SwapChain->Present(syncInterval, presentFlags));
+
+	// Updating current back buffer index:
+	// When using the DXGI_SWAP_EFFECT_FLIP_DISCARD flip model, the order of 
+	//     back buffer indicies is not guaranteed to be sequential. 
+	//	   The IDXGISwapChain3::GetCurrentBackBufferIndex method is used to 
+	//     get the index of the swap chain's current back buffer.
+	return m_SwapChain->GetCurrentBackBufferIndex();
+}
+
+
+void Window::ResizeBackBuffers() 
+{
+	DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
+	ThrowIfFailed(m_SwapChain->GetDesc(&swapChainDesc));
+	ThrowIfFailed(m_SwapChain->ResizeBuffers(swapChainDesc.BufferCount, m_ClientWidth, m_ClientHeight,
+		swapChainDesc.BufferDesc.Format, swapChainDesc.Flags));
+}
+
+ComPtr<ID3D12Resource> Window::GetBackBuffer(UINT8 index)
+{
+	ComPtr<ID3D12Resource> backBuffer;
+	ThrowIfFailed(m_SwapChain->GetBuffer(index, IID_PPV_ARGS(&backBuffer)));
+	return backBuffer;
+}
+// =====================================================================================
+//							  Pointer Injections
+// =====================================================================================
+
+void Window::SetUserPtr(void* userPtr)
+{
+	// inject Application pointer into window
+	SetWindowLongPtr(g_hWnd, GWLP_USERDATA, (LONG_PTR)userPtr);
+}
+
+void Window::SetCustomWndProc(WNDPROC wndProc)
+{
+	// Reset the Default WndProc of the window to app's static method
+	SetWindowLongPtr(g_hWnd, GWLP_WNDPROC, (LONG_PTR)wndProc);
+}
+
+
+// =====================================================================================
+//								 Helpers
+// =====================================================================================
+
+// Variable refresh rate displays (NVidia's G-Sync and AMD's FreeSync) require 
+//		tearing to be enabled in the DirectX 12 application to function correctly. 
+// This feature is also known as "vsync-off" 
+bool Window::CheckTearingSupport()
+{
+	BOOL allowTearing = FALSE;
+
+	// Rather than create the DXGI 1.5 factory interface directly, we create the
+	// DXGI 1.4 interface and query for the 1.5 interface. This is to enable the 
+	// graphics debugging tools which will not support the 1.5 factory interface 
+	// until a future update.
+	ComPtr<IDXGIFactory4> factory4;
+	if (SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(&factory4))))
+	{
+		ComPtr<IDXGIFactory5> factory5;
+		if (SUCCEEDED(factory4.As(&factory5)))
+		{
+			factory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING,
+				&allowTearing, sizeof(allowTearing));
+		}
+	}
+
+	return allowTearing == TRUE;
 }
 
 

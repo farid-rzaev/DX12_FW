@@ -63,7 +63,6 @@ protected:
 	virtual void Update();
 
 	void TransitionResource(ComPtr<ID3D12GraphicsCommandList2> commandList, ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after);
-	UINT8 Present();
 
 	void Flush();
 
@@ -75,7 +74,7 @@ protected:
 	ComPtr<ID3D12Device2> CreateDevice(ComPtr<IDXGIAdapter4> adapter);
 
 	ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(ComPtr<ID3D12Device2> device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors);
-	void UpdateRenderTargetViews(ComPtr<ID3D12Device2> device, ComPtr<IDXGISwapChain4> swapChain, ComPtr<ID3D12DescriptorHeap> descriptorHeap);
+	void UpdateRenderTargetViews(ComPtr<ID3D12Device2> device, ComPtr<ID3D12DescriptorHeap> descriptorHeap);
 
 private /*CONSTRUCTORS*/ :
 	Application(const Application& app) = delete;
@@ -90,11 +89,7 @@ private /*WINDOW*/ :
 
 	static const UINT8 m_NumFrames = 3;
 	UINT8 m_CurrentBackBufferIndex;
-	ComPtr<IDXGISwapChain4> m_SwapChain;  
 	ComPtr<ID3D12Resource> m_BackBuffers[m_NumFrames];
-
-	bool m_VSync = true;
-	bool m_TearingSupported = false;
 
 private /*MAIN*/ :
 	// APP instance handle

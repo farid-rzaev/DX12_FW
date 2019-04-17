@@ -12,8 +12,7 @@
 // =====================================================================================
 
 Application::Application(HINSTANCE hInstance, const wchar_t* windowTitle, int width, int height, bool vSync) :
-	m_hInstance (hInstance),
-	m_VSync(vSync)
+	m_hInstance (hInstance)
 {
 	// Windows 10 Creators update adds Per Monitor V2 DPI awareness context.
 	// The SetThreadDpiAwarenessContext function sets the DPI awareness for the 
@@ -29,18 +28,6 @@ Application::Application(HINSTANCE hInstance, const wchar_t* windowTitle, int wi
 	SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
 	EnableDebugLayer();
-	
-	// Window
-	{
-		m_Window = std::make_shared<Window>(width, height);
-		m_TearingSupported = m_Window->CheckTearingSupport();
-		m_Window->RegisterWindowClass(m_hInstance);
-		m_Window->CreateWindow(m_hInstance, windowTitle);
-		// Pointer ijections for WndProc
-		m_Window->SetUserPtr((void*)this);					// - inject Application pointer into window
-		m_Window->SetCustomWndProc(Application::WndProc);   // - reset the Default WndProc of the 
-															//   window to app's static method
-	}
 
 	// DirectX 12 objects
 	{	
@@ -53,9 +40,20 @@ Application::Application(HINSTANCE hInstance, const wchar_t* windowTitle, int wi
 			m_DirectCommandQueue  = std::make_shared<CommandQueue> (m_d3d12Device, D3D12_COMMAND_LIST_TYPE_DIRECT);
 			m_ComputeCommandQueue = std::make_shared<CommandQueue> (m_d3d12Device, D3D12_COMMAND_LIST_TYPE_COMPUTE);
 			m_CopyCommandQueue    = std::make_shared<CommandQueue> (m_d3d12Device, D3D12_COMMAND_LIST_TYPE_COPY);
+	}
 
-		if (m_DirectCommandQueue && m_Window)
-			m_SwapChain = m_Window->CreateSwapChain(m_DirectCommandQueue->GetD3D12CommandQueue(), m_NumFrames);
+	// Window
+	if (m_DirectCommandQueue)
+	{
+		m_Window = std::make_shared<Window>(width, height, vSync);
+		m_Window->RegisterWindowClass(m_hInstance);
+		m_Window->CreateWindow(m_hInstance, windowTitle);
+		m_Window->CreateSwapChain(m_DirectCommandQueue->GetD3D12CommandQueue(), m_NumFrames);
+
+		// Pointer ijections for WndProc
+		m_Window->SetUserPtr((void*)this);					// - inject Application pointer into window
+		m_Window->SetCustomWndProc(Application::WndProc);   // - reset the Default WndProc of the 
+															//   window to app's static method
 	}
 
 	//  Create RTV (DescriptorHeap) and update it's endtries 
@@ -69,7 +67,7 @@ Application::Application(HINSTANCE hInstance, const wchar_t* windowTitle, int wi
 		m_RTVDescriptorSize = m_d3d12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
 		// Render target views are fill into the descriptor heap
-		UpdateRenderTargetViews(m_d3d12Device, m_SwapChain, m_RTVDescriptorHeap);
+		UpdateRenderTargetViews(m_d3d12Device, m_RTVDescriptorHeap);
 	}
 
 	// Show Window
@@ -80,7 +78,7 @@ Application::Application(HINSTANCE hInstance, const wchar_t* windowTitle, int wi
 	// Current Buffer
 	{
 		// The first back buffer index will very likely be 0, but it depends
-		m_CurrentBackBufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
+		m_CurrentBackBufferIndex = m_Window->GetCurrentBackBufferIndex();
 	}
 }
 
@@ -148,33 +146,6 @@ void Application::TransitionResource(ComPtr<ID3D12GraphicsCommandList2> commandL
 	);
 
 	commandList->ResourceBarrier(1, &barrier);
-}
-
-UINT8 Application::Present()
-{
-	// If tearing is supported, it is recommended to always use the 
-	// DXGI_PRESENT_ALLOW_TEARING flag when presenting with a sync interval of 0.
-	// The requirements for using the DXGI_PRESENT_ALLOW_TEARING flag when 
-	// presenting are :
-	//
-	//		- The swap chain must be created with the DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING flag.
-	//		- The sync interval passed into Present(or Present1) must be 0.
-	//		- The DXGI_PRESENT_ALLOW_TEARING flag cannot be used in an application that is 
-	//			currently in full screen exclusive mode (set by calling SetFullscreenState(TRUE)).
-	//			It can only be used in windowed mode.To use this flag in 
-	//			full screen Win32 apps, the application should present 
-	//			to a fullscreen borderless window and disable automatic Alt + Enter 
-	//			fullscreen switching using  IDXGIFactory::MakeWindowAssociation.
-	UINT syncInterval = m_VSync ? 1 : 0;
-	UINT presentFlags = m_TearingSupported && !m_VSync ? DXGI_PRESENT_ALLOW_TEARING : 0;
-	ThrowIfFailed(m_SwapChain->Present(syncInterval, presentFlags));
-
-	// Updating current back buffer index:
-	// When using the DXGI_SWAP_EFFECT_FLIP_DISCARD flip model, the order of 
-	//     back buffer indicies is not guaranteed to be sequential. 
-	//	   The IDXGISwapChain3::GetCurrentBackBufferIndex method is used to 
-	//     get the index of the swap chain's current back buffer.
-	return m_SwapChain->GetCurrentBackBufferIndex();
 }
 
 
@@ -249,7 +220,7 @@ void Application::Render()
 		// Execute
 		m_FenceValues[m_CurrentBackBufferIndex] = commandQueue->ExecuteCommandList(commandList);
 
-		m_CurrentBackBufferIndex = Present();
+		m_CurrentBackBufferIndex = m_Window->Present();
 		commandQueue->WaitForFanceValue(m_FenceValues[m_CurrentBackBufferIndex]);
 	}
 }
@@ -263,10 +234,6 @@ void Application::Resize(uint32_t width, uint32_t height)
 {
 	if (m_Window->GetClientWidth() != width || m_Window->GetClientHeight() != height)
 	{
-		// Don't allow 0 size swap chain back buffers.
-		m_Window->SetClientWidth(std::max(1u, width));
-		m_Window->SetClientHeight(std::max(1u, height));
-
 		// Flush the GPU Command Queue to make sure the swap chain's back buffers
 		// are not being referenced by an in-flight command list.
 		Flush();
@@ -280,18 +247,42 @@ void Application::Resize(uint32_t width, uint32_t height)
 			m_BackBuffers[i].Reset();
 		}
 
-		DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
-		ThrowIfFailed(m_SwapChain->GetDesc(&swapChainDesc));
-		ThrowIfFailed(m_SwapChain->ResizeBuffers(m_NumFrames, m_Window->GetClientWidth(), m_Window->GetClientHeight(),
-			swapChainDesc.BufferDesc.Format, swapChainDesc.Flags));
+		// Don't allow 0 size swap chain back buffers.
+		m_Window->SetClientWidth(std::max(1u, width));
+		m_Window->SetClientHeight(std::max(1u, height));
+		m_Window->ResizeBackBuffers();
 
 		// Since the index of back buffer may not be the same, it is important
 		// to update the current back buffer index as known by the application.
-		m_CurrentBackBufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
+		m_CurrentBackBufferIndex = m_Window->GetCurrentBackBufferIndex();
 
 		// After the swap chain buffers have been resized, the descriptors 
 		// that refer to those buffers needs to be updated. 
-		UpdateRenderTargetViews(m_d3d12Device, m_SwapChain, m_RTVDescriptorHeap);
+		UpdateRenderTargetViews(m_d3d12Device, m_RTVDescriptorHeap);
+	}
+}
+
+// A render target view (RTV) describes a resource that can be attached to a 
+//		bind slot of the output merger stage
+void Application::UpdateRenderTargetViews(ComPtr<ID3D12Device2> device, ComPtr<ID3D12DescriptorHeap> descriptorHeap)
+{
+	// The size of a single descriptor in a descriptor heap is vendor specific and is queried 
+	//		using the ID3D12Device::GetDescriptorHandleIncrementSize()
+	auto rtvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
+	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(descriptorHeap->GetCPUDescriptorHandleForHeapStart());
+
+	for (int i = 0; i < m_NumFrames; ++i)
+	{
+
+		ComPtr<ID3D12Resource> backBuffer = m_Window->GetBackBuffer(i);
+
+		// nullptr - description is used to create a default descriptor for the resource
+		device->CreateRenderTargetView(backBuffer.Get(), nullptr, rtvHandle);
+
+		m_BackBuffers[i] = backBuffer;
+
+		rtvHandle.Offset(rtvDescriptorSize);
 	}
 }
 
@@ -523,31 +514,6 @@ ComPtr<ID3D12DescriptorHeap> Application::CreateDescriptorHeap(ComPtr<ID3D12Devi
 	return descriptorHeap;
 }
 
-// A render target view (RTV) describes a resource that can be attached to a 
-//		bind slot of the output merger stage
-void Application::UpdateRenderTargetViews(ComPtr<ID3D12Device2> device,
-	ComPtr<IDXGISwapChain4> swapChain, ComPtr<ID3D12DescriptorHeap> descriptorHeap)
-{
-	// The size of a single descriptor in a descriptor heap is vendor specific and is queried 
-	//		using the ID3D12Device::GetDescriptorHandleIncrementSize()
-	auto rtvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-
-	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(descriptorHeap->GetCPUDescriptorHandleForHeapStart());
-
-	for (int i = 0; i < m_NumFrames; ++i)
-	{
-		ComPtr<ID3D12Resource> backBuffer;
-		ThrowIfFailed(swapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
-
-		// nullptr - description is used to create a default descriptor for the resource
-		device->CreateRenderTargetView(backBuffer.Get(), nullptr, rtvHandle);
-
-		m_BackBuffers[i] = backBuffer;
-
-		rtvHandle.Offset(rtvDescriptorSize);
-	}
-}
-
 
 // The window procedure handles any window messages sent to the application. 
 LRESULT CALLBACK Application::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -585,7 +551,7 @@ LRESULT CALLBACK Application::WndProc(HWND hwnd, UINT message, WPARAM wParam, LP
 			switch (wParam)
 			{
 			case 'V':
-				app->m_VSync = !app->m_VSync;
+				app->m_Window->ToggleVSync();
 				break;
 			case VK_ESCAPE:
 				::PostQuitMessage(0);
