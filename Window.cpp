@@ -92,7 +92,7 @@ HWND Window::CreateWindow(HINSTANCE hInst, const wchar_t* windowTitle)
 }
 
 // The primary purpose of the swap chain is to present the rendered image to the screen. 
-void Window::CreateSwapChain(ComPtr<ID3D12CommandQueue> commandQueue, UINT bufferCount)
+void Window::CreateSwapChain(ComPtr<ID3D12CommandQueue> commandQueue)
 {
 	ComPtr<IDXGISwapChain4> dxgiSwapChain4;
 	ComPtr<IDXGIFactory4> dxgiFactory4;
@@ -128,7 +128,7 @@ void Window::CreateSwapChain(ComPtr<ID3D12CommandQueue> commandQueue, UINT buffe
 	// The number of buffers in the swap chain. When you create a full-screen swap chain, 
 	//		you typically include the front buffer in this value. 
 	// The minimum number of buffers When using the flip presentation model is two.
-	swapChainDesc.BufferCount = bufferCount;
+	swapChainDesc.BufferCount = NUM_FRAMES_IN_FLIGHT;
 	swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
 	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 	swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
@@ -152,6 +152,36 @@ void Window::CreateSwapChain(ComPtr<ID3D12CommandQueue> commandQueue, UINT buffe
 
 	// To render to the swap chain's back buffers, a render target view (RTV) 
 	//		needs to be created for each of the swap chain's back buffers.
+}
+
+
+void Window::ResizeBackBuffers(UINT32 width, UINT32 height)
+{
+	for (int i = 0; i < NUM_FRAMES_IN_FLIGHT; ++i)
+	{
+		// Releasing local references to the swap chain's back buffers
+		// as after Resize we'll get the new ones.
+		// Any references to the back buffers must be released
+		// before the swap chain can be resized.
+		m_BackBuffers[i].Reset();
+	}
+
+	// Don't allow 0 size swap chain back buffers.
+	m_ClientWidth = std::max(1u, width) ;
+	m_ClientHeight = std::max(1u, height);
+
+	DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
+	ThrowIfFailed(m_SwapChain->GetDesc(&swapChainDesc));
+	ThrowIfFailed(m_SwapChain->ResizeBuffers(swapChainDesc.BufferCount, m_ClientWidth, m_ClientHeight,
+		swapChainDesc.BufferDesc.Format, swapChainDesc.Flags));
+
+}
+
+ComPtr<ID3D12Resource> Window::UpdateBackBufferCache(UINT8 index)
+{ 
+	ThrowIfFailed(m_SwapChain->GetBuffer(index, IID_PPV_ARGS(&m_BackBuffers[index])));
+
+	return m_BackBuffers[index];
 }
 
 
@@ -182,21 +212,6 @@ UINT8 Window::Present()
 	return m_SwapChain->GetCurrentBackBufferIndex();
 }
 
-
-void Window::ResizeBackBuffers() 
-{
-	DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
-	ThrowIfFailed(m_SwapChain->GetDesc(&swapChainDesc));
-	ThrowIfFailed(m_SwapChain->ResizeBuffers(swapChainDesc.BufferCount, m_ClientWidth, m_ClientHeight,
-		swapChainDesc.BufferDesc.Format, swapChainDesc.Flags));
-}
-
-ComPtr<ID3D12Resource> Window::GetBackBuffer(UINT8 index)
-{
-	ComPtr<ID3D12Resource> backBuffer;
-	ThrowIfFailed(m_SwapChain->GetBuffer(index, IID_PPV_ARGS(&backBuffer)));
-	return backBuffer;
-}
 // =====================================================================================
 //							  Pointer Injections
 // =====================================================================================

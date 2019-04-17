@@ -33,6 +33,9 @@ using namespace Microsoft::WRL;
 
 // Window class name. Used for registering / creating the window.
 constexpr wchar_t WINDOW_CLASS_NAME[] = L"DX12RenderWindowClass";
+//const UINT8 NumFramesInFlight = 3;
+
+constexpr UINT8 NUM_FRAMES_IN_FLIGHT = 3;
 
 class Window 
 {
@@ -46,12 +49,11 @@ public:
 	// when the application terminates.
 	void RegisterWindowClass(HINSTANCE hInst);
 	HWND CreateWindow(HINSTANCE hInst, const wchar_t* windowTitle);
-	void CreateSwapChain(ComPtr<ID3D12CommandQueue> commandQueue, UINT bufferCount);
+	void CreateSwapChain(ComPtr<ID3D12CommandQueue> commandQueue);
 	
+	void ResizeBackBuffers(UINT32 width, UINT32 height);
+	ComPtr<ID3D12Resource> UpdateBackBufferCache(UINT8 index);
 	UINT8 Present();
-	void ResizeBackBuffers();
-	ComPtr<ID3D12Resource> GetBackBuffer(UINT8 index);
-
 
 	void Show() { ::ShowWindow(g_hWnd, SW_SHOW); }
 	void SetFullscreen(bool fullscreen);
@@ -69,34 +71,31 @@ public:
 	void SetClientHeight(UINT32 height) { m_ClientHeight = height; }
 	
 	UINT8 GetCurrentBackBufferIndex() const { return m_SwapChain->GetCurrentBackBufferIndex(); }
+	ComPtr<ID3D12Resource> GetBackBuffer(UINT8 index) { return m_BackBuffers[index]; }
 
 protected:
 	// Variable refresh rate displays (NVidia's G-Sync and AMD's FreeSync) require 
 	//		tearing to be enabled in the DirectX 12 application to function correctly. 
 	// This feature is also known as "vsync-off".
 	bool CheckTearingSupport();
+
 private:
 	// Windows should not be copied.
 	Window(const Window& Window) = delete;
 	Window& operator=(const Window& Window) = delete;
 
-	// Client Size
+private:
+	// Window handle
+	HWND g_hWnd; 
 	UINT32 m_ClientWidth = 1920;
 	UINT32 m_ClientHeight = 1080;
-
-	// By default, use windowed mode.
 	// Can be toggled with the Alt+Enter or F11
 	bool g_Fullscreen = false;
 	// Window rectangle (used to toggle fullscreen state).
 	RECT g_WindowRect;
-
-	// Window handle.
-	HWND g_hWnd;
-
-
-
-	ComPtr<IDXGISwapChain4> m_SwapChain;
 	bool m_TearingSupported = false;
 	bool m_VSync = true;
 
+	ComPtr<IDXGISwapChain4> m_SwapChain;
+	ComPtr<ID3D12Resource> m_BackBuffers[NUM_FRAMES_IN_FLIGHT];
 };

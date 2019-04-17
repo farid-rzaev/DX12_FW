@@ -7,6 +7,7 @@
 // Assert
 #include <cassert>
 
+
 // =====================================================================================
 //									Init and Run
 // =====================================================================================
@@ -48,7 +49,7 @@ Application::Application(HINSTANCE hInstance, const wchar_t* windowTitle, int wi
 		m_Window = std::make_shared<Window>(width, height, vSync);
 		m_Window->RegisterWindowClass(m_hInstance);
 		m_Window->CreateWindow(m_hInstance, windowTitle);
-		m_Window->CreateSwapChain(m_DirectCommandQueue->GetD3D12CommandQueue(), m_NumFrames);
+		m_Window->CreateSwapChain(m_DirectCommandQueue->GetD3D12CommandQueue());
 
 		// Pointer ijections for WndProc
 		m_Window->SetUserPtr((void*)this);					// - inject Application pointer into window
@@ -58,7 +59,7 @@ Application::Application(HINSTANCE hInstance, const wchar_t* windowTitle, int wi
 
 	//  Create RTV (DescriptorHeap) and update it's endtries 
 	{
-		m_RTVDescriptorHeap = CreateDescriptorHeap(m_d3d12Device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, m_NumFrames);
+		m_RTVDescriptorHeap = CreateDescriptorHeap(m_d3d12Device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, NUM_FRAMES_IN_FLIGHT);
 		// The size of a descriptor in a descriptor heap is vendor specific 
 		//   (Intel, NVidia, and AMD may store descriptors differently). 
 		// In order to correctly offset the index into the descriptor heap, 
@@ -136,18 +137,39 @@ std::shared_ptr<CommandQueue> Application::GetCommandQueue(D3D12_COMMAND_LIST_TY
 // =====================================================================================
 //							  Update & Render & Resize
 // =====================================================================================
-void Application::TransitionResource(ComPtr<ID3D12GraphicsCommandList2> commandList, ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after)
+
+// For this lesson, the functuion ony display's the frame-rate each second in the debug output 
+//		in Visual Studio.
+void Application::Update()
 {
-	CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition
-	(
-		resource.Get(),
-		D3D12_RESOURCE_STATE_PRESENT,
-		D3D12_RESOURCE_STATE_RENDER_TARGET
-	);
+	static uint64_t frameCounter = 0;
+	static double elapsedSeconds = 0.0;
+	static std::chrono::high_resolution_clock clock;
+	static auto t0 = clock.now();
 
-	commandList->ResourceBarrier(1, &barrier);
+	frameCounter++;
+	auto t1 = clock.now();
+	auto deltaTime = t1 - t0;
+	t0 = t1;
+
+	// The deltaTime time_point variable stores the number of NANOseconds
+	// since the previous call to the Update function. To convert the 
+	// deltaTime from nanoseconds into seconds, it is multiplied by 10^(9).
+	elapsedSeconds += deltaTime.count() * 1e-9;
+
+	// The frame-rate is printed to the debug output in Visual Studio 
+	// only once per second.
+	if (elapsedSeconds > 1.0)
+	{
+		wchar_t buffer[500];
+		auto fps = frameCounter / elapsedSeconds;
+		swprintf(buffer, 500, L"FPS: %f\n", fps);
+		OutputDebugString(buffer);
+
+		frameCounter = 0;
+		elapsedSeconds = 0.0;
+	}
 }
-
 
 // Resources must be transitioned from one state to another using a resource BARRIER
 //		and inserting that resource barrier into the command list.
@@ -180,7 +202,7 @@ void Application::Render()
 {
 	auto commandQueue = GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
 	auto commandList = commandQueue->GetCommandList();
-	auto backBuffer = m_BackBuffers[m_CurrentBackBufferIndex];
+	auto backBuffer = m_Window->GetBackBuffer(m_CurrentBackBufferIndex);
 
 	// Clear the render target:
 	//		Before the render target can be cleared, it must be transitioned
@@ -230,7 +252,7 @@ void Application::Render()
 // resizes the window by dragging the window border frame while in windowed mode.
 // The Resize function will resize the swap chain buffers if the client area of 
 // the window changes.
-void Application::Resize(uint32_t width, uint32_t height)
+void Application::Resize(UINT32 width, UINT32 height)
 {
 	if (m_Window->GetClientWidth() != width || m_Window->GetClientHeight() != height)
 	{
@@ -238,19 +260,7 @@ void Application::Resize(uint32_t width, uint32_t height)
 		// are not being referenced by an in-flight command list.
 		Flush();
 
-		for (int i = 0; i < m_NumFrames; ++i)
-		{
-			// Releasing local references to the swap chain's back buffers
-			// as after Resize we'll get the new ones.
-			// Any references to the back buffers must be released
-			// before the swap chain can be resized.
-			m_BackBuffers[i].Reset();
-		}
-
-		// Don't allow 0 size swap chain back buffers.
-		m_Window->SetClientWidth(std::max(1u, width));
-		m_Window->SetClientHeight(std::max(1u, height));
-		m_Window->ResizeBackBuffers();
+		m_Window->ResizeBackBuffers(width, height);
 
 		// Since the index of back buffer may not be the same, it is important
 		// to update the current back buffer index as known by the application.
@@ -272,56 +282,30 @@ void Application::UpdateRenderTargetViews(ComPtr<ID3D12Device2> device, ComPtr<I
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(descriptorHeap->GetCPUDescriptorHandleForHeapStart());
 
-	for (int i = 0; i < m_NumFrames; ++i)
+	for (int i = 0; i < NUM_FRAMES_IN_FLIGHT; ++i)
 	{
-
-		ComPtr<ID3D12Resource> backBuffer = m_Window->GetBackBuffer(i);
-
+		ComPtr<ID3D12Resource> backBuffer = m_Window->UpdateBackBufferCache(i);
 		// nullptr - description is used to create a default descriptor for the resource
 		device->CreateRenderTargetView(backBuffer.Get(), nullptr, rtvHandle);
 
-		m_BackBuffers[i] = backBuffer;
 
 		rtvHandle.Offset(rtvDescriptorSize);
 	}
 }
 
-// For this lesson, the functuion ony display's the frame-rate each second in the debug output 
-//		in Visual Studio.
-void Application::Update()
+void Application::TransitionResource(ComPtr<ID3D12GraphicsCommandList2> commandList, ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after)
 {
-	static uint64_t frameCounter = 0;
-	static double elapsedSeconds = 0.0;
-	static std::chrono::high_resolution_clock clock;
-	static auto t0 = clock.now();
+	CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition
+	(
+		resource.Get(), before,	after
+	);
 
-	frameCounter++;
-	auto t1 = clock.now();
-	auto deltaTime = t1 - t0;
-	t0 = t1;
-
-	// The deltaTime time_point variable stores the number of NANOseconds
-	// since the previous call to the Update function. To convert the 
-	// deltaTime from nanoseconds into seconds, it is multiplied by 10^(9).
-	elapsedSeconds += deltaTime.count() * 1e-9;
-
-	// The frame-rate is printed to the debug output in Visual Studio 
-	// only once per second.
-	if (elapsedSeconds > 1.0)
-	{
-		wchar_t buffer[500];
-		auto fps = frameCounter / elapsedSeconds;
-		swprintf(buffer, 500, L"FPS: %f\n", fps);
-		OutputDebugString(buffer);
-
-		frameCounter = 0;
-		elapsedSeconds = 0.0;
-	}
+	commandList->ResourceBarrier(1, &barrier);
 }
 
 
 // =====================================================================================
-//										Sync
+//									   Sync
 // =====================================================================================
 
 // It is sometimes useful to wait until all previously executed commands have finished
@@ -350,16 +334,6 @@ void Application::Flush()
 //									Helper Funcs
 // =====================================================================================
 
-void Application::SetFullscreen(bool fullscreen) {
-	m_Window->SetFullscreen(fullscreen);
-}
-
-void Application::ToggleFullscreen() {
-	m_Window->ToggleFullscreen();
-}
-
-
-
 void Application::EnableDebugLayer()
 {
 	// Attempting to enable the debug layer after the Direct3D 12 device context
@@ -377,8 +351,6 @@ void Application::EnableDebugLayer()
 	// based on the type of the interface pointer used.
 #endif
 }
-
-
 
 ComPtr<IDXGIAdapter4> Application::GetAdapter(bool useWarp)
 {
@@ -501,7 +473,7 @@ ComPtr<ID3D12Device2> Application::CreateDevice(ComPtr<IDXGIAdapter4> adapter)
 // CBV, SRV, and UAV can be stored in the same heap but
 // RTV and Sampler views EACH require separate descriptor heaps.
 ComPtr<ID3D12DescriptorHeap> Application::CreateDescriptorHeap(ComPtr<ID3D12Device2> device,
-	D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors)
+	D3D12_DESCRIPTOR_HEAP_TYPE type, UINT32 numDescriptors)
 {
 	ComPtr<ID3D12DescriptorHeap> descriptorHeap;
 
@@ -514,6 +486,10 @@ ComPtr<ID3D12DescriptorHeap> Application::CreateDescriptorHeap(ComPtr<ID3D12Devi
 	return descriptorHeap;
 }
 
+
+// =====================================================================================
+//										WndProc
+// =====================================================================================
 
 // The window procedure handles any window messages sent to the application. 
 LRESULT CALLBACK Application::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)

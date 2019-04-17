@@ -1,5 +1,6 @@
 #include "Game.h"
 
+
 int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLine, int nCmdShow)
 {
 	const wchar_t* windowTitle = L"Learning DirectX 12";

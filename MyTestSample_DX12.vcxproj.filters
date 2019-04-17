@@ -33,6 +33,7 @@
     <ClInclude Include="CommandQueue.h">
       <Filter>Framework\H</Filter>
     </ClInclude>
+    <ClInclude Include="Game.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="H_Helpers">

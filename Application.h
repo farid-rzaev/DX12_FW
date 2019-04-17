@@ -48,50 +48,50 @@ using Microsoft::WRL::ComPtr;
 
 class Application 
 {
-public:	
+public:
+	// Init and Run
 	Application(HINSTANCE hInstance, const wchar_t* windowTitle, int width, int height, bool vSync);
 	virtual ~Application();
 	virtual void Run();
 	
-	// Getters and Setters
+	// Get and Set
 	ComPtr<ID3D12Device2> GetDevice() const { return m_d3d12Device; }
 	std::shared_ptr<CommandQueue> GetCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT) const;
 
 protected:
-	virtual void Render();
-	virtual void Resize(uint32_t width, uint32_t height);
+	// Update & Render & Resize
 	virtual void Update();
-
+	virtual void Render();
+	virtual void Resize(UINT32 width, UINT32 height);
+	void UpdateRenderTargetViews(ComPtr<ID3D12Device2> device, ComPtr<ID3D12DescriptorHeap> descriptorHeap);
 	void TransitionResource(ComPtr<ID3D12GraphicsCommandList2> commandList, ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after);
 
+	// Fullscreen
+	void SetFullscreen(bool fullscreen) { m_Window->SetFullscreen(fullscreen); }
+	void ToggleFullscreen() { m_Window->ToggleFullscreen(); }
+	
+	// Sync
 	void Flush();
 
-	void SetFullscreen(bool fullscreen);
-	void ToggleFullscreen();
-
+	// Helper funcs
 	void EnableDebugLayer();
 	ComPtr<IDXGIAdapter4> GetAdapter(bool useWarp);
 	ComPtr<ID3D12Device2> CreateDevice(ComPtr<IDXGIAdapter4> adapter);
+	ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(ComPtr<ID3D12Device2> device, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT32 numDescriptors);
 
-	ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(ComPtr<ID3D12Device2> device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors);
-	void UpdateRenderTargetViews(ComPtr<ID3D12Device2> device, ComPtr<ID3D12DescriptorHeap> descriptorHeap);
-
-private /*CONSTRUCTORS*/ :
+private:
+	// Constructors
 	Application(const Application& app) = delete;
 	Application& operator=(const Application& app) = delete;
 
-private /*WINDOW*/ :
-	// Making window a member (not inhereting from it)
-	// as there could be multiple Windows in future.
+private:
+	// Window:
+	//     Making window a member (not inhereting from it)
+	//     as there could be multiple Windows in future.
 	std::shared_ptr<Window> m_Window; 
 	static LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
-
-	static const UINT8 m_NumFrames = 3;
-	UINT8 m_CurrentBackBufferIndex;
-	ComPtr<ID3D12Resource> m_BackBuffers[m_NumFrames];
-
-private /*MAIN*/ :
+private:
 	// APP instance handle
 	HINSTANCE m_hInstance;
 
@@ -107,6 +107,8 @@ private /*MAIN*/ :
 	std::shared_ptr<CommandQueue> m_ComputeCommandQueue;
 	std::shared_ptr<CommandQueue> m_CopyCommandQueue;
 
-private /*GAME*/:
-	uint64_t m_FenceValues[m_NumFrames] = {};
+private:
+	// Game
+	UINT8 m_CurrentBackBufferIndex;
+	UINT64 m_FenceValues[NUM_FRAMES_IN_FLIGHT] = {};
 };
