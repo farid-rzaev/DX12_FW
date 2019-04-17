@@ -7,6 +7,9 @@
 // Assert
 #include <cassert>
 
+// =====================================================================================
+//									Init and Run
+// =====================================================================================
 
 Application::Application(HINSTANCE hInstance, const wchar_t* windowTitle, int width, int height, bool vSync) :
 	m_hInstance (hInstance),
@@ -58,6 +61,11 @@ Application::Application(HINSTANCE hInstance, const wchar_t* windowTitle, int wi
 	//  Create RTV (DescriptorHeap) and update it's endtries 
 	{
 		m_RTVDescriptorHeap = CreateDescriptorHeap(m_d3d12Device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, m_NumFrames);
+		// The size of a descriptor in a descriptor heap is vendor specific 
+		//   (Intel, NVidia, and AMD may store descriptors differently). 
+		// In order to correctly offset the index into the descriptor heap, 
+		//   the size of a single element in the descriptor heap needs 
+		//   to be queried during initialization - m_RTVDescriptorSize.
 		m_RTVDescriptorSize = m_d3d12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
 		// Render target views are fill into the descriptor heap
@@ -102,7 +110,9 @@ void Application::Run() {
 	}
 }
 
-
+// =====================================================================================
+//									Get and Set
+// =====================================================================================
 
 std::shared_ptr<CommandQueue> Application::GetCommandQueue(D3D12_COMMAND_LIST_TYPE type) const 
 {
@@ -125,40 +135,48 @@ std::shared_ptr<CommandQueue> Application::GetCommandQueue(D3D12_COMMAND_LIST_TY
 	return commandQueue;
 }
 
-
-
-// For this lesson, the functuion ony display's the frame-rate each second in the debug output 
-//		in Visual Studio.
-void Application::Update()
+// =====================================================================================
+//							  Update & Render & Resize
+// =====================================================================================
+void Application::TransitionResource(ComPtr<ID3D12GraphicsCommandList2> commandList, ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after)
 {
-	static uint64_t frameCounter = 0;
-	static double elapsedSeconds = 0.0;
-	static std::chrono::high_resolution_clock clock;
-	static auto t0 = clock.now();
+	CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition
+	(
+		resource.Get(),
+		D3D12_RESOURCE_STATE_PRESENT,
+		D3D12_RESOURCE_STATE_RENDER_TARGET
+	);
 
-	frameCounter++;
-	auto t1 = clock.now();
-	auto deltaTime = t1 - t0;
-	t0 = t1;
-
-	// The deltaTime time_point variable stores the number of NANOseconds
-	// since the previous call to the Update function. To convert the 
-	// deltaTime from nanoseconds into seconds, it is multiplied by 10^(9).
-	elapsedSeconds += deltaTime.count() * 1e-9;
-
-	// The frame-rate is printed to the debug output in Visual Studio 
-	// only once per second.
-	if (elapsedSeconds > 1.0)
-	{
-		wchar_t buffer[500];
-		auto fps = frameCounter / elapsedSeconds;
-		swprintf(buffer, 500, L"FPS: %f\n", fps);
-		OutputDebugString(buffer);
-
-		frameCounter = 0;
-		elapsedSeconds = 0.0;
-	}
+	commandList->ResourceBarrier(1, &barrier);
 }
+
+UINT8 Application::Present()
+{
+	// If tearing is supported, it is recommended to always use the 
+	// DXGI_PRESENT_ALLOW_TEARING flag when presenting with a sync interval of 0.
+	// The requirements for using the DXGI_PRESENT_ALLOW_TEARING flag when 
+	// presenting are :
+	//
+	//		- The swap chain must be created with the DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING flag.
+	//		- The sync interval passed into Present(or Present1) must be 0.
+	//		- The DXGI_PRESENT_ALLOW_TEARING flag cannot be used in an application that is 
+	//			currently in full screen exclusive mode (set by calling SetFullscreenState(TRUE)).
+	//			It can only be used in windowed mode.To use this flag in 
+	//			full screen Win32 apps, the application should present 
+	//			to a fullscreen borderless window and disable automatic Alt + Enter 
+	//			fullscreen switching using  IDXGIFactory::MakeWindowAssociation.
+	UINT syncInterval = m_VSync ? 1 : 0;
+	UINT presentFlags = m_TearingSupported && !m_VSync ? DXGI_PRESENT_ALLOW_TEARING : 0;
+	ThrowIfFailed(m_SwapChain->Present(syncInterval, presentFlags));
+
+	// Updating current back buffer index:
+	// When using the DXGI_SWAP_EFFECT_FLIP_DISCARD flip model, the order of 
+	//     back buffer indicies is not guaranteed to be sequential. 
+	//	   The IDXGISwapChain3::GetCurrentBackBufferIndex method is used to 
+	//     get the index of the swap chain's current back buffer.
+	return m_SwapChain->GetCurrentBackBufferIndex();
+}
+
 
 // Resources must be transitioned from one state to another using a resource BARRIER
 //		and inserting that resource barrier into the command list.
@@ -210,11 +228,7 @@ void Application::Render()
 	//		operation that requires the resource to be in a particular 
 	//		state is executed.
 	{
-		CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-			backBuffer.Get(),
-			D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET
-		);
-		commandList->ResourceBarrier(1, &barrier);
+		TransitionResource(commandList, backBuffer, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
 		FLOAT clearColor[] = { 0.4f, 0.6f, 0.9f, 1.0f };
 		CD3DX12_CPU_DESCRIPTOR_HANDLE rtv(
@@ -230,67 +244,15 @@ void Application::Render()
 		//     to the screen.
 		// !!! Before presenting, the back buffer resource must be 
 		//     transitioned to the PRESENT state.
-		CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-			backBuffer.Get(),
-			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-		commandList->ResourceBarrier(1, &barrier);
+		TransitionResource(commandList, backBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 
 		// Execute
 		m_FenceValues[m_CurrentBackBufferIndex] = commandQueue->ExecuteCommandList(commandList);
 
-
-		// If tearing is supported, it is recommended to always use the 
-		// DXGI_PRESENT_ALLOW_TEARING flag when presenting with a sync interval of 0.
-		// The requirements for using the DXGI_PRESENT_ALLOW_TEARING flag when 
-		// presenting are :
-		//
-		//		- The swap chain must be created with the DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING flag.
-		//		- The sync interval passed into Present(or Present1) must be 0.
-		//		- The DXGI_PRESENT_ALLOW_TEARING flag cannot be used in an application that is 
-		//			currently in full screen exclusive mode (set by calling SetFullscreenState(TRUE)).
-		//			It can only be used in windowed mode.To use this flag in 
-		//			full screen Win32 apps, the application should present 
-		//			to a fullscreen borderless window and disable automatic Alt + Enter 
-		//			fullscreen switching using  IDXGIFactory::MakeWindowAssociation.
-		UINT syncInterval = m_VSync ? 1 : 0;
-		UINT presentFlags = m_TearingSupported && !m_VSync ? DXGI_PRESENT_ALLOW_TEARING : 0;
-		ThrowIfFailed(m_SwapChain->Present(syncInterval, presentFlags));
-
-
-		// Updating current back buffer index:
-		// When using the DXGI_SWAP_EFFECT_FLIP_DISCARD flip model, the order of 
-		//     back buffer indicies is not guaranteed to be sequential. 
-		//	   The IDXGISwapChain3::GetCurrentBackBufferIndex method is used to 
-		//     get the index of the swap chain's current back buffer.
-		m_CurrentBackBufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
-
+		m_CurrentBackBufferIndex = Present();
 		commandQueue->WaitForFanceValue(m_FenceValues[m_CurrentBackBufferIndex]);
 	}
 }
-
-// It is sometimes useful to wait until all previously executed commands have finished
-//		executing before doing something (for example, resizing the swap chain buffers 
-//		requires any references to the buffers to be released). For this, the Flush 
-//		function is used to ensure the GPU has finished processing all commands before
-//		continuing.
-// The Flush function is used to ensure that any commands previously executed on the GPU
-//		have finished executing before the CPU thread is allowed to continue processing. 
-// This is useful for ensuring that any back buffer resources being referenced by a command 
-//		that is currently "in-flight" on the GPU have finished executing before being resized.
-// It is also strongly advisable to flush the GPU command queue before releasing any resources
-//		that might be referenced by a command list that is currently "in-flight" on the command 
-//		queue (for example, before closing the application). The Flush function will block the 
-//		calling thread until the fence value has been reached. After this function returns, it is
-//		safe to release any resources that were referenced by the GPU.
-// The Flush function is simply a Signal followed by a WaitForFenceValue.)))
-void Application::Flush()
-{
-	m_DirectCommandQueue->Flush();
-	m_ComputeCommandQueue->Flush();
-	m_CopyCommandQueue->Flush();
-}
-
-
 
 // A resize event is triggered when the window is created the first time. 
 // It is also triggered when switching to full-screen mode or if the user 
@@ -302,8 +264,8 @@ void Application::Resize(uint32_t width, uint32_t height)
 	if (m_Window->GetClientWidth() != width || m_Window->GetClientHeight() != height)
 	{
 		// Don't allow 0 size swap chain back buffers.
-		m_Window->SetClientWidth( std::max(1u, width) );
-		m_Window->SetClientHeight( std::max(1u, height) );
+		m_Window->SetClientWidth(std::max(1u, width));
+		m_Window->SetClientHeight(std::max(1u, height));
 
 		// Flush the GPU Command Queue to make sure the swap chain's back buffers
 		// are not being referenced by an in-flight command list.
@@ -332,6 +294,70 @@ void Application::Resize(uint32_t width, uint32_t height)
 		UpdateRenderTargetViews(m_d3d12Device, m_SwapChain, m_RTVDescriptorHeap);
 	}
 }
+
+// For this lesson, the functuion ony display's the frame-rate each second in the debug output 
+//		in Visual Studio.
+void Application::Update()
+{
+	static uint64_t frameCounter = 0;
+	static double elapsedSeconds = 0.0;
+	static std::chrono::high_resolution_clock clock;
+	static auto t0 = clock.now();
+
+	frameCounter++;
+	auto t1 = clock.now();
+	auto deltaTime = t1 - t0;
+	t0 = t1;
+
+	// The deltaTime time_point variable stores the number of NANOseconds
+	// since the previous call to the Update function. To convert the 
+	// deltaTime from nanoseconds into seconds, it is multiplied by 10^(9).
+	elapsedSeconds += deltaTime.count() * 1e-9;
+
+	// The frame-rate is printed to the debug output in Visual Studio 
+	// only once per second.
+	if (elapsedSeconds > 1.0)
+	{
+		wchar_t buffer[500];
+		auto fps = frameCounter / elapsedSeconds;
+		swprintf(buffer, 500, L"FPS: %f\n", fps);
+		OutputDebugString(buffer);
+
+		frameCounter = 0;
+		elapsedSeconds = 0.0;
+	}
+}
+
+
+// =====================================================================================
+//										Sync
+// =====================================================================================
+
+// It is sometimes useful to wait until all previously executed commands have finished
+//		executing before doing something (for example, resizing the swap chain buffers 
+//		requires any references to the buffers to be released). For this, the Flush 
+//		function is used to ensure the GPU has finished processing all commands before
+//		continuing.
+// The Flush function is used to ensure that any commands previously executed on the GPU
+//		have finished executing before the CPU thread is allowed to continue processing. 
+// This is useful for ensuring that any back buffer resources being referenced by a command 
+//		that is currently "in-flight" on the GPU have finished executing before being resized.
+// It is also strongly advisable to flush the GPU command queue before releasing any resources
+//		that might be referenced by a command list that is currently "in-flight" on the command 
+//		queue (for example, before closing the application). The Flush function will block the 
+//		calling thread until the fence value has been reached. After this function returns, it is
+//		safe to release any resources that were referenced by the GPU.
+// The Flush function is simply a Signal followed by a WaitForFenceValue.)))
+void Application::Flush()
+{
+	m_DirectCommandQueue->Flush();
+	m_ComputeCommandQueue->Flush();
+	m_CopyCommandQueue->Flush();
+}
+
+// =====================================================================================
+//									Helper Funcs
+// =====================================================================================
 
 void Application::SetFullscreen(bool fullscreen) {
 	m_Window->SetFullscreen(fullscreen);

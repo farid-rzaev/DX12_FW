@@ -53,15 +53,20 @@ public:
 	virtual ~Application();
 	virtual void Run();
 	
+	// Getters and Setters
 	ComPtr<ID3D12Device2> GetDevice() const { return m_d3d12Device; }
 	std::shared_ptr<CommandQueue> GetCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT) const;
 
 protected:
 	virtual void Render();
-	void Update();
+	virtual void Resize(uint32_t width, uint32_t height);
+	virtual void Update();
+
+	void TransitionResource(ComPtr<ID3D12GraphicsCommandList2> commandList, ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after);
+	UINT8 Present();
+
 	void Flush();
 
-	void Resize(uint32_t width, uint32_t height);
 	void SetFullscreen(bool fullscreen);
 	void ToggleFullscreen();
 
@@ -77,57 +82,30 @@ private /*CONSTRUCTORS*/ :
 	Application& operator=(const Application& app) = delete;
 
 private /*WINDOW*/ :
-	// Window class
 	// Making window a member (not inhereting from it)
 	// as there could be multiple Windows in future.
 	std::shared_ptr<Window> m_Window; 
 	static LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
-	// Num of SwapChain BackBuffers.
-	// Must not be less than 2 when 
-	// using the flip presentation model.
-	// Depending on the flip model of the swap chain, the index of 
-	// the current back buffer in the swap chain may not be sequential
-	static const uint8_t m_NumFrames = 3;
-	ComPtr<IDXGISwapChain4> m_SwapChain;  // responsible for presenting the rendered image to the window
+
+	static const UINT8 m_NumFrames = 3;
+	UINT8 m_CurrentBackBufferIndex;
+	ComPtr<IDXGISwapChain4> m_SwapChain;  
 	ComPtr<ID3D12Resource> m_BackBuffers[m_NumFrames];
 
-	UINT m_CurrentBackBufferIndex;
-
-
-	// Variables to control the swap chain's present method:
-	// By default, enable V-Sync.
-	// Can be toggled with the V key.
-	//   The m_VSync variable controls whether the swap chain's present 
-	//   method should wait for the next vertical refresh before presenting
-	//   the rendered image to the screen. By default, the swap chain's present 
-	//   method will block until the next vertical refresh of the screen.This will 
-	//   cap the framerate of the application to the refresh rate of the screen/monitor.
-	// 
-	//   Setting  m_VSync variable to false will cause the swap chain to present the 
-	//   rendered image to the screen as fast as possible which will allow the application 
-	//   to render at an unthrottled frame rate but may cause visual artifacts in the 
-	//   form of screen tearing.
 	bool m_VSync = true;
 	bool m_TearingSupported = false;
 
 private /*MAIN*/ :
-	// APP instance handle that 
-	// this APP was created with.
+	// APP instance handle
 	HINSTANCE m_hInstance;
 
 	// Heap with RTVs
 	ComPtr<ID3D12DescriptorHeap> m_RTVDescriptorHeap;
-	// The size of a descriptor in a descriptor heap is vendor specific 
-	//   (Intel, NVidia, and AMD may store descriptors differently). 
-	// In order to correctly offset the index into the descriptor heap, 
-	//   the size of a single element in the descriptor heap needs 
-	//   to be queried during initialization - m_RTVDescriptorSize.
 	UINT m_RTVDescriptorSize;
 
 	// DirectX 12 Objects
 	ComPtr<ID3D12Device2> m_d3d12Device;
-
 
 	// Command Queues
 	std::shared_ptr<CommandQueue> m_DirectCommandQueue;
@@ -136,5 +114,4 @@ private /*MAIN*/ :
 
 private /*GAME*/:
 	uint64_t m_FenceValues[m_NumFrames] = {};
-
 };

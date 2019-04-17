@@ -86,4 +86,5 @@ private:
 
 	// Window handle.
 	HWND g_hWnd;
+
 };
