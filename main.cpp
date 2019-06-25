@@ -10,7 +10,7 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
 	//app.Run();
 	//app.Finish();
 
-	Game qg (hInstance, windowTitle, 1920, 1080, false);
+	Game qg (hInstance, windowTitle, 3500, 1800, false);
 	qg.Run();
 
 	return 0;

@@ -55,9 +55,11 @@ Application::Application(HINSTANCE hInstance, const wchar_t* windowTitle, int wi
 		m_Window->SetUserPtr((void*)this);					// - inject Application pointer into window
 		m_Window->SetCustomWndProc(Application::WndProc);   // - reset the Default WndProc of the 
 															//   window to app's static method
+		// Show Window
+		m_Window->Show();
 	}
 
-	//  Create RTV (DescriptorHeap) and update it's endtries 
+	//  Create RTVs in DescriptorHeap
 	{
 		m_RTVDescriptorHeap = CreateDescriptorHeap(m_d3d12Device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, NUM_FRAMES_IN_FLIGHT);
 		// The size of a descriptor in a descriptor heap is vendor specific 
@@ -69,11 +71,6 @@ Application::Application(HINSTANCE hInstance, const wchar_t* windowTitle, int wi
 
 		// Render target views are fill into the descriptor heap
 		UpdateRenderTargetViews(m_d3d12Device, m_RTVDescriptorHeap);
-	}
-
-	// Show Window
-	{
-		m_Window->Show();
 	}
 	
 	// Current Buffer
@@ -287,7 +284,6 @@ void Application::UpdateRenderTargetViews(ComPtr<ID3D12Device2> device, ComPtr<I
 		ComPtr<ID3D12Resource> backBuffer = m_Window->UpdateBackBufferCache(i);
 		// nullptr - description is used to create a default descriptor for the resource
 		device->CreateRenderTargetView(backBuffer.Get(), nullptr, rtvHandle);
-
 
 		rtvHandle.Offset(rtvDescriptorSize);
 	}

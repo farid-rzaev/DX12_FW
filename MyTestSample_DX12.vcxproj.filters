@@ -26,13 +26,11 @@
     <ClInclude Include="Application.h">
       <Filter>Framework\H</Filter>
     </ClInclude>
-    <ClInclude Include="Game.h">
-      <Filter>Framework\H</Filter>
-    </ClInclude>
     <ClInclude Include="Game.h" />
     <ClInclude Include="CommandQueue.h">
       <Filter>Framework\H</Filter>
     </ClInclude>
+    <ClInclude Include="Game.h" />
     <ClInclude Include="Game.h" />
   </ItemGroup>
   <ItemGroup>

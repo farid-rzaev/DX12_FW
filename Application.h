@@ -63,6 +63,7 @@ protected:
 	virtual void Update();
 	virtual void Render();
 	virtual void Resize(UINT32 width, UINT32 height);
+	// Assist funcs
 	void UpdateRenderTargetViews(ComPtr<ID3D12Device2> device, ComPtr<ID3D12DescriptorHeap> descriptorHeap);
 	void TransitionResource(ComPtr<ID3D12GraphicsCommandList2> commandList, ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after);
 
@@ -70,7 +71,7 @@ protected:
 	void SetFullscreen(bool fullscreen) { m_Window->SetFullscreen(fullscreen); }
 	void ToggleFullscreen() { m_Window->ToggleFullscreen(); }
 	
-	// Sync
+	// Sync frames
 	void Flush();
 
 	// Helper funcs
