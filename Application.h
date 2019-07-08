@@ -48,24 +48,30 @@ using Microsoft::WRL::ComPtr;
 
 class Application 
 {
+// ------------------------------------------------------------------------------------------
+//									Function members
+// ------------------------------------------------------------------------------------------
 public:
-	// Init and Run
+	// Init 
 	Application(HINSTANCE hInstance, const wchar_t* windowTitle, int width, int height, bool vSync);
+	Application(const Application& app) = delete;
+	Application& operator=(const Application& app) = delete;
 	virtual ~Application();
+
+	// Run
 	virtual void Run();
 	
 	// Get and Set
 	ComPtr<ID3D12Device2> GetDevice() const { return m_d3d12Device; }
 	std::shared_ptr<CommandQueue> GetCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT) const;
+	UINT GetCurrentBackbufferIndex() const { return m_Window->GetCurrentBackBufferIndex(); }
+	ComPtr<ID3D12Resource> GetBackbuffer(UINT BackBufferIndex);
 
 protected:
 	// Update & Render & Resize
 	virtual void Update();
-	virtual void Render();
-	virtual void Resize(UINT32 width, UINT32 height);
-	// Assist funcs
-	void UpdateRenderTargetViews(ComPtr<ID3D12Device2> device, ComPtr<ID3D12DescriptorHeap> descriptorHeap);
-	void TransitionResource(ComPtr<ID3D12GraphicsCommandList2> commandList, ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after);
+	virtual void Render() = 0;
+	virtual void Resize(UINT32 width, UINT32 height) = 0;
 
 	// Fullscreen
 	void SetFullscreen(bool fullscreen) { m_Window->SetFullscreen(fullscreen); }
@@ -80,16 +86,14 @@ protected:
 	ComPtr<ID3D12Device2> CreateDevice(ComPtr<IDXGIAdapter4> adapter);
 	ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(ComPtr<ID3D12Device2> device, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT32 numDescriptors);
 
-private:
-	// Constructors
-	Application(const Application& app) = delete;
-	Application& operator=(const Application& app) = delete;
-
+// ------------------------------------------------------------------------------------------
+//									Data members
+// ------------------------------------------------------------------------------------------
 private:
 	// Window:
-	//     Making window a member (not inhereting from it)
-	//     as there could be multiple Windows in future.
-	std::shared_ptr<Window> m_Window; 
+	//   Making window a member (not inhereting from it)
+	//   as there could be multiple Windows in future.
+	std::shared_ptr<Window> m_Window					= nullptr;
 	static LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
 private:
@@ -104,12 +108,7 @@ private:
 	ComPtr<ID3D12Device2> m_d3d12Device;
 
 	// Command Queues
-	std::shared_ptr<CommandQueue> m_DirectCommandQueue;
-	std::shared_ptr<CommandQueue> m_ComputeCommandQueue;
-	std::shared_ptr<CommandQueue> m_CopyCommandQueue;
-
-private:
-	// Game
-	UINT8 m_CurrentBackBufferIndex;
-	UINT64 m_FenceValues[NUM_FRAMES_IN_FLIGHT] = {};
+	std::shared_ptr<CommandQueue> m_DirectCommandQueue	= nullptr;
+	std::shared_ptr<CommandQueue> m_ComputeCommandQueue = nullptr;
+	std::shared_ptr<CommandQueue> m_CopyCommandQueue	= nullptr;
 };

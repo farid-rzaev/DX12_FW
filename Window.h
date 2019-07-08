@@ -70,8 +70,8 @@ public:
 	void SetClientWidth(UINT32 width) { m_ClientWidth = width; }
 	void SetClientHeight(UINT32 height) { m_ClientHeight = height; }
 	
-	UINT8 GetCurrentBackBufferIndex() const { return m_SwapChain->GetCurrentBackBufferIndex(); }
-	ComPtr<ID3D12Resource> GetBackBuffer(UINT8 index) { return m_BackBuffers[index]; }
+	UINT GetCurrentBackBufferIndex() const { return m_SwapChain->GetCurrentBackBufferIndex(); }
+	ComPtr<ID3D12Resource> GetBackBuffer(UINT index) { return m_BackBuffers[index]; }
 
 protected:
 	// Variable refresh rate displays (NVidia's G-Sync and AMD's FreeSync) require 

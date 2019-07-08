@@ -91,6 +91,7 @@
     <ClInclude Include="Application.h" />
     <ClInclude Include="CommandQueue.h" />
     <ClInclude Include="d3dx12.h" />
+    <ClInclude Include="Game.h" />
     <ClInclude Include="Helpers.h" />
     <ClInclude Include="Window.h" />
   </ItemGroup>
