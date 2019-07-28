@@ -29,7 +29,7 @@ Application::Application(HINSTANCE hInstance, const wchar_t* windowTitle, int wi
 	SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
 	EnableDebugLayer();
-
+	
 	// DirectX 12 objects
 	{	
 		ComPtr<IDXGIAdapter4> dxgiAdapter4 = GetAdapter(false);
@@ -59,6 +59,20 @@ Application::Application(HINSTANCE hInstance, const wchar_t* windowTitle, int wi
 															//   window to app's static method
 		// Show Window
 		m_Window->Show();
+	}
+
+	//  Create RTVs in DescriptorHeap
+	{
+		m_RTVDescriptorHeap = CreateDescriptorHeap(m_d3d12Device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, NUM_FRAMES_IN_FLIGHT);
+		// The size of a descriptor in a descriptor heap is vendor specific 
+		//   (Intel, NVidia, and AMD may store descriptors differently). 
+		// In order to correctly offset the index into the descriptor heap, 
+		//   the size of a single element in the descriptor heap needs 
+		//   to be queried during initialization - m_RTVDescriptorSize.
+		m_RTVDescriptorSize = m_d3d12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
+		// Render target views are fill into the descriptor heap
+		UpdateRenderTargetViews(m_d3d12Device, m_RTVDescriptorHeap);
 	}
 }
 
@@ -122,6 +136,16 @@ ComPtr<ID3D12Resource> Application::GetBackbuffer(UINT BackBufferIndex)
 	return m_Window->GetBackBuffer(BackBufferIndex);
 }
 
+CD3DX12_CPU_DESCRIPTOR_HANDLE Application::GetCurrentBackbufferRTV()
+{
+	CD3DX12_CPU_DESCRIPTOR_HANDLE rtv(
+		m_RTVDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
+		GetCurrentBackbufferIndex(), m_RTVDescriptorSize
+	);
+
+	return rtv;
+}
+
 // =====================================================================================
 //							  Update & Render & Resize
 // =====================================================================================
@@ -159,13 +183,46 @@ void Application::Update()
 	}
 }
 
-
+// A resize event is triggered when the window is created the first time. 
+// It is also triggered when switching to full-screen mode or if the user 
+// resizes the window by dragging the window border frame while in windowed mode.
+// The Resize function will resize the swap chain buffers if the client area of 
+// the window changes.
 void Application::Resize(UINT32 width, UINT32 height)
 {
+	if (m_Window->GetClientWidth() != width || m_Window->GetClientHeight() != height)
+	{
+		// Flush the GPU Command Queue to make sure the swap chain's back buffers
+		// are not being referenced by an in-flight command list.
+		Flush();
 
+		m_Window->ResizeBackBuffers(width, height);
+
+		// After the swap chain buffers have been resized, the descriptors 
+		// that refer to those buffers needs to be updated. 
+		UpdateRenderTargetViews(m_d3d12Device, m_RTVDescriptorHeap);
+	}
 }
 
+// A render target view (RTV) describes a resource that can be attached to a 
+//		bind slot of the output merger stage
+void Application::UpdateRenderTargetViews(ComPtr<ID3D12Device2> device, ComPtr<ID3D12DescriptorHeap> descriptorHeap)
+{
+	// The size of a single descriptor in a descriptor heap is vendor specific and is queried 
+	//		using the ID3D12Device::GetDescriptorHandleIncrementSize()
+	auto rtvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
+	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(descriptorHeap->GetCPUDescriptorHandleForHeapStart());
+
+	for (int i = 0; i < NUM_FRAMES_IN_FLIGHT; ++i)
+	{
+		ComPtr<ID3D12Resource> backBuffer = m_Window->UpdateBackBufferCache(i);
+		// nullptr - description is used to create a default descriptor for the resource
+		device->CreateRenderTargetView(backBuffer.Get(), nullptr, rtvHandle);
+
+		rtvHandle.Offset(rtvDescriptorSize);
+	}
+}
 
 // =====================================================================================
 //									   Sync

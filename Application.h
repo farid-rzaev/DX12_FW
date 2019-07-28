@@ -66,12 +66,14 @@ public:
 	std::shared_ptr<CommandQueue> GetCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT) const;
 	UINT GetCurrentBackbufferIndex() const { return m_Window->GetCurrentBackBufferIndex(); }
 	ComPtr<ID3D12Resource> GetBackbuffer(UINT BackBufferIndex);
+	CD3DX12_CPU_DESCRIPTOR_HANDLE GetCurrentBackbufferRTV();
 
 protected:
 	// Update & Render & Resize
 	virtual void Update();
 	virtual void Render() = 0;
-	virtual void Resize(UINT32 width, UINT32 height) = 0;
+	virtual void Resize(UINT32 width, UINT32 height);
+	UINT8 Present() { return m_Window->Present(); }
 
 	// Fullscreen
 	void SetFullscreen(bool fullscreen) { m_Window->SetFullscreen(fullscreen); }
@@ -85,6 +87,7 @@ protected:
 	ComPtr<IDXGIAdapter4> GetAdapter(bool useWarp);
 	ComPtr<ID3D12Device2> CreateDevice(ComPtr<IDXGIAdapter4> adapter);
 	ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(ComPtr<ID3D12Device2> device, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT32 numDescriptors);
+	void UpdateRenderTargetViews(ComPtr<ID3D12Device2> device, ComPtr<ID3D12DescriptorHeap> descriptorHeap);
 
 // ------------------------------------------------------------------------------------------
 //									Data members
