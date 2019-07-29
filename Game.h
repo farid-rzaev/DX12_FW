@@ -4,6 +4,9 @@
 
 class Game : public Application
 {
+// ------------------------------------------------------------------------------------------
+//									Function members
+// ------------------------------------------------------------------------------------------
 public:
 	Game(HINSTANCE hInstance, const wchar_t * windowTitle, int width, int height, bool vSync);
 	virtual ~Game();
@@ -13,17 +16,23 @@ protected:
 	virtual void Resize(UINT32 width, UINT32 height);
 	virtual void Render();
 	
-	void TransitionResource(ComPtr<ID3D12GraphicsCommandList2> commandList, ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after);
-
+	// Sample
 	bool LoadContent() {};
 	void UnloadContent() {};
 
-private:
+	// Helpers
+	void TransitionResource(ComPtr<ID3D12GraphicsCommandList2> commandList, ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after);
+
+// ------------------------------------------------------------------------------------------
+//									Data members
+// ------------------------------------------------------------------------------------------
+private:	
+	// Sample
 	D3D12_VIEWPORT m_Viewport;
 	D3D12_RECT m_ScissorRect;
 	float m_FoV;
 
-private:
+private:	
 	// Frame Sync 
 	UINT m_CurrentBackBufferIndex;
 	UINT64 m_FenceValues[NUM_FRAMES_IN_FLIGHT] = {};

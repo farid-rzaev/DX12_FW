@@ -1,5 +1,8 @@
 #include "Game.h"
 
+// =====================================================================================
+//										Init 
+// =====================================================================================
 Game::Game(HINSTANCE hInstance, const wchar_t * windowTitle, int width, int height, bool vSync) :
 	Application(hInstance, windowTitle, width, height, vSync),
 	m_ScissorRect(CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX)),
@@ -14,7 +17,9 @@ Game::~Game()
 
 }
 
-
+// =====================================================================================
+//							  Update & Render & Resize
+// =====================================================================================
 void Game::Update() 
 { 
 	Application::Update(); 
@@ -87,7 +92,9 @@ void Game::Render()
 	}
 }
 
-
+// =====================================================================================
+//									Helper Funcs
+// =====================================================================================
 void Game::TransitionResource(ComPtr<ID3D12GraphicsCommandList2> commandList, ComPtr<ID3D12Resource> resource, 
 	D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after)
 {

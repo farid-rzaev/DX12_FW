@@ -82,7 +82,7 @@ protected:
 	// Sync frames
 	void Flush();
 
-	// Helper funcs
+	// Helpers
 	void EnableDebugLayer();
 	ComPtr<IDXGIAdapter4> GetAdapter(bool useWarp);
 	ComPtr<ID3D12Device2> CreateDevice(ComPtr<IDXGIAdapter4> adapter);
