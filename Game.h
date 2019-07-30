@@ -17,8 +17,8 @@ protected:
 	virtual void Render();
 	
 	// Sample
-	bool LoadContent() {};
-	void UnloadContent() {};
+	bool LoadContent();
+	void UnloadContent();
 
 	// Helpers
 	void TransitionResource(ComPtr<ID3D12GraphicsCommandList2> commandList, ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after);
@@ -26,8 +26,11 @@ protected:
 // ------------------------------------------------------------------------------------------
 //									Data members
 // ------------------------------------------------------------------------------------------
+private:
+	bool m_ContentLoaded;
+
 private:	
-	// Sample
+	// View Settings
 	D3D12_VIEWPORT m_Viewport;
 	D3D12_RECT m_ScissorRect;
 	float m_FoV;
