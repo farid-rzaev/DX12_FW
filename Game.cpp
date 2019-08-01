@@ -1,5 +1,47 @@
 #include "Game.h"
 
+#include <d3dcompiler.h>
+
+// =====================================================================================
+//										Global vars 
+// =====================================================================================
+using namespace DirectX;
+
+// Clamp a value between a min and max range.
+template<typename T>
+constexpr const T& clamp(const T& val, const T& min, const T& max)
+{
+	return val < min ? min : val > max ? max : val;
+}
+
+// Vertex data for a colored cube.
+struct VertexPosColor
+{
+	XMFLOAT3 Position;
+	XMFLOAT3 Color;
+};
+
+static VertexPosColor g_Vertices[8] = {
+	{ XMFLOAT3(-1.0f, -1.0f, -1.0f), XMFLOAT3(0.0f, 0.0f, 0.0f) }, // 0
+	{ XMFLOAT3(-1.0f,  1.0f, -1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f) }, // 1
+	{ XMFLOAT3(1.0f,  1.0f, -1.0f), XMFLOAT3(1.0f, 1.0f, 0.0f) }, // 2
+	{ XMFLOAT3(1.0f, -1.0f, -1.0f), XMFLOAT3(1.0f, 0.0f, 0.0f) }, // 3
+	{ XMFLOAT3(-1.0f, -1.0f,  1.0f), XMFLOAT3(0.0f, 0.0f, 1.0f) }, // 4
+	{ XMFLOAT3(-1.0f,  1.0f,  1.0f), XMFLOAT3(0.0f, 1.0f, 1.0f) }, // 5
+	{ XMFLOAT3(1.0f,  1.0f,  1.0f), XMFLOAT3(1.0f, 1.0f, 1.0f) }, // 6
+	{ XMFLOAT3(1.0f, -1.0f,  1.0f), XMFLOAT3(1.0f, 0.0f, 1.0f) }  // 7
+};
+
+static WORD g_Indicies[36] =
+{
+	0, 1, 2, 0, 2, 3,
+	4, 6, 5, 4, 7, 6,
+	4, 5, 1, 4, 1, 0,
+	3, 2, 6, 3, 6, 7,
+	1, 5, 6, 1, 6, 2,
+	4, 0, 3, 4, 3, 7
+};
+
 // =====================================================================================
 //										Init 
 // =====================================================================================
@@ -95,13 +137,53 @@ void Game::Render()
 // =====================================================================================
 //									   Sample
 // =====================================================================================
+void Game::UpdateBufferResource(
+	ComPtr<ID3D12GraphicsCommandList2> commandList,
+	ID3D12Resource** pDestinationResource,
+	ID3D12Resource** pIntermediateResource,
+	size_t numElements, size_t elementSize, const void* bufferData,
+	D3D12_RESOURCE_FLAGS flags)
+{
+	auto device = Application::GetDevice();
+
+	size_t bufferSize = numElements * elementSize;
+
+	// Create a committed resource for the GPU resource in a default heap.
+	ThrowIfFailed(device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&CD3DX12_RESOURCE_DESC::Buffer(bufferSize, flags),
+		D3D12_RESOURCE_STATE_COPY_DEST,
+		nullptr,
+		IID_PPV_ARGS(pDestinationResource)));
+
+	// Create a committed resource for the upload.
+	if (bufferData)
+	{
+		ThrowIfFailed(device->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+			D3D12_HEAP_FLAG_NONE,
+			&CD3DX12_RESOURCE_DESC::Buffer(bufferSize),
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(pIntermediateResource)));
+
+		D3D12_SUBRESOURCE_DATA subresourceData = {};
+		subresourceData.pData = bufferData;
+		subresourceData.RowPitch = bufferSize;
+		subresourceData.SlicePitch = subresourceData.RowPitch;
+
+		UpdateSubresources(commandList.Get(),
+			*pDestinationResource, *pIntermediateResource,
+			0, 0, 1, &subresourceData);
+	}
+}
+
 
 bool Game::LoadContent()
 {
-	m_d3d12Dev
-
-	auto device = Application::Get().GetDevice();
-	auto commandQueue = Application::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COPY);
+	auto device = Application::GetDevice();
+	auto commandQueue = Application::GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COPY);
 	auto commandList = commandQueue->GetCommandList();
 
 	// Upload vertex buffer data.
@@ -216,6 +298,47 @@ bool Game::LoadContent()
 	ResizeDepthBuffer(GetClientWidth(), GetClientHeight());
 
 	return true;
+}
+
+
+void Game::ResizeDepthBuffer(int width, int height)
+{
+	if (m_ContentLoaded)
+	{
+		// Flush any GPU commands that might be referencing the depth buffer.
+		Application::Get().Flush();
+
+		width = std::max(1, width);
+		height = std::max(1, height);
+
+		auto device = Application::Get().GetDevice();
+
+		// Resize screen dependent resources.
+		// Create a depth buffer.
+		D3D12_CLEAR_VALUE optimizedClearValue = {};
+		optimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT;
+		optimizedClearValue.DepthStencil = { 1.0f, 0 };
+
+		ThrowIfFailed(device->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+			D3D12_HEAP_FLAG_NONE,
+			&CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, width, height,
+				1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL),
+			D3D12_RESOURCE_STATE_DEPTH_WRITE,
+			&optimizedClearValue,
+			IID_PPV_ARGS(&m_DepthBuffer)
+		));
+
+		// Update the depth-stencil view.
+		D3D12_DEPTH_STENCIL_VIEW_DESC dsv = {};
+		dsv.Format = DXGI_FORMAT_D32_FLOAT;
+		dsv.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+		dsv.Texture2D.MipSlice = 0;
+		dsv.Flags = D3D12_DSV_FLAG_NONE;
+
+		device->CreateDepthStencilView(m_DepthBuffer.Get(), &dsv,
+			m_DSVHeap->GetCPUDescriptorHandleForHeapStart());
+	}
 }
 
 // =====================================================================================
