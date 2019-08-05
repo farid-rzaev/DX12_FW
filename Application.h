@@ -62,6 +62,8 @@ public:
 	virtual void Run();
 	
 	// Get and Set
+	UINT32 GetClientWidth() const { return m_Window->GetClientWidth(); }
+	UINT32 GetClientHeight() const { return m_Window->GetClientHeight(); }
 	ComPtr<ID3D12Device2> GetDevice() const { return m_d3d12Device; }
 	std::shared_ptr<CommandQueue> GetCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT) const;
 	UINT GetCurrentBackbufferIndex() const { return m_Window->GetCurrentBackBufferIndex(); }

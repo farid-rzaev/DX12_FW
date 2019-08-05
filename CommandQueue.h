@@ -13,7 +13,7 @@ public:
 
 	UINT64 Signal();
 	bool IsFenceComplete(UINT64 fenceValue);
-	void WaitForFanceValue(UINT64 fenceValue);
+	void WaitForFenceValue(UINT64 fenceValue);
 	void Flush();
 
 	// Get an available command list from the command queue.

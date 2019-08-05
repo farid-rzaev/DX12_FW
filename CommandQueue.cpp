@@ -43,7 +43,7 @@ bool CommandQueue::IsFenceComplete(UINT64 fenceValue)
 }
 
 
-void CommandQueue::WaitForFanceValue(UINT64 fenceValue) 
+void CommandQueue::WaitForFenceValue(UINT64 fenceValue) 
 {
 	if (!IsFenceComplete(fenceValue)) 
 	{
@@ -55,7 +55,7 @@ void CommandQueue::WaitForFanceValue(UINT64 fenceValue)
 
 void CommandQueue::Flush()
 {
-	WaitForFanceValue(Signal());
+	WaitForFenceValue(Signal());
 }
 
 

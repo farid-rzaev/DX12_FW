@@ -5,6 +5,7 @@
 // =====================================================================================
 //										Global vars 
 // =====================================================================================
+
 using namespace DirectX;
 
 // Clamp a value between a min and max range.
@@ -45,6 +46,7 @@ static WORD g_Indicies[36] =
 // =====================================================================================
 //										Init 
 // =====================================================================================
+
 Game::Game(HINSTANCE hInstance, const wchar_t * windowTitle, int width, int height, bool vSync) :
 	Application(hInstance, windowTitle, width, height, vSync),
 	m_ScissorRect(CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX)),
@@ -62,6 +64,7 @@ Game::~Game()
 // =====================================================================================
 //							  Update & Render & Resize
 // =====================================================================================
+
 void Game::Update() 
 { 
 	Application::Update(); 
@@ -69,11 +72,25 @@ void Game::Update()
 
 void Game::Resize(UINT32 width, UINT32 height) 
 {
-	Application::Resize(width, height);
+	if (Application::GetClientWidth() != width || Application::GetClientHeight() != height)
+	{
+		// RenderTargets
+		{
+			Application::Resize(width, height);
 
-	// Since the index of back buffer may not be the same, it is important
-	// to update the current back buffer index as known by the application.
-	m_CurrentBackBufferIndex = Application::GetCurrentBackbufferIndex();
+			// Since the index of back buffer may not be the same, it is important
+			// to update the current back buffer index as known by the application.
+			m_CurrentBackBufferIndex = Application::GetCurrentBackbufferIndex();
+		}
+
+		// Viewport and DephBuffer
+		{
+			m_Viewport = CD3DX12_VIEWPORT(0.0f, 0.0f,
+				static_cast<float>(width), static_cast<float>(height));
+
+			ResizeDepthBuffer(width, height);
+		}
+	}
 }
 
 // Resources must be transitioned from one state to another using a resource BARRIER
@@ -130,13 +147,14 @@ void Game::Render()
 		m_FenceValues[m_CurrentBackBufferIndex] = commandQueue->ExecuteCommandList(commandList);
 
 		m_CurrentBackBufferIndex = Application::Present();
-		commandQueue->WaitForFanceValue(m_FenceValues[m_CurrentBackBufferIndex]);
+		commandQueue->WaitForFenceValue(m_FenceValues[m_CurrentBackBufferIndex]);
 	}
 }
 
 // =====================================================================================
 //									   Sample
 // =====================================================================================
+
 void Game::UpdateBufferResource(
 	ComPtr<ID3D12GraphicsCommandList2> commandList,
 	ID3D12Resource** pDestinationResource,
@@ -295,9 +313,14 @@ bool Game::LoadContent()
 	m_ContentLoaded = true;
 
 	// Resize/Create the depth buffer.
-	ResizeDepthBuffer(GetClientWidth(), GetClientHeight());
+	ResizeDepthBuffer(Application::GetClientWidth(), Application::GetClientHeight());
 
 	return true;
+}
+
+
+void Game::UnloadContent() {
+	m_ContentLoaded = false;
 }
 
 
@@ -306,12 +329,12 @@ void Game::ResizeDepthBuffer(int width, int height)
 	if (m_ContentLoaded)
 	{
 		// Flush any GPU commands that might be referencing the depth buffer.
-		Application::Get().Flush();
+		Application::Flush();
 
 		width = std::max(1, width);
 		height = std::max(1, height);
 
-		auto device = Application::Get().GetDevice();
+		auto device = Application::GetDevice();
 
 		// Resize screen dependent resources.
 		// Create a depth buffer.
@@ -344,6 +367,7 @@ void Game::ResizeDepthBuffer(int width, int height)
 // =====================================================================================
 //									Helper Funcs
 // =====================================================================================
+
 void Game::TransitionResource(ComPtr<ID3D12GraphicsCommandList2> commandList, ComPtr<ID3D12Resource> resource, 
 	D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after)
 {
