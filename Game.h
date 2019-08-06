@@ -14,8 +14,8 @@ public:
 	virtual ~Game();
 
 	virtual void Update();
-	virtual void Resize(UINT32 width, UINT32 height);
 	virtual void Render();
+	virtual void Resize(UINT32 width, UINT32 height);
 
 	// Sample
 	bool LoadContent();
@@ -62,6 +62,11 @@ private:
 	D3D12_VIEWPORT m_Viewport;
 	D3D12_RECT m_ScissorRect;
 	float m_FoV;
+
+	// Camera
+	DirectX::XMMATRIX m_ModelMatrix;
+	DirectX::XMMATRIX m_ViewMatrix;
+	DirectX::XMMATRIX m_ProjectionMatrix;
 
 private:	
 	// Frame Sync 

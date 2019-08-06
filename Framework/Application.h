@@ -15,6 +15,9 @@ using namespace Microsoft::WRL;
 
 // D3D12 extension library.
 #include "../Helpers/d3dx12.h"
+// External - Timer - TODO replace it
+#include "../External/HighResolutionClock.h"
+
 // Framework
 #include "Window.h"
 #include "CommandQueue.h"
@@ -36,19 +39,10 @@ public:
 	// Run
 	virtual void Run();
 	
-	// Get and Set
-	UINT32 GetClientWidth() const { return m_Window->GetClientWidth(); }
-	UINT32 GetClientHeight() const { return m_Window->GetClientHeight(); }
-	ComPtr<ID3D12Device2> GetDevice() const { return m_d3d12Device; }
-	std::shared_ptr<CommandQueue> GetCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT) const;
-	UINT GetCurrentBackbufferIndex() const { return m_Window->GetCurrentBackBufferIndex(); }
-	ComPtr<ID3D12Resource> GetBackbuffer(UINT BackBufferIndex);
-	CD3DX12_CPU_DESCRIPTOR_HANDLE GetCurrentBackbufferRTV();
-
 protected:
 	// Update & Render & Resize
 	virtual void Update();
-	virtual void Render() = 0;
+	virtual void Render();
 	virtual void Resize(UINT32 width, UINT32 height);
 	UINT8 Present() { return m_Window->Present(); }
 
@@ -66,6 +60,17 @@ protected:
 	ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(ComPtr<ID3D12Device2> device, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT32 numDescriptors);
 	void UpdateRenderTargetViews(ComPtr<ID3D12Device2> device, ComPtr<ID3D12DescriptorHeap> descriptorHeap);
 
+	// Get and Set
+	UINT32 GetClientWidth() const { return m_Window->GetClientWidth(); }
+	UINT32 GetClientHeight() const { return m_Window->GetClientHeight(); }
+	ComPtr<ID3D12Device2> GetDevice() const { return m_d3d12Device; }
+	std::shared_ptr<CommandQueue> GetCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT) const;
+	UINT GetCurrentBackbufferIndex() const { return m_Window->GetCurrentBackBufferIndex(); }
+	ComPtr<ID3D12Resource> GetBackbuffer(UINT BackBufferIndex);
+	CD3DX12_CPU_DESCRIPTOR_HANDLE GetCurrentBackbufferRTV();
+	double GetUpdateTotalTime() { return m_UpdateClock.GetTotalSeconds(); }
+	double GetRenderTotalTime() { return m_RenderClock.GetTotalSeconds(); }
+
 // ------------------------------------------------------------------------------------------
 //									Data members
 // ------------------------------------------------------------------------------------------
@@ -80,15 +85,19 @@ private:
 	// APP instance handle
 	HINSTANCE m_hInstance;
 
-	// Heap with RTVs
-	ComPtr<ID3D12DescriptorHeap> m_RTVDescriptorHeap;
-	UINT m_RTVDescriptorSize;
-
 	// DirectX 12 Objects
 	ComPtr<ID3D12Device2> m_d3d12Device;
 
 	// Command Queues
-	std::shared_ptr<CommandQueue> m_DirectCommandQueue	= nullptr;
+	std::shared_ptr<CommandQueue> m_DirectCommandQueue = nullptr;
 	std::shared_ptr<CommandQueue> m_ComputeCommandQueue = nullptr;
-	std::shared_ptr<CommandQueue> m_CopyCommandQueue	= nullptr;
+	std::shared_ptr<CommandQueue> m_CopyCommandQueue = nullptr;
+
+	// Heap with RTVs
+	ComPtr<ID3D12DescriptorHeap> m_RTVDescriptorHeap;
+	UINT m_RTVDescriptorSize;
+
+	// Frametimes
+	HighResolutionClock m_UpdateClock;
+	HighResolutionClock m_RenderClock;
 };

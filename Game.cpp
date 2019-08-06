@@ -5,7 +5,7 @@
 // =====================================================================================
 //										Global vars 
 // =====================================================================================
-
+using namespace Microsoft::WRL;
 using namespace DirectX;
 
 // Clamp a value between a min and max range.
@@ -68,29 +68,22 @@ Game::~Game()
 void Game::Update() 
 { 
 	Application::Update(); 
-}
+	double totalUpdateTime = Application::GetUpdateTotalTime();
 
-void Game::Resize(UINT32 width, UINT32 height) 
-{
-	if (Application::GetClientWidth() != width || Application::GetClientHeight() != height)
-	{
-		// RenderTargets
-		{
-			Application::Resize(width, height);
+	// Update the model matrix.
+	float angle = static_cast<float>(totalUpdateTime * 90.0);
+	const XMVECTOR rotationAxis = XMVectorSet(0, 1, 1, 0);
+	m_ModelMatrix = XMMatrixRotationAxis(rotationAxis, XMConvertToRadians(angle));
 
-			// Since the index of back buffer may not be the same, it is important
-			// to update the current back buffer index as known by the application.
-			m_CurrentBackBufferIndex = Application::GetCurrentBackbufferIndex();
-		}
+	// Update the view matrix.
+	const XMVECTOR eyePosition = XMVectorSet(0, 0, -10, 1);
+	const XMVECTOR focusPoint = XMVectorSet(0, 0, 0, 1);
+	const XMVECTOR upDirection = XMVectorSet(0, 1, 0, 0);
+	m_ViewMatrix = XMMatrixLookAtLH(eyePosition, focusPoint, upDirection);
 
-		// Viewport and DephBuffer
-		{
-			m_Viewport = CD3DX12_VIEWPORT(0.0f, 0.0f,
-				static_cast<float>(width), static_cast<float>(height));
-
-			ResizeDepthBuffer(width, height);
-		}
-	}
+	// Update the projection matrix.
+	float aspectRatio = GetClientWidth() / static_cast<float>(GetClientHeight());
+	m_ProjectionMatrix = XMMatrixPerspectiveFovLH(XMConvertToRadians(m_FoV), aspectRatio, 0.1f, 100.0f);
 }
 
 // Resources must be transitioned from one state to another using a resource BARRIER
@@ -122,6 +115,9 @@ void Game::Resize(UINT32 width, UINT32 height)
 //						read - only(Read > Read) resource between draw or dispatches.
 void Game::Render() 
 {
+	Application::Render();
+	double totalRenderTime = Application::GetRenderTotalTime();
+
 	auto commandQueue = GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
 	auto commandList = commandQueue->GetCommandList();
 	m_CurrentBackBufferIndex = GetCurrentBackbufferIndex();
@@ -150,6 +146,30 @@ void Game::Render()
 		commandQueue->WaitForFenceValue(m_FenceValues[m_CurrentBackBufferIndex]);
 	}
 }
+
+void Game::Resize(UINT32 width, UINT32 height)
+{
+	if (Application::GetClientWidth() != width || Application::GetClientHeight() != height)
+	{
+		// RenderTargets
+		{
+			Application::Resize(width, height);
+
+			// Since the index of back buffer may not be the same, it is important
+			// to update the current back buffer index as known by the application.
+			m_CurrentBackBufferIndex = Application::GetCurrentBackbufferIndex();
+		}
+
+		// Viewport and DephBuffer
+		{
+			m_Viewport = CD3DX12_VIEWPORT(0.0f, 0.0f,
+				static_cast<float>(width), static_cast<float>(height));
+
+			ResizeDepthBuffer(width, height);
+		}
+	}
+}
+
 
 // =====================================================================================
 //									   Sample

@@ -104,6 +104,10 @@ void Application::Run() {
 			::DispatchMessage(&msg);
 		}
 	}
+
+	// Flush any commands in the 
+	// commands queues before quiting.
+	Flush();
 }
 
 // =====================================================================================
@@ -154,34 +158,34 @@ CD3DX12_CPU_DESCRIPTOR_HANDLE Application::GetCurrentBackbufferRTV()
 //		in Visual Studio.
 void Application::Update()
 {
-	static uint64_t frameCounter = 0;
-	static double elapsedSeconds = 0.0;
-	static std::chrono::high_resolution_clock clock;
-	static auto t0 = clock.now();
+	// Timer
+	m_UpdateClock.Tick();
 
-	frameCounter++;
-	auto t1 = clock.now();
-	auto deltaTime = t1 - t0;
-	t0 = t1;
+	static uint64_t frameCount = 0;
+	static double totalTime = 0.0;
 
-	// The deltaTime time_point variable stores the number of NANOseconds
-	// since the previous call to the Update function. To convert the 
-	// deltaTime from nanoseconds into seconds, it is multiplied by 10^(9).
-	elapsedSeconds += deltaTime.count() * 1e-9;
+	totalTime += m_UpdateClock.GetDeltaSeconds();
+	frameCount++;
 
-	// The frame-rate is printed to the debug output in Visual Studio 
-	// only once per second.
-	if (elapsedSeconds > 1.0)
+	// The frame-rate is printed to the debug output only once per second.
+	if (totalTime > 1.0)
 	{
 		wchar_t buffer[500];
-		auto fps = frameCounter / elapsedSeconds;
+		auto fps = frameCount / totalTime;
 		swprintf(buffer, 500, L"FPS: %f\n", fps);
 		OutputDebugString(buffer);
 
-		frameCounter = 0;
-		elapsedSeconds = 0.0;
+		frameCount = 0;
+		totalTime = 0.0;
 	}
 }
+
+void Application::Render()
+{
+	// Timer
+	m_RenderClock.Tick();
+}
+
 
 // A resize event is triggered when the window is created the first time. 
 // It is also triggered when switching to full-screen mode or if the user 
