@@ -1,5 +1,4 @@
 #include "Window.h"
-#include "Helpers.h"
 
 #include <cassert>
 #include <algorithm> // std::min and  std::max.

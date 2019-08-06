@@ -1,29 +1,5 @@
 #pragma once
 
-// Minimize the num of 
-// headers from Windows.h
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-
-// The min/max macros conflict 
-// with like-named member functions.
-// Only use std::min and std::max 
-// defined in <algorithm>.
-#if defined(min)
-#undef min
-#endif
-
-#if defined(max)
-#undef max
-#endif
-
-// To define a func called CreateWindow,
-// the Windows macro needs to be undefined.
-#if defined(CreateWindow)
-#undef CreateWindow
-#endif
-
-
 // Windows Runtime Library. Needed for 
 // Microsoft::WRL::ComPtr<> template class.
 #include <wrl.h>
@@ -38,9 +14,8 @@ using namespace Microsoft::WRL;
 #include <memory>
 
 // D3D12 extension library.
-#include "d3dx12.h"
+#include "../Helpers/d3dx12.h"
 // Framework
-#include "Helpers.h"
 #include "Window.h"
 #include "CommandQueue.h"
 

@@ -81,19 +81,21 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Application.cpp" />
-    <ClCompile Include="CommandQueue.cpp" />
+    <ClCompile Include="External\HighResolutionClock.cpp" />
+    <ClCompile Include="Framework\Application.cpp" />
+    <ClCompile Include="Framework\CommandQueue.cpp" />
+    <ClCompile Include="Framework\Window.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Game.cpp" />
-    <ClCompile Include="Window.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Application.h" />
-    <ClInclude Include="CommandQueue.h" />
-    <ClInclude Include="d3dx12.h" />
+    <ClInclude Include="External\HighResolutionClock.h" />
+    <ClInclude Include="Framework\Application.h" />
+    <ClInclude Include="Framework\CommandQueue.h" />
+    <ClInclude Include="Framework\Window.h" />
     <ClInclude Include="Game.h" />
-    <ClInclude Include="Helpers.h" />
-    <ClInclude Include="Window.h" />
+    <ClInclude Include="Helpers\d3dx12.h" />
+    <ClInclude Include="Helpers\Helpers.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
