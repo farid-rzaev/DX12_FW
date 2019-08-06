@@ -52,6 +52,7 @@ Game::Game(HINSTANCE hInstance, const wchar_t * windowTitle, int width, int heig
 	m_ScissorRect(CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX)),
 	m_Viewport(CD3DX12_VIEWPORT(0.0f, 0.0f, (float)width, (float)height)),
 	m_FoV(45.0f)
+	m_zoomFactor(1.0f)
 {
 	// The first back buffer index will very likely be 0, but it depends
 	m_CurrentBackBufferIndex = Application::GetCurrentBackbufferIndex();
@@ -83,7 +84,13 @@ void Game::Update()
 
 	// Update the projection matrix.
 	float aspectRatio = GetClientWidth() / static_cast<float>(GetClientHeight());
-	m_ProjectionMatrix = XMMatrixPerspectiveFovLH(XMConvertToRadians(m_FoV), aspectRatio, 0.1f, 100.0f);
+	float aspectRatioY = aspectRatio / aspectRatio;
+	float conditionalAspect = 16.0f / 9.0f;
+	if (aspectRatio < conditionalAspect)
+	{
+		aspectRatioY = aspectRatio / conditionalAspect
+	}
+	m_ProjectionMatrix = XMMatrixPerspectiveFovLH(2.0f * std::atan(std::tan((XMConvertToRadians(m_FoV) / 2.0f) / aspectRatioY / m_zoomFactor), aspectRatio, 0.1f, 100.0f);
 }
 
 // Resources must be transitioned from one state to another using a resource BARRIER
