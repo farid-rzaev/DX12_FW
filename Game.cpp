@@ -62,117 +62,7 @@ Game::~Game()
 }
 
 // =====================================================================================
-//							  Update & Render & Resize
-// =====================================================================================
-
-void Game::Update() 
-{ 
-	Application::Update(); 
-	double totalUpdateTime = Application::GetUpdateTotalTime();
-
-	// Update the model matrix.
-	float angle = static_cast<float>(totalUpdateTime * 90.0);
-	const XMVECTOR rotationAxis = XMVectorSet(0, 1, 1, 0);
-	m_ModelMatrix = XMMatrixRotationAxis(rotationAxis, XMConvertToRadians(angle));
-
-	// Update the view matrix.
-	const XMVECTOR eyePosition = XMVectorSet(0, 0, -10, 1);
-	const XMVECTOR focusPoint = XMVectorSet(0, 0, 0, 1);
-	const XMVECTOR upDirection = XMVectorSet(0, 1, 0, 0);
-	m_ViewMatrix = XMMatrixLookAtLH(eyePosition, focusPoint, upDirection);
-
-	// Update the projection matrix.
-	float aspectRatio = GetClientWidth() / static_cast<float>(GetClientHeight());
-	m_ProjectionMatrix = XMMatrixPerspectiveFovLH(XMConvertToRadians(m_FoV), aspectRatio, 0.1f, 100.0f);
-}
-
-// Resources must be transitioned from one state to another using a resource BARRIER
-//		and inserting that resource barrier into the command list.
-// For example, before you can use the swap chain's back buffer as a render target, 
-//		it must be transitioned to the RENDER_TARGET state and before it can be used
-//		for presenting the rendered image to the screen, it must be transitioned to 
-//		the  PRESENT state.
-// 
-//
-// There are several types of resource barriers :
-//	 - Transition: Transitions a(sub)resource to a particular state before using it. 
-//			For example, before a texture can be used in a pixel shader, it must be 
-//			transitioned to the PIXEL_SHADER_RESOURCE state.
-//	 - Aliasing: Specifies that a resource is used in a placed or reserved heap when
-//			that resource is aliased with another resource in the same heap.
-//	 - UAV: Indicates that all UAV accesses to a particular resource have completed 
-//			before any future UAV access can begin.This is necessary when the UAV is 
-//			transitioned for :
-//				* Read > Write: Guarantees that all previous read operations on the UAV
-//						have completed before being written to in another shader.
-//				* Write > Read: Guarantees that all previous write operations on the UAV
-//						have completed before being read from in another shader.
-//				* Write > Write: Avoids race conditions that could be caused by different
-//						shaders in a different draw or dispatch trying to write to the same
-//						resource(does not avoid race conditions that could be caused in the
-//						same draw or dispatch call).
-//				* A UAV barrier is not needed if the resource is being used as a 
-//						read - only(Read > Read) resource between draw or dispatches.
-void Game::Render() 
-{
-	Application::Render();
-	double totalRenderTime = Application::GetRenderTotalTime();
-
-	auto commandQueue = GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
-	auto commandList = commandQueue->GetCommandList();
-	m_CurrentBackBufferIndex = GetCurrentBackbufferIndex();
-	auto backBuffer = Application::GetBackbuffer(m_CurrentBackBufferIndex);
-
-	{
-		TransitionResource(commandList, backBuffer, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-
-		FLOAT clearColor[] = { 0.4f, 0.6f, 0.9f, 1.0f };
-		CD3DX12_CPU_DESCRIPTOR_HANDLE rtv = GetCurrentBackbufferRTV();
-		commandList->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
-	}
-
-	// PRESENT image to the screen
-	{
-		// After rendering the scene, the current back buffer is PRESENTed 
-		//     to the screen.
-		// !!! Before presenting, the back buffer resource must be 
-		//     transitioned to the PRESENT state.
-		TransitionResource(commandList, backBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-
-		// Execute
-		m_FenceValues[m_CurrentBackBufferIndex] = commandQueue->ExecuteCommandList(commandList);
-
-		m_CurrentBackBufferIndex = Application::Present();
-		commandQueue->WaitForFenceValue(m_FenceValues[m_CurrentBackBufferIndex]);
-	}
-}
-
-void Game::Resize(UINT32 width, UINT32 height)
-{
-	if (Application::GetClientWidth() != width || Application::GetClientHeight() != height)
-	{
-		// RenderTargets
-		{
-			Application::Resize(width, height);
-
-			// Since the index of back buffer may not be the same, it is important
-			// to update the current back buffer index as known by the application.
-			m_CurrentBackBufferIndex = Application::GetCurrentBackbufferIndex();
-		}
-
-		// Viewport and DephBuffer
-		{
-			m_Viewport = CD3DX12_VIEWPORT(0.0f, 0.0f,
-				static_cast<float>(width), static_cast<float>(height));
-
-			ResizeDepthBuffer(width, height);
-		}
-	}
-}
-
-
-// =====================================================================================
-//									   Sample
+//						      LoadContent & UnloadContent
 // =====================================================================================
 
 void Game::UpdateBufferResource(
@@ -218,7 +108,7 @@ void Game::UpdateBufferResource(
 }
 
 
-bool Game::LoadContent()
+bool Game::LoadContent(std::wstring shaderBlobPath)
 {
 	auto device = Application::GetDevice();
 	auto commandQueue = Application::GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COPY);
@@ -255,11 +145,13 @@ bool Game::LoadContent()
 
 	// Load the vertex shader.
 	ComPtr<ID3DBlob> vertexShaderBlob;
-	ThrowIfFailed(D3DReadFileToBlob(L"VertexShader.cso", &vertexShaderBlob));
+	std::wstring blobPath = std::wstring(shaderBlobPath + L"VertexShader.cso");
+	ThrowIfFailed(D3DReadFileToBlob(blobPath.c_str(), &vertexShaderBlob));
 
 	// Load the pixel shader.
 	ComPtr<ID3DBlob> pixelShaderBlob;
-	ThrowIfFailed(D3DReadFileToBlob(L"PixelShader.cso", &pixelShaderBlob));
+	blobPath = std::wstring(shaderBlobPath + L"PixelShader.cso");
+	ThrowIfFailed(D3DReadFileToBlob(blobPath.c_str(), &pixelShaderBlob));
 
 	// Create the vertex input layout
 	D3D12_INPUT_ELEMENT_DESC inputLayout[] = {
@@ -343,6 +235,140 @@ void Game::UnloadContent() {
 	m_ContentLoaded = false;
 }
 
+// =====================================================================================
+//							  Update & Render & Resize
+// =====================================================================================
+
+void Game::Update() 
+{ 
+	Application::Update(); 
+	double totalUpdateTime = Application::GetUpdateTotalTime();
+
+	// Update the model matrix.
+	float angle = static_cast<float>(totalUpdateTime * 90.0);
+	const XMVECTOR rotationAxis = XMVectorSet(0, 1, 1, 0);
+	m_ModelMatrix = XMMatrixRotationAxis(rotationAxis, XMConvertToRadians(angle));
+
+	// Update the view matrix.
+	const XMVECTOR eyePosition = XMVectorSet(0, 0, -10, 1);
+	const XMVECTOR focusPoint = XMVectorSet(0, 0, 0, 1);
+	const XMVECTOR upDirection = XMVectorSet(0, 1, 0, 0);
+	m_ViewMatrix = XMMatrixLookAtLH(eyePosition, focusPoint, upDirection);
+
+	// Update the projection matrix.
+	float aspectRatio = Application::GetClientWidth() / static_cast<float>(Application::GetClientHeight());
+	m_ProjectionMatrix = XMMatrixPerspectiveFovLH(XMConvertToRadians(m_FoV), aspectRatio, 0.1f, 100.0f);
+}
+
+// Resources must be transitioned from one state to another using a resource BARRIER
+//		and inserting that resource barrier into the command list.
+// For example, before you can use the swap chain's back buffer as a render target, 
+//		it must be transitioned to the RENDER_TARGET state and before it can be used
+//		for presenting the rendered image to the screen, it must be transitioned to 
+//		the  PRESENT state.
+// 
+//
+// There are several types of resource barriers :
+//	 - Transition: Transitions a(sub)resource to a particular state before using it. 
+//			For example, before a texture can be used in a pixel shader, it must be 
+//			transitioned to the PIXEL_SHADER_RESOURCE state.
+//	 - Aliasing: Specifies that a resource is used in a placed or reserved heap when
+//			that resource is aliased with another resource in the same heap.
+//	 - UAV: Indicates that all UAV accesses to a particular resource have completed 
+//			before any future UAV access can begin.This is necessary when the UAV is 
+//			transitioned for :
+//				* Read > Write: Guarantees that all previous read operations on the UAV
+//						have completed before being written to in another shader.
+//				* Write > Read: Guarantees that all previous write operations on the UAV
+//						have completed before being read from in another shader.
+//				* Write > Write: Avoids race conditions that could be caused by different
+//						shaders in a different draw or dispatch trying to write to the same
+//						resource(does not avoid race conditions that could be caused in the
+//						same draw or dispatch call).
+//				* A UAV barrier is not needed if the resource is being used as a 
+//						read - only(Read > Read) resource between draw or dispatches.
+void Game::Render() 
+{
+	Application::Render();
+	double totalRenderTime = Application::GetRenderTotalTime();
+
+	auto commandQueue = Application::GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
+	auto commandList = commandQueue->GetCommandList();
+	
+	m_CurrentBackBufferIndex = Application::GetCurrentBackbufferIndex();
+	auto backBuffer = Application::GetBackbuffer(m_CurrentBackBufferIndex);
+
+	auto rtv = Application::GetCurrentBackbufferRTV();
+	auto dsv = m_DSVHeap->GetCPUDescriptorHandleForHeapStart();
+
+	// Clear RT
+	{
+		TransitionResource(commandList, backBuffer, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+		FLOAT clearColor[] = { 0.4f, 0.6f, 0.9f, 1.0f };
+		ClearRTV(commandList, rtv, clearColor);
+		ClearDepth(commandList, dsv);
+	}
+
+	// Set Graphics state
+	commandList->SetPipelineState(m_PipelineState.Get());
+	commandList->SetGraphicsRootSignature(m_RootSignature.Get());
+
+	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	commandList->IASetVertexBuffers(0, 1, &m_VertexBufferView);
+	commandList->IASetIndexBuffer(&m_IndexBufferView);
+
+	commandList->RSSetViewports(1, &m_Viewport);
+	commandList->RSSetScissorRects(1, &m_ScissorRect);
+
+	commandList->OMSetRenderTargets(1, &rtv, FALSE, &dsv);
+
+	// Update the MVP matrix
+	XMMATRIX mvpMatrix = XMMatrixMultiply(m_ModelMatrix, m_ViewMatrix);
+	mvpMatrix = XMMatrixMultiply(mvpMatrix, m_ProjectionMatrix);
+	commandList->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &mvpMatrix, 0);
+
+	// Draw
+	commandList->DrawIndexedInstanced(_countof(g_Indicies), 1, 0, 0, 0);
+
+	// PRESENT image
+	{
+		// After rendering the scene, the current back buffer is PRESENTed 
+		//     to the screen.
+		// !!! Before presenting, the back buffer resource must be 
+		//     transitioned to the PRESENT state.
+		TransitionResource(commandList, backBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+
+		// Execute
+		m_FenceValues[m_CurrentBackBufferIndex] = commandQueue->ExecuteCommandList(commandList);
+
+		m_CurrentBackBufferIndex = Application::Present();
+		commandQueue->WaitForFenceValue(m_FenceValues[m_CurrentBackBufferIndex]);
+	}
+}
+
+void Game::Resize(UINT32 width, UINT32 height)
+{
+	if (Application::GetClientWidth() != width || Application::GetClientHeight() != height)
+	{
+		// RenderTargets
+		{
+			Application::Resize(width, height);
+
+			// Since the index of back buffer may not be the same, it is important
+			// to update the current back buffer index as known by the application.
+			m_CurrentBackBufferIndex = Application::GetCurrentBackbufferIndex();
+		}
+
+		// Viewport and DephBuffer
+		{
+			m_Viewport = CD3DX12_VIEWPORT(0.0f, 0.0f,
+				static_cast<float>(width), static_cast<float>(height));
+
+			ResizeDepthBuffer(width, height);
+		}
+	}
+}
 
 void Game::ResizeDepthBuffer(int width, int height)
 {
@@ -397,4 +423,16 @@ void Game::TransitionResource(ComPtr<ID3D12GraphicsCommandList2> commandList, Co
 	);
 
 	commandList->ResourceBarrier(1, &barrier);
+}
+
+void Game::ClearRTV(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> commandList,
+	D3D12_CPU_DESCRIPTOR_HANDLE rtv, FLOAT* clearColor)
+{
+	commandList->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
+}
+
+void Game::ClearDepth(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> commandList,
+	D3D12_CPU_DESCRIPTOR_HANDLE dsv, FLOAT depth)
+{
+	commandList->ClearDepthStencilView(dsv, D3D12_CLEAR_FLAG_DEPTH, depth, 0, 0, nullptr);
 }

@@ -140,7 +140,7 @@ ComPtr<ID3D12Resource> Application::GetBackbuffer(UINT BackBufferIndex)
 	return m_Window->GetBackBuffer(BackBufferIndex);
 }
 
-CD3DX12_CPU_DESCRIPTOR_HANDLE Application::GetCurrentBackbufferRTV()
+D3D12_CPU_DESCRIPTOR_HANDLE Application::GetCurrentBackbufferRTV()
 {
 	CD3DX12_CPU_DESCRIPTOR_HANDLE rtv(
 		m_RTVDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),

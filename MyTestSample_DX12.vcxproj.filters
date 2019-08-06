@@ -55,5 +55,16 @@
     <Filter Include="Helpers">
       <UniqueIdentifier>{0ef4aee0-d9a9-45d5-b593-ee6237279407}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{ddc3ca7a-6d5c-4dcc-9710-2bc87050094c}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="Shaders\PixelShader.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\VertexShader.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

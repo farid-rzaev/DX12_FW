@@ -67,7 +67,7 @@ protected:
 	std::shared_ptr<CommandQueue> GetCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT) const;
 	UINT GetCurrentBackbufferIndex() const { return m_Window->GetCurrentBackBufferIndex(); }
 	ComPtr<ID3D12Resource> GetBackbuffer(UINT BackBufferIndex);
-	CD3DX12_CPU_DESCRIPTOR_HANDLE GetCurrentBackbufferRTV();
+	D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentBackbufferRTV();
 	double GetUpdateTotalTime() { return m_UpdateClock.GetTotalSeconds(); }
 	double GetRenderTotalTime() { return m_RenderClock.GetTotalSeconds(); }
 

@@ -18,7 +18,7 @@ public:
 	virtual void Resize(UINT32 width, UINT32 height);
 
 	// Sample
-	bool LoadContent();
+	bool LoadContent(std::wstring shaderBlobPath);
 	void UnloadContent();
 
 protected:
@@ -33,6 +33,10 @@ protected:
 	// Helpers
 	void TransitionResource(ComPtr<ID3D12GraphicsCommandList2> commandList, ComPtr<ID3D12Resource> resource, 
 		D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after);
+	void ClearRTV(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> commandList,
+		D3D12_CPU_DESCRIPTOR_HANDLE rtv, FLOAT* clearColor);
+	void ClearDepth(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> commandList,
+		D3D12_CPU_DESCRIPTOR_HANDLE dsv, FLOAT depth = 1.0f);
 
 // ------------------------------------------------------------------------------------------
 //									Data members
