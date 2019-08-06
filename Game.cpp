@@ -51,7 +51,7 @@ Game::Game(HINSTANCE hInstance, const wchar_t * windowTitle, int width, int heig
 	Application(hInstance, windowTitle, width, height, vSync),
 	m_ScissorRect(CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX)),
 	m_Viewport(CD3DX12_VIEWPORT(0.0f, 0.0f, (float)width, (float)height)),
-	m_FoV(45.0f)
+	m_FoV(45.0f),
 	m_zoomFactor(1.0f)
 {
 	// The first back buffer index will very likely be 0, but it depends
