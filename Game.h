@@ -62,6 +62,7 @@ private:
 	D3D12_VIEWPORT m_Viewport;
 	D3D12_RECT m_ScissorRect;
 	float m_FoV;
+	float m_zoomFactor;
 
 	// Camera
 	DirectX::XMMATRIX m_ModelMatrix;
