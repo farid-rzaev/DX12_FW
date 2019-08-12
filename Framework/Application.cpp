@@ -57,8 +57,6 @@ Application::Application(HINSTANCE hInstance, const wchar_t* windowTitle, int wi
 		m_Window->SetUserPtr((void*)this);					// - inject Application pointer into window
 		m_Window->SetCustomWndProc(Application::WndProc);   // - reset the Default WndProc of the 
 															//   window to app's static method
-		// Show Window
-		m_Window->Show();
 	}
 
 	//  Create RTVs in DescriptorHeap
@@ -74,6 +72,9 @@ Application::Application(HINSTANCE hInstance, const wchar_t* windowTitle, int wi
 		// Render target views are fill into the descriptor heap
 		UpdateRenderTargetViews(m_d3d12Device, m_RTVDescriptorHeap);
 	}
+
+	// Show Window
+	m_Window->Show();
 }
 
 Application::~Application() {
