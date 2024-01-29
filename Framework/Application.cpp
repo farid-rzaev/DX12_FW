@@ -1,4 +1,5 @@
 #include "Application.h"
+#include "../Helpers/Helpers.h"
 // --
 #include <d3dcompiler.h>
 #include <DirectXMath.h>
@@ -77,6 +78,7 @@ Application::Application(HINSTANCE hInstance, const wchar_t* windowTitle, int wi
 	m_Window->Show();
 }
 
+
 Application::~Application() {
 	// Make sure the command queue has finished all commands before closing.
 	//
@@ -88,9 +90,11 @@ Application::~Application() {
 	Flush();
 }
 
+
 // =====================================================================================
 //										Run 
 // =====================================================================================
+
 
 void Application::Run() {
 	// Messages are dispatched to the window procedure (the WndProc function)
@@ -111,9 +115,11 @@ void Application::Run() {
 	Flush();
 }
 
+
 // =====================================================================================
 //									Get and Set
 // =====================================================================================
+
 
 std::shared_ptr<CommandQueue> Application::GetCommandQueue(D3D12_COMMAND_LIST_TYPE type) const 
 {
@@ -136,10 +142,12 @@ std::shared_ptr<CommandQueue> Application::GetCommandQueue(D3D12_COMMAND_LIST_TY
 	return commandQueue;
 }
 
+
 ComPtr<ID3D12Resource> Application::GetBackbuffer(UINT BackBufferIndex)
 {
 	return m_Window->GetBackBuffer(BackBufferIndex);
 }
+
 
 D3D12_CPU_DESCRIPTOR_HANDLE Application::GetCurrentBackbufferRTV()
 {
@@ -151,9 +159,11 @@ D3D12_CPU_DESCRIPTOR_HANDLE Application::GetCurrentBackbufferRTV()
 	return rtv;
 }
 
+
 // =====================================================================================
 //							  Update & Render & Resize
 // =====================================================================================
+
 
 // For this lesson, the functuion ony display's the frame-rate each second in the debug output 
 //		in Visual Studio.
@@ -180,6 +190,7 @@ void Application::Update()
 		totalTime = 0.0;
 	}
 }
+
 
 void Application::Render()
 {
@@ -209,6 +220,7 @@ void Application::Resize(UINT32 width, UINT32 height)
 	}
 }
 
+
 // A render target view (RTV) describes a resource that can be attached to a 
 //		bind slot of the output merger stage
 void Application::UpdateRenderTargetViews(ComPtr<ID3D12Device2> device, ComPtr<ID3D12DescriptorHeap> descriptorHeap)
@@ -228,6 +240,7 @@ void Application::UpdateRenderTargetViews(ComPtr<ID3D12Device2> device, ComPtr<I
 		rtvHandle.Offset(rtvDescriptorSize);
 	}
 }
+
 
 // =====================================================================================
 //									   Sync
@@ -255,9 +268,11 @@ void Application::Flush()
 	m_CopyCommandQueue->Flush();
 }
 
+
 // =====================================================================================
 //									Helper Funcs
 // =====================================================================================
+
 
 void Application::EnableDebugLayer()
 {
@@ -276,6 +291,7 @@ void Application::EnableDebugLayer()
 	// based on the type of the interface pointer used.
 #endif
 }
+
 
 ComPtr<IDXGIAdapter4> Application::GetAdapter(bool useWarp)
 {
@@ -329,6 +345,7 @@ ComPtr<IDXGIAdapter4> Application::GetAdapter(bool useWarp)
 
 	return dxgiAdapter4;
 }
+
 
 // The DirectX 12 device is used to create resources (such as textures and buffers, command lists,
 //		command queues, fences, heaps, etc...). 
@@ -393,6 +410,7 @@ ComPtr<ID3D12Device2> Application::CreateDevice(ComPtr<IDXGIAdapter4> adapter)
 	return d3d12Device2;
 }
 
+
 // A descriptor heap can be considered an array of resource VIEWs.
 //
 // CBV, SRV, and UAV can be stored in the same heap but
@@ -415,6 +433,7 @@ ComPtr<ID3D12DescriptorHeap> Application::CreateDescriptorHeap(ComPtr<ID3D12Devi
 // =====================================================================================
 //										WndProc
 // =====================================================================================
+
 
 // The window procedure handles any window messages sent to the application. 
 LRESULT CALLBACK Application::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)

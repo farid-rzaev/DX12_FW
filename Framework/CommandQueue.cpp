@@ -1,8 +1,8 @@
 #include <cassert>
-#include "../Helpers/Helpers.h"
 
 #include "CommandQueue.h"
 
+#include "../Helpers/Helpers.h"
 
 
 CommandQueue::CommandQueue(ComPtr<ID3D12Device2> device, D3D12_COMMAND_LIST_TYPE type) 
@@ -22,6 +22,7 @@ CommandQueue::CommandQueue(ComPtr<ID3D12Device2> device, D3D12_COMMAND_LIST_TYPE
 	m_FenceEvent = ::CreateEvent(NULL, FALSE, FALSE, NULL);
 	assert(m_FenceEvent && "Failed to create fence event handle.");
 }
+
 
 CommandQueue::~CommandQueue()
 {

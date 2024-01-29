@@ -4,6 +4,7 @@
 #include <Windows.h> // For HRESULT
 #include <exception> // For std::exception
 
+
 // From DXSampleHelper.h 
 // Source: https://github.com/Microsoft/DirectX-Graphics-Samples
 inline void ThrowIfFailed(HRESULT hr)

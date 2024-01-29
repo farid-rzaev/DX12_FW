@@ -31,13 +31,13 @@ using namespace Microsoft::WRL;
 #include <d3d12.h>
 #include <dxgi1_6.h>
 
-#include "../Helpers/Helpers.h"
 
 // Window class name. Used for registering / creating the window.
 constexpr wchar_t WINDOW_CLASS_NAME[] = L"DX12RenderWindowClass";
 //const UINT8 NumFramesInFlight = 3;
 
 constexpr UINT8 NUM_FRAMES_IN_FLIGHT = 3;
+
 
 class Window 
 {

@@ -3,6 +3,8 @@
 #include <cassert>
 #include <algorithm> // std::min and  std::max.
 
+#include "../Helpers/Helpers.h"
+
 
 Window::Window(UINT32 width, UINT32 height, bool vSync) 
 	: m_ClientWidth(width)
@@ -90,6 +92,7 @@ HWND Window::CreateWindow(HINSTANCE hInst, const wchar_t* windowTitle)
 	return g_hWnd;
 }
 
+
 // The primary purpose of the swap chain is to present the rendered image to the screen. 
 void Window::CreateSwapChain(ComPtr<ID3D12CommandQueue> commandQueue)
 {
@@ -176,6 +179,7 @@ void Window::ResizeBackBuffers(UINT32 width, UINT32 height)
 
 }
 
+
 ComPtr<ID3D12Resource> Window::UpdateBackBufferCache(UINT8 index)
 { 
 	ThrowIfFailed(m_SwapChain->GetBuffer(index, IID_PPV_ARGS(&m_BackBuffers[index])));
@@ -211,15 +215,18 @@ UINT8 Window::Present()
 	return m_SwapChain->GetCurrentBackBufferIndex();
 }
 
+
 // =====================================================================================
 //							  Pointer Injections
 // =====================================================================================
+
 
 void Window::SetUserPtr(void* userPtr)
 {
 	// inject Application pointer into window
 	SetWindowLongPtr(g_hWnd, GWLP_USERDATA, (LONG_PTR)userPtr);
 }
+
 
 void Window::SetCustomWndProc(WNDPROC wndProc)
 {
@@ -231,6 +238,7 @@ void Window::SetCustomWndProc(WNDPROC wndProc)
 // =====================================================================================
 //								 Helpers
 // =====================================================================================
+
 
 // Variable refresh rate displays (NVidia's G-Sync and AMD's FreeSync) require 
 //		tearing to be enabled in the DirectX 12 application to function correctly. 

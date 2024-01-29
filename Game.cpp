@@ -1,6 +1,9 @@
 #include "Game.h"
 
+#include "Helpers/Helpers.h"
+
 #include <d3dcompiler.h>
+
 
 // =====================================================================================
 //										Global vars 
@@ -43,9 +46,11 @@ static WORD g_Indicies[36] =
 	4, 0, 3, 4, 3, 7
 };
 
+
 // =====================================================================================
 //										Init 
 // =====================================================================================
+
 
 Game::Game(HINSTANCE hInstance, const wchar_t * windowTitle, int width, int height, bool vSync) :
 	Application(hInstance, windowTitle, width, height, vSync),
@@ -61,9 +66,11 @@ Game::~Game()
 
 }
 
+
 // =====================================================================================
-//						      LoadContent & UnloadContent
+//								LoadContent & UnloadContent
 // =====================================================================================
+
 
 void Game::UpdateBufferResource(
 	ComPtr<ID3D12GraphicsCommandList2> commandList,
@@ -81,7 +88,7 @@ void Game::UpdateBufferResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 		D3D12_HEAP_FLAG_NONE,
 		&CD3DX12_RESOURCE_DESC::Buffer(bufferSize, flags),
-		D3D12_RESOURCE_STATE_COPY_DEST,
+		D3D12_RESOURCE_STATE_COMMON /*D3D12_RESOURCE_STATE_COPY_DEST*/,
 		nullptr,
 		IID_PPV_ARGS(pDestinationResource)));
 
@@ -235,11 +242,13 @@ void Game::UnloadContent() {
 	m_ContentLoaded = false;
 }
 
+
 // =====================================================================================
 //							  Update & Render & Resize
 // =====================================================================================
 
-void Game::Update() 
+
+void Game::Update()
 { 
 	Application::Update(); 
 	double totalUpdateTime = Application::GetUpdateTotalTime();
@@ -347,6 +356,7 @@ void Game::Render()
 	}
 }
 
+
 void Game::Resize(UINT32 width, UINT32 height)
 {
 	if (Application::GetClientWidth() != width || Application::GetClientHeight() != height)
@@ -369,6 +379,7 @@ void Game::Resize(UINT32 width, UINT32 height)
 		}
 	}
 }
+
 
 void Game::ResizeDepthBuffer(int width, int height)
 {
@@ -410,9 +421,11 @@ void Game::ResizeDepthBuffer(int width, int height)
 	}
 }
 
+
 // =====================================================================================
 //									Helper Funcs
 // =====================================================================================
+
 
 void Game::TransitionResource(ComPtr<ID3D12GraphicsCommandList2> commandList, ComPtr<ID3D12Resource> resource, 
 	D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after)
@@ -425,11 +438,13 @@ void Game::TransitionResource(ComPtr<ID3D12GraphicsCommandList2> commandList, Co
 	commandList->ResourceBarrier(1, &barrier);
 }
 
+
 void Game::ClearRTV(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> commandList,
 	D3D12_CPU_DESCRIPTOR_HANDLE rtv, FLOAT* clearColor)
 {
 	commandList->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
 }
+
 
 void Game::ClearDepth(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> commandList,
 	D3D12_CPU_DESCRIPTOR_HANDLE dsv, FLOAT depth)

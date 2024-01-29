@@ -5,6 +5,7 @@
 
 using Microsoft::WRL::ComPtr;
 
+
 class CommandQueue
 {
 public:

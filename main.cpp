@@ -17,6 +17,7 @@ std::wstring GetExePath()
 	return std::wstring(L"");
 }
 
+
 int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLine, int nCmdShow)
 {
 	std::wstring exePath = GetExePath();
@@ -24,7 +25,7 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
 
 	const wchar_t* windowTitle = L"Learning DirectX 12";
 
-	Game game (hInstance, windowTitle, 3500, 1800, false);
+	Game game (hInstance, windowTitle, 1900, 900, false);
 	game.LoadContent(exePath);
 	game.Run();
 	game.UnloadContent();
