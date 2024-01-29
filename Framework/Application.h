@@ -1,26 +1,21 @@
 #pragma once
 
-// Windows Runtime Library. Needed for 
-// Microsoft::WRL::ComPtr<> template class.
-#include <wrl.h>
-using namespace Microsoft::WRL;
-// DirectX 12 specific headers.
-#include <d3d12.h>
-#include <dxgi1_6.h>
-// for time chrono::high_resolution_clock,
-// uint32_t, uint64_t
-#include <chrono>    
-// shared_ptr 
-#include <memory>
-
-// D3D12 extension library.
-#include "../External/D3D/d3dx12.h"
-// External - Timer - TODO replace it
-#include "../External/Timer/HighResolutionClock.h"
-
 // Framework
 #include "Window.h"
 #include "CommandQueue.h"
+
+// D3D12 extension library.
+#include <External/D3D/d3dx12.h>
+#include <External/Timer/HighResolutionClock.h>
+
+// ComPtr
+#include <wrl.h>
+// shared_ptr 
+#include <memory>
+
+// DX12 headers.
+#include <d3d12.h>
+#include <dxgi1_6.h>
 
 using Microsoft::WRL::ComPtr;
 

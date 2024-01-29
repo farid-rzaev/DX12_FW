@@ -1,11 +1,14 @@
 #include "Application.h"
-#include "../External/Helpers.h"
-// --
+
+#include <External/Helpers.h>
+
+// D3D
 #include <d3dcompiler.h>
 #include <DirectXMath.h>
-// STL Headers
-#include <algorithm> // std::min and  std::max.
-// Assert
+
+// std::min / std::max
+#include <algorithm> 
+
 #include <cassert>
 
 

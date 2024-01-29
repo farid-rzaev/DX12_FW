@@ -1,6 +1,6 @@
 #pragma once
 
-// Minimize the num of 
+// Minimize the num of
 // headers from Windows.h
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
@@ -23,14 +23,13 @@
 #undef CreateWindow
 #endif
 
-// Windows Runtime Library. Needed for 
-// Microsoft::WRL::ComPtr<> template class.
-#include <wrl.h>
-using namespace Microsoft::WRL;
-
+// D3D
 #include <d3d12.h>
 #include <dxgi1_6.h>
 
+// ComPtr
+#include <wrl.h>
+using Microsoft::WRL::ComPtr;
 
 // Window class name. Used for registering / creating the window.
 constexpr wchar_t WINDOW_CLASS_NAME[] = L"DX12RenderWindowClass";

@@ -1,9 +1,9 @@
 #include "Window.h"
 
-#include <cassert>
-#include <algorithm> // std::min and  std::max.
+#include <External/Helpers.h>
 
-#include "../External/Helpers.h"
+#include <cassert>
+#include <algorithm> // std::min and std::max.
 
 
 Window::Window(UINT32 width, UINT32 height, bool vSync) 

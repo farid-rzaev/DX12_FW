@@ -1,6 +1,6 @@
 #pragma once
 #include <d3d12.h>
-#include <wrl.h>    // For Microsoft::WRL::ComPtr
+#include <wrl.h>    // ComPtr
 #include <queue>
 
 using Microsoft::WRL::ComPtr;

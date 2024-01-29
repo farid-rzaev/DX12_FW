@@ -1,4 +1,4 @@
-#include "Game.h"
+#include "Samples/00_Cube/Game.h"
 
 
 std::wstring GetExePath() 
