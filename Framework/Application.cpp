@@ -1,5 +1,5 @@
 #include "Application.h"
-#include "../Helpers/Helpers.h"
+#include "../External/Helpers.h"
 // --
 #include <d3dcompiler.h>
 #include <DirectXMath.h>

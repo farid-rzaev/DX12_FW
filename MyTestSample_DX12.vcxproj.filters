@@ -12,8 +12,8 @@
     <ClCompile Include="Framework\Window.cpp">
       <Filter>Framework\SRC</Filter>
     </ClCompile>
-    <ClCompile Include="External\HighResolutionClock.cpp">
-      <Filter>External</Filter>
+    <ClCompile Include="External\Timer\HighResolutionClock.cpp">
+      <Filter>External\Timer</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -29,14 +29,14 @@
     <ClInclude Include="Framework\Window.h">
       <Filter>Framework\H</Filter>
     </ClInclude>
-    <ClInclude Include="External\HighResolutionClock.h">
+    <ClInclude Include="External\Helpers.h">
       <Filter>External</Filter>
     </ClInclude>
-    <ClInclude Include="Helpers\d3dx12.h">
-      <Filter>Helpers</Filter>
+    <ClInclude Include="External\Timer\HighResolutionClock.h">
+      <Filter>External\Timer</Filter>
     </ClInclude>
-    <ClInclude Include="Helpers\Helpers.h">
-      <Filter>Helpers</Filter>
+    <ClInclude Include="External\D3D\d3dx12.h">
+      <Filter>External\D3D</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -52,11 +52,14 @@
     <Filter Include="External">
       <UniqueIdentifier>{f089c2b6-2084-4307-bb03-092226de14f2}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Helpers">
-      <UniqueIdentifier>{0ef4aee0-d9a9-45d5-b593-ee6237279407}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Shaders">
       <UniqueIdentifier>{ddc3ca7a-6d5c-4dcc-9710-2bc87050094c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="External\Timer">
+      <UniqueIdentifier>{49af6e2a-a155-4dd0-86b3-7776d15beb35}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="External\D3D">
+      <UniqueIdentifier>{327c5b89-83b4-41bb-9d21-2976f662900d}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

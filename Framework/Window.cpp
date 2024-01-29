@@ -3,7 +3,7 @@
 #include <cassert>
 #include <algorithm> // std::min and  std::max.
 
-#include "../Helpers/Helpers.h"
+#include "../External/Helpers.h"
 
 
 Window::Window(UINT32 width, UINT32 height, bool vSync) 

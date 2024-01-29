@@ -14,9 +14,9 @@ using namespace Microsoft::WRL;
 #include <memory>
 
 // D3D12 extension library.
-#include "../Helpers/d3dx12.h"
+#include "../External/D3D/d3dx12.h"
 // External - Timer - TODO replace it
-#include "../External/HighResolutionClock.h"
+#include "../External/Timer/HighResolutionClock.h"
 
 // Framework
 #include "Window.h"

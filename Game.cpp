@@ -1,6 +1,6 @@
 #include "Game.h"
 
-#include "Helpers/Helpers.h"
+#include "External/Helpers.h"
 
 #include <d3dcompiler.h>
 

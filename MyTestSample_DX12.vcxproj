@@ -81,7 +81,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="External\HighResolutionClock.cpp" />
+    <ClCompile Include="External\Timer\HighResolutionClock.cpp" />
     <ClCompile Include="Framework\Application.cpp" />
     <ClCompile Include="Framework\CommandQueue.cpp" />
     <ClCompile Include="Framework\Window.cpp" />
@@ -89,13 +89,13 @@
     <ClCompile Include="Game.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="External\HighResolutionClock.h" />
+    <ClInclude Include="External\D3D\d3dx12.h" />
+    <ClInclude Include="External\Helpers.h" />
+    <ClInclude Include="External\Timer\HighResolutionClock.h" />
     <ClInclude Include="Framework\Application.h" />
     <ClInclude Include="Framework\CommandQueue.h" />
     <ClInclude Include="Framework\Window.h" />
     <ClInclude Include="Game.h" />
-    <ClInclude Include="Helpers\d3dx12.h" />
-    <ClInclude Include="Helpers\Helpers.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\PixelShader.hlsl">
