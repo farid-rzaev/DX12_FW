@@ -1,5 +1,5 @@
-/Bin
-/x64
+/_Output
+.vs/
 *.opensdf
 *.sdf
 *.user
@@ -7,4 +7,3 @@
 *.VC.opendb
 *.orig
 *.VC.db
-.vs/
