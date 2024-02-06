@@ -1,4 +1,4 @@
-#include "Game.h"
+#include "Sample0.h"
 
 #include <External/Helpers.h>
 
@@ -52,7 +52,7 @@ static WORD g_Indicies[36] =
 // =====================================================================================
 
 
-Game::Game(HINSTANCE hInstance, const wchar_t * windowTitle, int width, int height, bool vSync) :
+Sample0::Sample0(HINSTANCE hInstance, const wchar_t * windowTitle, int width, int height, bool vSync) :
 	Application(hInstance, windowTitle, width, height, vSync),
 	m_ScissorRect(CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX)),
 	m_Viewport(CD3DX12_VIEWPORT(0.0f, 0.0f, (float)width, (float)height)),
@@ -61,7 +61,7 @@ Game::Game(HINSTANCE hInstance, const wchar_t * windowTitle, int width, int heig
 	// The first back buffer index will very likely be 0, but it depends
 	m_CurrentBackBufferIndex = Application::GetCurrentBackbufferIndex();
 }
-Game::~Game() 
+Sample0::~Sample0()
 {
 
 }
@@ -72,7 +72,7 @@ Game::~Game()
 // =====================================================================================
 
 
-void Game::UpdateBufferResource(
+void Sample0::UpdateBufferResource(
 	ComPtr<ID3D12GraphicsCommandList2> commandList,
 	ID3D12Resource** pDestinationResource,
 	ID3D12Resource** pIntermediateResource,
@@ -115,7 +115,7 @@ void Game::UpdateBufferResource(
 }
 
 
-bool Game::LoadContent(std::wstring shaderBlobPath)
+bool Sample0::LoadContent(std::wstring shaderBlobPath)
 {
 	auto device = Application::GetDevice();
 	auto commandQueue = Application::GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COPY);
@@ -238,7 +238,7 @@ bool Game::LoadContent(std::wstring shaderBlobPath)
 }
 
 
-void Game::UnloadContent() {
+void Sample0::UnloadContent() {
 	m_ContentLoaded = false;
 }
 
@@ -248,7 +248,7 @@ void Game::UnloadContent() {
 // =====================================================================================
 
 
-void Game::Update()
+void Sample0::Update()
 { 
 	Application::Update(); 
 	double totalUpdateTime = Application::GetUpdateTotalTime();
@@ -296,7 +296,7 @@ void Game::Update()
 //						same draw or dispatch call).
 //				* A UAV barrier is not needed if the resource is being used as a 
 //						read - only(Read > Read) resource between draw or dispatches.
-void Game::Render() 
+void Sample0::Render()
 {
 	Application::Render();
 	double totalRenderTime = Application::GetRenderTotalTime();
@@ -357,7 +357,7 @@ void Game::Render()
 }
 
 
-void Game::Resize(UINT32 width, UINT32 height)
+void Sample0::Resize(UINT32 width, UINT32 height)
 {
 	if (Application::GetClientWidth() != width || Application::GetClientHeight() != height)
 	{
@@ -381,7 +381,7 @@ void Game::Resize(UINT32 width, UINT32 height)
 }
 
 
-void Game::ResizeDepthBuffer(int width, int height)
+void Sample0::ResizeDepthBuffer(int width, int height)
 {
 	if (m_ContentLoaded)
 	{
@@ -427,7 +427,7 @@ void Game::ResizeDepthBuffer(int width, int height)
 // =====================================================================================
 
 
-void Game::TransitionResource(ComPtr<ID3D12GraphicsCommandList2> commandList, ComPtr<ID3D12Resource> resource, 
+void Sample0::TransitionResource(ComPtr<ID3D12GraphicsCommandList2> commandList, ComPtr<ID3D12Resource> resource,
 	D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after)
 {
 	CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition
@@ -439,14 +439,14 @@ void Game::TransitionResource(ComPtr<ID3D12GraphicsCommandList2> commandList, Co
 }
 
 
-void Game::ClearRTV(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> commandList,
+void Sample0::ClearRTV(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> commandList,
 	D3D12_CPU_DESCRIPTOR_HANDLE rtv, FLOAT* clearColor)
 {
 	commandList->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
 }
 
 
-void Game::ClearDepth(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> commandList,
+void Sample0::ClearDepth(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> commandList,
 	D3D12_CPU_DESCRIPTOR_HANDLE dsv, FLOAT depth)
 {
 	commandList->ClearDepthStencilView(dsv, D3D12_CLEAR_FLAG_DEPTH, depth, 0, 0, nullptr);

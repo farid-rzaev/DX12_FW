@@ -1,4 +1,4 @@
-#include "Samples/00_Cube/Game.h"
+#include "Samples/00_Cube/Sample0.h"
 
 
 std::wstring GetExePath() 
@@ -25,10 +25,10 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
 
 	const wchar_t* windowTitle = L"Learning DirectX 12";
 
-	Game game (hInstance, windowTitle, 1900, 900, false);
-	game.LoadContent(exePath);
-	game.Run();
-	game.UnloadContent();
+	Sample0 sample (hInstance, windowTitle, 1900, 900, false);
+	sample.LoadContent(exePath);
+	sample.Run();
+	sample.UnloadContent();
 
 	return 0;
 }
