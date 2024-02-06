@@ -1,5 +1,7 @@
 #pragma once
 
+// Minimize the num of
+// headers from Windows.h
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h> // For HRESULT
 #include <exception> // For std::exception
