@@ -23,9 +23,6 @@
     <ClCompile Include="Framework\Game.cpp">
       <Filter>Framework\SRC</Filter>
     </ClCompile>
-    <ClCompile Include="Framework\Events.cpp">
-      <Filter>Framework\SRC\Events</Filter>
-    </ClCompile>
     <ClCompile Include="External\IMGUI\imgui.cpp">
       <Filter>Framework\SRC\IMGUI</Filter>
     </ClCompile>
@@ -85,6 +82,18 @@
     <ClInclude Include="External\IMGUI\imgui_impl_win32.h">
       <Filter>Framework\H\IMGUI</Filter>
     </ClInclude>
+    <ClInclude Include="External\IMGUI\imgui_internal.h">
+      <Filter>Framework\H\IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="External\IMGUI\imstb_rectpack.h">
+      <Filter>Framework\H\IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="External\IMGUI\imstb_textedit.h">
+      <Filter>Framework\H\IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="External\IMGUI\imstb_truetype.h">
+      <Filter>Framework\H\IMGUI</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Framework">
@@ -116,9 +125,6 @@
     </Filter>
     <Filter Include="Samples\01_DescHeap_DecAllocator_StateTrack_TexMipGenCS">
       <UniqueIdentifier>{bab1bab4-f7e1-45ca-a122-d351fb77bdeb}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Framework\SRC\Events">
-      <UniqueIdentifier>{992da5ed-4217-43f9-b5d0-dcc5f924e75d}</UniqueIdentifier>
     </Filter>
     <Filter Include="Framework\H\Events">
       <UniqueIdentifier>{28b4c650-19c4-48d4-adba-3d1cbf4a0777}</UniqueIdentifier>

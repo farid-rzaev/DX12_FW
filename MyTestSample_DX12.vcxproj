@@ -95,7 +95,6 @@
     <ClCompile Include="External\Timer\HighResolutionClock.cpp" />
     <ClCompile Include="Framework\Application.cpp" />
     <ClCompile Include="Framework\CommandQueue.cpp" />
-    <ClCompile Include="Framework\Events.cpp" />
     <ClCompile Include="Framework\Game.cpp" />
     <ClCompile Include="Framework\Window.cpp" />
     <ClCompile Include="main.cpp" />
@@ -108,6 +107,10 @@
     <ClInclude Include="External\IMGUI\imconfig.h" />
     <ClInclude Include="External\IMGUI\imgui.h" />
     <ClInclude Include="External\IMGUI\imgui_impl_win32.h" />
+    <ClInclude Include="External\IMGUI\imgui_internal.h" />
+    <ClInclude Include="External\IMGUI\imstb_rectpack.h" />
+    <ClInclude Include="External\IMGUI\imstb_textedit.h" />
+    <ClInclude Include="External\IMGUI\imstb_truetype.h" />
     <ClInclude Include="External\Timer\HighResolutionClock.h" />
     <ClInclude Include="Framework\Application.h" />
     <ClInclude Include="Framework\CommandQueue.h" />
