@@ -87,21 +87,36 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="External\IMGUI\imgui.cpp" />
+    <ClCompile Include="External\IMGUI\imgui_demo.cpp" />
+    <ClCompile Include="External\IMGUI\imgui_draw.cpp" />
+    <ClCompile Include="External\IMGUI\imgui_impl_win32.cpp" />
+    <ClCompile Include="External\IMGUI\imgui_widgets.cpp" />
     <ClCompile Include="External\Timer\HighResolutionClock.cpp" />
     <ClCompile Include="Framework\Application.cpp" />
     <ClCompile Include="Framework\CommandQueue.cpp" />
+    <ClCompile Include="Framework\Events.cpp" />
+    <ClCompile Include="Framework\Game.cpp" />
     <ClCompile Include="Framework\Window.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="Samples\00_Cube\Game.cpp" />
+    <ClCompile Include="Samples\00_Cube\Sample0.cpp" />
+    <ClCompile Include="Samples\01_DescHeap_DecAllocator_StateTrack_TexMipGenCS\Sample1.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="External\D3D\d3dx12.h" />
     <ClInclude Include="External\Helpers.h" />
+    <ClInclude Include="External\IMGUI\imconfig.h" />
+    <ClInclude Include="External\IMGUI\imgui.h" />
+    <ClInclude Include="External\IMGUI\imgui_impl_win32.h" />
     <ClInclude Include="External\Timer\HighResolutionClock.h" />
     <ClInclude Include="Framework\Application.h" />
     <ClInclude Include="Framework\CommandQueue.h" />
+    <ClInclude Include="Framework\Events\Events.h" />
+    <ClInclude Include="Framework\Events\KeyCodes.h" />
+    <ClInclude Include="Framework\Game.h" />
     <ClInclude Include="Framework\Window.h" />
-    <ClInclude Include="Samples\00_Cube\Game.h" />
+    <ClInclude Include="Samples\00_Cube\Sample0.h" />
+    <ClInclude Include="Samples\01_DescHeap_DecAllocator_StateTrack_TexMipGenCS\Sample1.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Samples\00_Cube\Shaders\PixelShader.hlsl">
