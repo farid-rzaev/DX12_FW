@@ -5,14 +5,14 @@
 #include <DirectXMath.h>
 
 
-class Sample0 : public Application
+class Game : public Application
 {
 // ------------------------------------------------------------------------------------------
 //									Function members
 // ------------------------------------------------------------------------------------------
 public:
-	Sample0(HINSTANCE hInstance, const wchar_t * windowTitle, int width, int height, bool vSync);
-	virtual ~Sample0();
+	Game(HINSTANCE hInstance, const wchar_t * windowTitle, int width, int height, bool vSync);
+	virtual ~Game();
 
 	virtual void Update();
 	virtual void Render();
