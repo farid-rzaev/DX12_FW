@@ -6,13 +6,20 @@
 #include <Windows.h> // For HRESULT
 #include <exception> // For std::exception
 
-
 // From DXSampleHelper.h 
 // Source: https://github.com/Microsoft/DirectX-Graphics-Samples
-inline void ThrowIfFailed(HRESULT hr)
+inline void ThrowIfFailed(HRESULT hr, char const* const message = "")
 {
 	if (FAILED(hr))
 	{
-		throw std::exception();
+		throw std::exception(message);
+	}
+}
+
+inline void ThrowIfFailed(bool success, char const* const message = "")
+{
+	if (success > 0)
+	{
+		throw std::exception(message);
 	}
 }

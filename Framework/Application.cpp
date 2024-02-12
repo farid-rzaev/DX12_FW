@@ -11,12 +11,51 @@
 
 #include <cassert>
 
+// =====================================================================================
+//								   DEFINES / GLOBAL
+// =====================================================================================
+static Application* gs_pSingelton = nullptr;
+
 
 // =====================================================================================
-//										Init 
+//									STATIC - INIT
 // =====================================================================================
 
-Application::Application(HINSTANCE hInstance, const wchar_t* windowTitle, int width, int height, bool vSync) :
+
+void Application::Create(HINSTANCE hInstance, const wchar_t* windowTitle, int width, int height, bool vSync)
+{
+	if (!gs_pSingelton)
+	{
+		gs_pSingelton = new Application(hInstance);
+		gs_pSingelton->Initialize(windowTitle, width, height, vSync);
+	}
+}
+
+Application& Application::Get()
+{
+	assert(gs_pSingelton);
+	return *gs_pSingelton;
+}
+
+void Application::Destroy()
+{
+	if (gs_pSingelton)
+	{
+		//assert(gs_Windows.empty() && gs_WindowByName.empty() &&
+		//	"All windows should be destroyed before destroying the application instance.");
+
+		delete gs_pSingelton;
+		gs_pSingelton = nullptr;
+	}
+}
+
+
+// =====================================================================================
+//								PROTECTED - Init 
+// =====================================================================================
+
+
+Application::Application(HINSTANCE hInstance) :
 	m_hInstance (hInstance)
 {
 	// Windows 10 Creators update adds Per Monitor V2 DPI awareness context.
@@ -31,22 +70,28 @@ Application::Application(HINSTANCE hInstance, const wchar_t* windowTitle, int wi
 	// when resizing the client area of the window instead of scaling the client 
 	// area based on the DPI scaling settings.
 	SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+}
 
+
+void Application::Initialize(const wchar_t* windowTitle, int width, int height, bool vSync)
+{
 	EnableDebugLayer();
-	
+
 	// DirectX 12 objects
-	{	
+	{
 		ComPtr<IDXGIAdapter4> dxgiAdapter4 = GetAdapter(false);
+		if (!dxgiAdapter4) dxgiAdapter4 = GetAdapter(true); // fall back to WARP adapter
+		ThrowIfFailed(dxgiAdapter4, "DXGI adapter enumeration failed.");
 
-		if (dxgiAdapter4)
-			m_d3d12Device = CreateDevice(dxgiAdapter4);
+		m_d3d12Device = CreateDevice(dxgiAdapter4);
+		ThrowIfFailed(m_d3d12Device, "Failed to create a device.");
 
-		if (m_d3d12Device) 
-		{
-			m_DirectCommandQueue  = std::make_shared<CommandQueue> (m_d3d12Device, D3D12_COMMAND_LIST_TYPE_DIRECT);
-			m_ComputeCommandQueue = std::make_shared<CommandQueue> (m_d3d12Device, D3D12_COMMAND_LIST_TYPE_COMPUTE);
-			m_CopyCommandQueue    = std::make_shared<CommandQueue> (m_d3d12Device, D3D12_COMMAND_LIST_TYPE_COPY);
-		}
+		m_DirectCommandQueue  = std::make_shared<CommandQueue> (m_d3d12Device, D3D12_COMMAND_LIST_TYPE_DIRECT);
+		m_ComputeCommandQueue = std::make_shared<CommandQueue> (m_d3d12Device, D3D12_COMMAND_LIST_TYPE_COMPUTE);
+		m_CopyCommandQueue    = std::make_shared<CommandQueue> (m_d3d12Device, D3D12_COMMAND_LIST_TYPE_COPY);
+		ThrowIfFailed(m_d3d12Device, "Failed to create a DirectCommandQueue.");
+		ThrowIfFailed(m_d3d12Device, "Failed to create a ComputeCommandQueue.");
+		ThrowIfFailed(m_d3d12Device, "Failed to create a CopyCommandQueue.");
 	}
 
 	// Window
@@ -58,9 +103,9 @@ Application::Application(HINSTANCE hInstance, const wchar_t* windowTitle, int wi
 		m_Window->CreateSwapChain(m_DirectCommandQueue->GetD3D12CommandQueue());
 
 		// Pointer ijections for WndProc
-		m_Window->SetUserPtr((void*)this);					// - inject Application pointer into window
+		//m_Window->SetUserPtr((void*)this);				// - inject Application pointer into window
 		m_Window->SetCustomWndProc(Application::WndProc);   // - reset the Default WndProc of the 
-															//   window to app's static method
+		//   window to app's static method
 	}
 
 	//  Create RTVs in DescriptorHeap
@@ -80,7 +125,6 @@ Application::Application(HINSTANCE hInstance, const wchar_t* windowTitle, int wi
 	// Show Window
 	m_Window->Show();
 }
-
 
 Application::~Application() {
 	// Make sure the command queue has finished all commands before closing.
@@ -441,7 +485,8 @@ ComPtr<ID3D12DescriptorHeap> Application::CreateDescriptorHeap(ComPtr<ID3D12Devi
 // The window procedure handles any window messages sent to the application. 
 LRESULT CALLBACK Application::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	Application* app = (Application*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+	//Application* app = (Application*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+	Application * app = gs_pSingelton;
 
 	// In order to prevent the application from handling events before the necessary 
 	// DirectX 12 objects are created, the m_IsInitialized flag is checked. This flag

@@ -26,16 +26,22 @@ class Application
 //									Function members
 // ------------------------------------------------------------------------------------------
 public:
-	// Init 
-	Application(HINSTANCE hInstance, const wchar_t* windowTitle, int width, int height, bool vSync);
-	Application(const Application& app) = delete;
-	Application& operator=(const Application& app) = delete;
-	virtual ~Application();
+	static void Create(HINSTANCE hInstance, const wchar_t* windowTitle, int width, int height, bool vSync);
+	static void Destroy();
+	static Application & Get();
 
-	// Run
 	virtual void Run();
 	
 protected:
+	// Init 
+	Application(HINSTANCE hInstance);
+	void Initialize(const wchar_t* windowTitle, int width, int height, bool vSync);
+	virtual ~Application();
+
+	// Deleated
+	Application(const Application& app) = delete;
+	Application& operator=(const Application& app) = delete;
+
 	// Update & Render & Resize
 	virtual void Update();
 	virtual void Render();
