@@ -25,10 +25,13 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
 
 	const wchar_t* windowTitle = L"Learning DirectX 12";
 
-	Sample0 sample (hInstance, windowTitle, 1900, 900, false);
-	sample.LoadContent(exePath);
-	sample.Run();
-	sample.UnloadContent();
+	Sample0::Create(hInstance, windowTitle, 1280, 720, false);
+	{
+		Sample0::Get().LoadContent(exePath);
+		Sample0::Get().Run();
+		Sample0::Get().UnloadContent();
+	}
+	Sample0::Destroy();
 
 	return 0;
 }

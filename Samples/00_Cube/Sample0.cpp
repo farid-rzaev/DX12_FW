@@ -6,7 +6,7 @@
 
 
 // =====================================================================================
-//										Global vars 
+//								   DEFINES / GLOBAL
 // =====================================================================================
 using namespace Microsoft::WRL;
 using namespace DirectX;
@@ -48,19 +48,61 @@ static WORD g_Indicies[36] =
 
 
 // =====================================================================================
+//									STATIC - INIT
+// =====================================================================================
+
+static Sample0* gs_pSingelton = nullptr;
+
+void Sample0::Create(HINSTANCE hInstance, const wchar_t* windowTitle, int width, int height, bool vSync)
+{
+	if (!gs_pSingelton)
+	{
+		gs_pSingelton = new Sample0(hInstance);
+		gs_pSingelton->Initialize(windowTitle, width, height, vSync);
+	}
+}
+
+Sample0& Sample0::Get()
+{
+	assert(gs_pSingelton);
+	return *gs_pSingelton;
+}
+
+void Sample0::Destroy()
+{
+	if (gs_pSingelton)
+	{
+		//assert(gs_Windows.empty() && gs_WindowByName.empty() &&
+		//	"All windows should be destroyed before destroying the application instance.");
+
+		delete gs_pSingelton;
+		gs_pSingelton = nullptr;
+	}
+}
+
+// =====================================================================================
 //										Init 
 // =====================================================================================
 
 
-Sample0::Sample0(HINSTANCE hInstance, const wchar_t * windowTitle, int width, int height, bool vSync) :
-	Application(hInstance, windowTitle, width, height, vSync),
+Sample0::Sample0(HINSTANCE hInstance) :
+	Application(hInstance),
 	m_ScissorRect(CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX)),
-	m_Viewport(CD3DX12_VIEWPORT(0.0f, 0.0f, (float)width, (float)height)),
 	m_FoV(45.0f)
 {
 	// The first back buffer index will very likely be 0, but it depends
 	m_CurrentBackBufferIndex = Application::GetCurrentBackbufferIndex();
 }
+
+
+void Sample0::Initialize(const wchar_t* windowTitle, int width, int height, bool vSync)
+{
+	Application::Initialize(windowTitle, width, height, vSync);
+
+	m_Viewport = CD3DX12_VIEWPORT(0.0f, 0.0f, (float)width, (float)height);
+}
+
+
 Sample0::~Sample0()
 {
 

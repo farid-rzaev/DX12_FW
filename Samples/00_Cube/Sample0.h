@@ -11,16 +11,24 @@ class Sample0 : public Application
 //									Function members
 // ------------------------------------------------------------------------------------------
 public:
-	Sample0(HINSTANCE hInstance, const wchar_t * windowTitle, int width, int height, bool vSync);
+	static void Create(HINSTANCE hInstance, const wchar_t* windowTitle, int width, int height, bool vSync);
+	static void Destroy();
+	static Sample0& Get();
+
+	virtual void Run();
+
+	// Sample
+	bool LoadContent(std::wstring shaderBlobPath);
+	void UnloadContent();
+
+protected:
+	Sample0(HINSTANCE hInstance);
+	void Initialize(const wchar_t* windowTitle, int width, int height, bool vSync);
 	virtual ~Sample0();
 
 	virtual void Update();
 	virtual void Render();
 	virtual void Resize(UINT32 width, UINT32 height);
-
-	// Sample
-	bool LoadContent(std::wstring shaderBlobPath);
-	void UnloadContent();
 
 protected:
 	// Create a GPU buffer.
@@ -64,8 +72,8 @@ private:
 	ComPtr<ID3D12PipelineState> m_PipelineState;
 private:	
 	// View Settings
-	D3D12_VIEWPORT m_Viewport;
-	D3D12_RECT m_ScissorRect;
+	D3D12_VIEWPORT m_Viewport = {};
+	D3D12_RECT m_ScissorRect = {};
 	float m_FoV;
 
 	// Camera
