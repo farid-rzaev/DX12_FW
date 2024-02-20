@@ -48,14 +48,14 @@ protected:
 	virtual void Resize(UINT32 width, UINT32 height);
 	UINT8 Present() { return m_Window->Present(); }
 
+	// Sync frames
+	void Flush();
+
 	// Fullscreen
 	void SetFullscreen(bool fullscreen) { m_Window->SetFullscreen(fullscreen); }
 	void ToggleFullscreen() { m_Window->ToggleFullscreen(); }
 	
-	// Sync frames
-	void Flush();
-
-	// Helpers
+	// DX12 Helpers
 	void EnableDebugLayer();
 	ComPtr<IDXGIAdapter4> GetAdapter(bool useWarp);
 	ComPtr<ID3D12Device2> CreateDevice(ComPtr<IDXGIAdapter4> adapter);
@@ -72,6 +72,9 @@ protected:
 	D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentBackbufferRTV();
 	double GetUpdateTotalTime() { return m_UpdateClock.GetTotalSeconds(); }
 	double GetRenderTotalTime() { return m_RenderClock.GetTotalSeconds(); }
+
+	// Support checks
+	DXGI_SAMPLE_DESC GetMultisampleQualityLevels(DXGI_FORMAT format, UINT numSamples, D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE) const;
 
 // ------------------------------------------------------------------------------------------
 //									Data members
@@ -91,9 +94,9 @@ private:
 	ComPtr<ID3D12Device2> m_d3d12Device;
 
 	// Command Queues
-	std::shared_ptr<CommandQueue> m_DirectCommandQueue = nullptr;
+	std::shared_ptr<CommandQueue> m_DirectCommandQueue  = nullptr;
 	std::shared_ptr<CommandQueue> m_ComputeCommandQueue = nullptr;
-	std::shared_ptr<CommandQueue> m_CopyCommandQueue = nullptr;
+	std::shared_ptr<CommandQueue> m_CopyCommandQueue    = nullptr;
 
 	// Heap with RTVs
 	ComPtr<ID3D12DescriptorHeap> m_RTVDescriptorHeap;
@@ -102,4 +105,6 @@ private:
 	// Frametimes
 	HighResolutionClock m_UpdateClock;
 	HighResolutionClock m_RenderClock;
+
+	static uint64_t ms_FrameCount;
 };

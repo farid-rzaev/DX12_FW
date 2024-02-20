@@ -15,6 +15,16 @@ Window::Window(UINT32 width, UINT32 height, bool vSync)
 }
 
 
+Window::~Window() 
+{
+	if (g_hWnd)
+	{
+		DestroyWindow(g_hWnd);
+		g_hWnd = nullptr;
+	}
+}
+
+
 // Before creating an instance of an OS window, the window class corresponding to that window must be registered. 
 // The window class will be automatically unregistered when the application terminates.
 void Window::RegisterWindowClass(HINSTANCE hInst)
@@ -24,7 +34,7 @@ void Window::RegisterWindowClass(HINSTANCE hInst)
 
 	windowClass.cbSize = sizeof(WNDCLASSEX);
 	windowClass.style = CS_HREDRAW | CS_VREDRAW;
-	//windowClass.lpfnWndProc = &WndProc;
+	//windowClass.lpfnWndProc = &WndProc; // declared in Aplication::WndProc
 	windowClass.lpfnWndProc = DefWindowProc;
 	windowClass.cbClsExtra = 0;
 	windowClass.cbWndExtra = 0;
@@ -38,12 +48,17 @@ void Window::RegisterWindowClass(HINSTANCE hInst)
 	// A color value must be one of the standard system colors (the value 1 must be added to the chosen color)
 	// If a color value is given, you must convert it to (HBRUSH)
 	windowClass.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-	windowClass.lpszMenuName = NULL;
+	windowClass.lpszMenuName = nullptr;
 	windowClass.lpszClassName = WINDOW_CLASS_NAME;
 	windowClass.hIconSm = ::LoadIcon(hInst, NULL);
 
-	static ATOM atom = ::RegisterClassExW(&windowClass);
-	assert(atom > 0);
+	//static ATOM atom = ::RegisterClassExW(&windowClass);
+	//assert(atom > 0);
+
+	if (!RegisterClassExW(&windowClass))
+	{
+		MessageBoxA(NULL, "Unable to register the window class.", "Error", MB_OK | MB_ICONERROR);
+	}
 }
 
 
@@ -84,7 +99,11 @@ HWND Window::CreateWindow(HINSTANCE hInst, const wchar_t* windowTitle)
 		nullptr
 	);
 
-	assert(g_hWnd && "Failed to create window");
+	if (!g_hWnd)
+	{
+		MessageBoxA(NULL, "Failed to create window.", "Error", MB_OK | MB_ICONERROR);
+		return nullptr;
+	}
 
 	// Query Window rectangle for toggling the full screen state of the window.
 	::GetWindowRect(g_hWnd, &g_WindowRect);
@@ -135,7 +154,7 @@ void Window::CreateSwapChain(ComPtr<ID3D12CommandQueue> commandQueue)
 	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 	swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
 	// It is recommended to always allow tearing if tearing support is available.
-	swapChainDesc.Flags = CheckTearingSupport() ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
+	swapChainDesc.Flags = m_TearingSupported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
 
 	ComPtr<IDXGISwapChain1> swapChain1;
 	ThrowIfFailed(dxgiFactory4->CreateSwapChainForHwnd(

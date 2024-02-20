@@ -42,7 +42,7 @@ class Window
 {
 public:
 	Window(UINT32 width, UINT32 height, bool vSync);
-	virtual ~Window() {};
+	virtual ~Window();
 	   
 	// Before creating an instance of an OS window, the window class 
 	// corresponding to that window must be registered. 
@@ -87,7 +87,7 @@ private:
 
 private:
 	// Window handle
-	HWND g_hWnd; 
+	HWND g_hWnd = nullptr;
 	UINT32 m_ClientWidth = 1920;
 	UINT32 m_ClientHeight = 1080;
 	// Can be toggled with the Alt+Enter or F11

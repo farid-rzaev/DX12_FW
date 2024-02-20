@@ -18,7 +18,7 @@ inline void ThrowIfFailed(HRESULT hr, char const* const message = "")
 
 inline void ThrowIfFailed(bool success, char const* const message = "")
 {
-	if (success > 0)
+	if (!success)
 	{
 		throw std::exception(message);
 	}

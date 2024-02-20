@@ -16,6 +16,7 @@
 // =====================================================================================
 static Application* gs_pSingelton = nullptr;
 
+uint64_t Application::ms_FrameCount = 0;
 
 // =====================================================================================
 //									STATIC - INIT
@@ -47,6 +48,30 @@ void Application::Destroy()
 		delete gs_pSingelton;
 		gs_pSingelton = nullptr;
 	}
+}
+
+// =====================================================================================
+//										Run 
+// =====================================================================================
+
+
+void Application::Run() {
+	// Messages are dispatched to the window procedure (the WndProc function)
+	// until the WM_QUIT message is posted to the message queue using the 
+	// PostQuitMessage function (this happens in the WndProc function).
+	MSG msg = {};
+	while (msg.message != WM_QUIT)
+	{
+		if (::PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		{
+			::TranslateMessage(&msg);
+			::DispatchMessage(&msg);
+		}
+	}
+
+	// Flush any commands in the 
+	// commands queues before quiting.
+	Flush();
 }
 
 
@@ -89,23 +114,21 @@ void Application::Initialize(const wchar_t* windowTitle, int width, int height, 
 		m_DirectCommandQueue  = std::make_shared<CommandQueue> (m_d3d12Device, D3D12_COMMAND_LIST_TYPE_DIRECT);
 		m_ComputeCommandQueue = std::make_shared<CommandQueue> (m_d3d12Device, D3D12_COMMAND_LIST_TYPE_COMPUTE);
 		m_CopyCommandQueue    = std::make_shared<CommandQueue> (m_d3d12Device, D3D12_COMMAND_LIST_TYPE_COPY);
-		ThrowIfFailed(m_d3d12Device, "Failed to create a DirectCommandQueue.");
-		ThrowIfFailed(m_d3d12Device, "Failed to create a ComputeCommandQueue.");
-		ThrowIfFailed(m_d3d12Device, "Failed to create a CopyCommandQueue.");
+		ThrowIfFailed((bool)m_DirectCommandQueue,  "Failed to create a DirectCommandQueue.");
+		ThrowIfFailed((bool)m_ComputeCommandQueue, "Failed to create a ComputeCommandQueue.");
+		ThrowIfFailed((bool)m_CopyCommandQueue,    "Failed to create a CopyCommandQueue.");
 	}
 
 	// Window
 	if (m_DirectCommandQueue)
 	{
 		m_Window = std::make_shared<Window>(width, height, vSync);
+		
 		m_Window->RegisterWindowClass(m_hInstance);
+		m_Window->SetCustomWndProc(Application::WndProc);   // - reset the Default WndProc of the window to app's static method
+		
 		m_Window->CreateWindow(m_hInstance, windowTitle);
 		m_Window->CreateSwapChain(m_DirectCommandQueue->GetD3D12CommandQueue());
-
-		// Pointer ijections for WndProc
-		//m_Window->SetUserPtr((void*)this);				// - inject Application pointer into window
-		m_Window->SetCustomWndProc(Application::WndProc);   // - reset the Default WndProc of the 
-		//   window to app's static method
 	}
 
 	//  Create RTVs in DescriptorHeap
@@ -124,7 +147,11 @@ void Application::Initialize(const wchar_t* windowTitle, int width, int height, 
 
 	// Show Window
 	m_Window->Show();
+
+	// Initialize frame counter
+	ms_FrameCount = 0;
 }
+
 
 Application::~Application() {
 	// Make sure the command queue has finished all commands before closing.
@@ -135,75 +162,6 @@ Application::~Application() {
 	//		be cleaned up when the application exits but this cleanup should not 
 	//		occur until the GPU is using them
 	Flush();
-}
-
-
-// =====================================================================================
-//										Run 
-// =====================================================================================
-
-
-void Application::Run() {
-	// Messages are dispatched to the window procedure (the WndProc function)
-	// until the WM_QUIT message is posted to the message queue using the 
-	// PostQuitMessage function (this happens in the WndProc function).
-	MSG msg = {};
-	while (msg.message != WM_QUIT)
-	{
-		if (::PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
-		{
-			::TranslateMessage(&msg);
-			::DispatchMessage(&msg);
-		}
-	}
-
-	// Flush any commands in the 
-	// commands queues before quiting.
-	Flush();
-}
-
-
-// =====================================================================================
-//									Get and Set
-// =====================================================================================
-
-
-std::shared_ptr<CommandQueue> Application::GetCommandQueue(D3D12_COMMAND_LIST_TYPE type) const 
-{
-	std::shared_ptr<CommandQueue> commandQueue;
-	switch (type)
-	{
-	case D3D12_COMMAND_LIST_TYPE_DIRECT:
-		commandQueue = m_DirectCommandQueue;
-		break;
-	case D3D12_COMMAND_LIST_TYPE_COMPUTE:
-		commandQueue = m_ComputeCommandQueue;
-		break;
-	case D3D12_COMMAND_LIST_TYPE_COPY:
-		commandQueue = m_CopyCommandQueue;
-		break;
-	default:
-		assert(false && "Invalid command queue type.");
-	}
-
-	return commandQueue;
-}
-
-
-ComPtr<ID3D12Resource> Application::GetBackbuffer(UINT BackBufferIndex)
-{
-	return m_Window->GetBackBuffer(BackBufferIndex);
-}
-
-
-D3D12_CPU_DESCRIPTOR_HANDLE Application::GetCurrentBackbufferRTV()
-{
-	CD3DX12_CPU_DESCRIPTOR_HANDLE rtv(
-		m_RTVDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
-		GetCurrentBackbufferIndex(), m_RTVDescriptorSize
-	);
-
-	return rtv;
 }
 
 
@@ -317,7 +275,7 @@ void Application::Flush()
 
 
 // =====================================================================================
-//									Helper Funcs
+//								DX12 Helper Funcs
 // =====================================================================================
 
 
@@ -437,6 +395,7 @@ ComPtr<ID3D12Device2> Application::CreateDevice(ComPtr<IDXGIAdapter4> adapter)
 
 		// Suppress individual messages by their ID
 		D3D12_MESSAGE_ID DenyIds[] = {
+			D3D12_MESSAGE_ID_COPY_DESCRIPTORS_INVALID_RANGES,				// This started happening after updating to an RTX 2080 Ti. I believe this to be an error in the validation layer itself.
 			D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,   // I'm really not sure how to avoid this message.
 			D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,                         // This warning occurs when using capture frame while graphics debugging.
 			D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,                       // This warning occurs when using capture frame while graphics debugging.
@@ -465,17 +424,91 @@ ComPtr<ID3D12Device2> Application::CreateDevice(ComPtr<IDXGIAdapter4> adapter)
 ComPtr<ID3D12DescriptorHeap> Application::CreateDescriptorHeap(ComPtr<ID3D12Device2> device,
 	D3D12_DESCRIPTOR_HEAP_TYPE type, UINT32 numDescriptors)
 {
-	ComPtr<ID3D12DescriptorHeap> descriptorHeap;
-
 	D3D12_DESCRIPTOR_HEAP_DESC desc = {};
-	desc.NumDescriptors = numDescriptors;
 	desc.Type = type;
+	desc.NumDescriptors = numDescriptors;
+	desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+	desc.NodeMask = 0;
 
+	ComPtr<ID3D12DescriptorHeap> descriptorHeap;
 	ThrowIfFailed(device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&descriptorHeap)));
 
 	return descriptorHeap;
 }
 
+
+// =====================================================================================
+//									Get and Set
+// =====================================================================================
+
+
+std::shared_ptr<CommandQueue> Application::GetCommandQueue(D3D12_COMMAND_LIST_TYPE type) const
+{
+	std::shared_ptr<CommandQueue> commandQueue;
+	switch (type)
+	{
+	case D3D12_COMMAND_LIST_TYPE_DIRECT:
+		commandQueue = m_DirectCommandQueue;
+		break;
+	case D3D12_COMMAND_LIST_TYPE_COMPUTE:
+		commandQueue = m_ComputeCommandQueue;
+		break;
+	case D3D12_COMMAND_LIST_TYPE_COPY:
+		commandQueue = m_CopyCommandQueue;
+		break;
+	default:
+		assert(false && "Invalid command queue type.");
+	}
+
+	return commandQueue;
+}
+
+
+ComPtr<ID3D12Resource> Application::GetBackbuffer(UINT BackBufferIndex)
+{
+	return m_Window->GetBackBuffer(BackBufferIndex);
+}
+
+
+D3D12_CPU_DESCRIPTOR_HANDLE Application::GetCurrentBackbufferRTV()
+{
+	CD3DX12_CPU_DESCRIPTOR_HANDLE rtv(
+		m_RTVDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
+		GetCurrentBackbufferIndex(), m_RTVDescriptorSize
+	);
+
+	return rtv;
+}
+
+
+// =====================================================================================
+//									Support checks
+// =====================================================================================
+
+
+// Check if the requested multisample quality supported for the given format.
+DXGI_SAMPLE_DESC Application::GetMultisampleQualityLevels(DXGI_FORMAT format, UINT numSamples, D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS flags) const
+{
+	DXGI_SAMPLE_DESC sampleDesc = { 1, 0 };
+
+	D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS qualityLevels;
+	qualityLevels.Format = format;
+	qualityLevels.SampleCount = 1;
+	qualityLevels.Flags = flags;
+	qualityLevels.NumQualityLevels = 0;
+
+	while (qualityLevels.SampleCount <= numSamples && SUCCEEDED(m_d3d12Device->CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, &qualityLevels, sizeof(D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS))) && qualityLevels.NumQualityLevels > 0)
+	{
+		// That works...
+		sampleDesc.Count = qualityLevels.SampleCount;
+		sampleDesc.Quality = qualityLevels.NumQualityLevels - 1;
+
+		// But can we do better?
+		qualityLevels.SampleCount *= 2;
+	}
+
+	return sampleDesc;
+}
 
 // =====================================================================================
 //										WndProc
