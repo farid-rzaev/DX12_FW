@@ -72,6 +72,7 @@ protected:
 	D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentBackbufferRTV();
 	double GetUpdateTotalTime() { return m_UpdateClock.GetTotalSeconds(); }
 	double GetRenderTotalTime() { return m_RenderClock.GetTotalSeconds(); }
+	std::shared_ptr<Window> GetWindow() { return m_Window; }
 
 	// Support checks
 	DXGI_SAMPLE_DESC GetMultisampleQualityLevels(DXGI_FORMAT format, UINT numSamples, D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE) const;
@@ -79,12 +80,12 @@ protected:
 // ------------------------------------------------------------------------------------------
 //									Data members
 // ------------------------------------------------------------------------------------------
+	static LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 private:
 	// Window:
 	//   Making window a member (not inhereting from it)
 	//   as there could be multiple Windows in future.
 	std::shared_ptr<Window> m_Window					= nullptr;
-	static LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
 private:
 	// APP instance handle

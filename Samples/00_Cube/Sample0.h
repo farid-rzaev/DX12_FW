@@ -15,7 +15,7 @@ public:
 	static void Destroy();
 	static Sample0& Get();
 
-	virtual void Run();
+	//virtual void Run() {}
 
 	// Sample
 	bool LoadContent(std::wstring shaderBlobPath);

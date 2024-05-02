@@ -125,7 +125,8 @@ void Application::Initialize(const wchar_t* windowTitle, int width, int height, 
 		m_Window = std::make_shared<Window>(width, height, vSync);
 		
 		m_Window->RegisterWindowClass(m_hInstance);
-		m_Window->SetCustomWndProc(Application::WndProc);   // - reset the Default WndProc of the window to app's static method
+		//Application::GetWindow()->SetUserPtr((void*)this);
+		//m_Window->SetCustomWndProc(Application::WndProc);   // - reset the Default WndProc of the window to app's static method
 		
 		m_Window->CreateWindow(m_hInstance, windowTitle);
 		m_Window->CreateSwapChain(m_DirectCommandQueue->GetD3D12CommandQueue());
@@ -518,8 +519,8 @@ DXGI_SAMPLE_DESC Application::GetMultisampleQualityLevels(DXGI_FORMAT format, UI
 // The window procedure handles any window messages sent to the application. 
 LRESULT CALLBACK Application::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	//Application* app = (Application*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
-	Application * app = gs_pSingelton;
+	Application* app = (Application*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+	//Application * app = gs_pSingelton;
 
 	// In order to prevent the application from handling events before the necessary 
 	// DirectX 12 objects are created, the m_IsInitialized flag is checked. This flag

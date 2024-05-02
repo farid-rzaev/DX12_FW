@@ -90,14 +90,18 @@ Sample0::Sample0(HINSTANCE hInstance) :
 	m_ScissorRect(CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX)),
 	m_FoV(45.0f)
 {
-	// The first back buffer index will very likely be 0, but it depends
-	m_CurrentBackBufferIndex = Application::GetCurrentBackbufferIndex();
 }
 
 
 void Sample0::Initialize(const wchar_t* windowTitle, int width, int height, bool vSync)
 {
 	Application::Initialize(windowTitle, width, height, vSync);
+
+	// The first back buffer index will very likely be 0, but it depends
+	m_CurrentBackBufferIndex = Application::GetCurrentBackbufferIndex();
+
+	Application::GetWindow()->SetUserPtr((void*)this);					// inject (this) pointer to retrive then in WndProc (as WndProc is not a member of a class)
+	Application::GetWindow()->SetCustomWndProc(Application::WndProc);   // reset the Default WndProc of the window to app's static method
 
 	m_Viewport = CD3DX12_VIEWPORT(0.0f, 0.0f, (float)width, (float)height);
 }
