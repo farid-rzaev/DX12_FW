@@ -125,10 +125,12 @@ void Application::Initialize(const wchar_t* windowTitle, int width, int height, 
 		m_Window = std::make_shared<Window>(width, height, vSync);
 		
 		m_Window->RegisterWindowClass(m_hInstance);
-		//Application::GetWindow()->SetUserPtr((void*)this);
-		//m_Window->SetCustomWndProc(Application::WndProc);   // - reset the Default WndProc of the window to app's static method
-		
 		m_Window->CreateWindow(m_hInstance, windowTitle);
+
+		// Both of these calls should be called after CreateWindow
+		Application::GetWindow()->SetUserPtr((void*)this); // inject (this) pointer to retrive then in WndProc (as WndProc is not a member of a class)
+		m_Window->SetCustomWndProc(Application::WndProc);  // reset the Default WndProc of the window to app's static method
+		
 		m_Window->CreateSwapChain(m_DirectCommandQueue->GetD3D12CommandQueue());
 	}
 

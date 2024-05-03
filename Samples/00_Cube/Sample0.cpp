@@ -99,10 +99,6 @@ void Sample0::Initialize(const wchar_t* windowTitle, int width, int height, bool
 
 	// The first back buffer index will very likely be 0, but it depends
 	m_CurrentBackBufferIndex = Application::GetCurrentBackbufferIndex();
-
-	Application::GetWindow()->SetUserPtr((void*)this);					// inject (this) pointer to retrive then in WndProc (as WndProc is not a member of a class)
-	Application::GetWindow()->SetCustomWndProc(Application::WndProc);   // reset the Default WndProc of the window to app's static method
-
 	m_Viewport = CD3DX12_VIEWPORT(0.0f, 0.0f, (float)width, (float)height);
 }
 
