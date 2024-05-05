@@ -17,18 +17,18 @@ public:
 
 	virtual void Run() final;
 
-	// Sample
-	bool LoadContent(std::wstring shaderBlobPath);
-	void UnloadContent();
-
 protected:
 	Sample0(HINSTANCE hInstance);
 	void Initialize(const wchar_t* windowTitle, int width, int height, bool vSync);
 	virtual ~Sample0();
 
-	virtual void Update()	final;
-	virtual void Render()	final;
+	virtual void Update() final;
+	virtual void Render() final;
 	virtual void Resize(UINT32 width, UINT32 height) final;
+
+	// Sample
+	bool LoadContent();
+	void UnloadContent();
 
 protected:
 	// Create a GPU buffer.

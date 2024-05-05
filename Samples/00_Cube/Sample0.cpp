@@ -88,7 +88,11 @@ void Sample0::Destroy()
 
 void Sample0::Run() 
 {
+	LoadContent();
+
 	Application::Run();
+
+	UnloadContent();
 }
 
 
@@ -169,8 +173,11 @@ void Sample0::UpdateBufferResource(
 }
 
 
-bool Sample0::LoadContent(std::wstring shaderBlobPath)
+bool Sample0::LoadContent()
 {
+	std::wstring shaderBlobPath = GetExePath();
+	assert(shaderBlobPath.size() != 0);
+
 	auto device = Application::GetDevice();
 	auto commandQueue = Application::GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COPY);
 	auto commandList = commandQueue->GetCommandList();
