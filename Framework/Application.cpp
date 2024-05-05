@@ -55,7 +55,8 @@ void Application::Destroy()
 // =====================================================================================
 
 
-void Application::Run() {
+void Application::Run() 
+{
 	// Messages are dispatched to the window procedure (the WndProc function)
 	// until the WM_QUIT message is posted to the message queue using the 
 	// PostQuitMessage function (this happens in the WndProc function).
@@ -128,8 +129,8 @@ void Application::Initialize(const wchar_t* windowTitle, int width, int height, 
 		m_Window->CreateWindow(m_hInstance, windowTitle);
 
 		// Both of these calls should be called after CreateWindow
-		Application::GetWindow()->SetUserPtr((void*)this); // inject (this) pointer to retrive then in WndProc (as WndProc is not a member of a class)
 		m_Window->SetCustomWndProc(Application::WndProc);  // reset the Default WndProc of the window to app's static method
+		Application::GetWindow()->SetUserPtr((void*)this); // inject (this) pointer to retrive then in WndProc (as WndProc is not a member of a class)
 		
 		m_Window->CreateSwapChain(m_DirectCommandQueue->GetD3D12CommandQueue());
 	}

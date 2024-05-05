@@ -15,7 +15,7 @@ public:
 	static void Destroy();
 	static Sample0& Get();
 
-	//virtual void Run() {}
+	virtual void Run() final;
 
 	// Sample
 	bool LoadContent(std::wstring shaderBlobPath);
@@ -26,9 +26,9 @@ protected:
 	void Initialize(const wchar_t* windowTitle, int width, int height, bool vSync);
 	virtual ~Sample0();
 
-	virtual void Update();
-	virtual void Render();
-	virtual void Resize(UINT32 width, UINT32 height);
+	virtual void Update()	final;
+	virtual void Render()	final;
+	virtual void Resize(UINT32 width, UINT32 height) final;
 
 protected:
 	// Create a GPU buffer.
