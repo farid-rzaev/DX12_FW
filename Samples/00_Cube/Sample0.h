@@ -10,18 +10,23 @@ class Sample0 : public Application
 // ------------------------------------------------------------------------------------------
 //									Function members
 // ------------------------------------------------------------------------------------------
-public:
+public: // STATIC
+#if 0
 	static void Create(HINSTANCE hInstance, const wchar_t* windowTitle, int width, int height, bool vSync);
 	static void Destroy();
 	static Sample0& Get();
+#endif
 
-	virtual void Run() final;
-
-protected:
+public:
+	// Init 
 	Sample0(HINSTANCE hInstance);
 	void Initialize(const wchar_t* windowTitle, int width, int height, bool vSync);
 	virtual ~Sample0();
 
+	// Run
+	virtual void Run() final;
+
+protected:
 	virtual void Update() final;
 	virtual void Render() final;
 	virtual void Resize(UINT32 width, UINT32 height) final;

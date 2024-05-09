@@ -23,6 +23,7 @@ uint64_t Application::ms_FrameCount = 0;
 // =====================================================================================
 
 
+#if 0
 void Application::Create(HINSTANCE hInstance, const wchar_t* windowTitle, int width, int height, bool vSync)
 {
 	if (!gs_pSingelton)
@@ -49,6 +50,8 @@ void Application::Destroy()
 		gs_pSingelton = nullptr;
 	}
 }
+#endif
+
 
 // =====================================================================================
 //										Run 

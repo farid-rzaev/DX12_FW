@@ -51,6 +51,8 @@ static WORD g_Indicies[36] =
 //									STATIC - INIT
 // =====================================================================================
 
+
+#if 0
 static Sample0* gs_pSingelton = nullptr;
 
 void Sample0::Create(HINSTANCE hInstance, const wchar_t* windowTitle, int width, int height, bool vSync)
@@ -79,6 +81,7 @@ void Sample0::Destroy()
 		gs_pSingelton = nullptr;
 	}
 }
+#endif
 
 
 // =====================================================================================

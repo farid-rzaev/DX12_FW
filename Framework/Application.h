@@ -25,19 +25,23 @@ class Application
 // ------------------------------------------------------------------------------------------
 //									Function members
 // ------------------------------------------------------------------------------------------
-public:
+public: // STATIC
+#if 0 
 	static void Create(HINSTANCE hInstance, const wchar_t* windowTitle, int width, int height, bool vSync);
 	static void Destroy();
 	static Application & Get();
+#endif
 
-	virtual void Run();
-	
-protected:
+public:
 	// Init 
 	Application(HINSTANCE hInstance);
 	void Initialize(const wchar_t* windowTitle, int width, int height, bool vSync);
 	virtual ~Application();
 
+	// Run
+	virtual void Run();
+
+protected:
 	// Deleated
 	Application(const Application& app) = delete;
 	Application& operator=(const Application& app) = delete;

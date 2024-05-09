@@ -31,9 +31,13 @@
 //        return false;
 //    }
 //
+//#if 0
 //    m_pWindow = Application::Get().CreateRenderWindow(m_Name, m_Width, m_Height, m_vSync);
 //    m_pWindow->RegisterCallbacks(shared_from_this());
 //    m_pWindow->Show();
+//#else
+//
+//#endif
 //
 //    return true;
 //}
@@ -41,14 +45,14 @@
 //
 //void Game::Destroy()
 //{
-//    Application::Get().DestroyWindow(m_pWindow);
-//    m_pWindow.reset();
+//    //Application::Get().DestroyWindow(m_pWindow);
+//    //m_pWindow.reset();
 //}
 //
 //void Game::Destroy()
 //{
-//    Application::Get().DestroyWindow(m_pWindow);
-//    m_pWindow.reset();
+//    //Application::Get().DestroyWindow(m_pWindow);
+//    //m_pWindow.reset();
 //}
 //
 //void Game::OnUpdate(UpdateEventArgs& e)
