@@ -84,7 +84,6 @@ protected:
 // ------------------------------------------------------------------------------------------
 //									Data members
 // ------------------------------------------------------------------------------------------
-	static LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 private:
 	// Window:
 	//   Making window a member (not inhereting from it)

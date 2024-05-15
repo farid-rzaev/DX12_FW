@@ -35,6 +35,7 @@ protected:
 	virtual void Resize(UINT32 width, UINT32 height)	override;
 
 protected:
+
 	// Update the game logic
 	virtual void OnUpdate(UpdateEventArgs& e);
 
@@ -64,4 +65,7 @@ protected:
 
 	// Invoked when the registered window instance is destroyed
 	virtual void OnWindowDestroy();
+
+private:
+	static LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 };
