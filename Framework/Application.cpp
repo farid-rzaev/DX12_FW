@@ -14,7 +14,9 @@
 // =====================================================================================
 //								   DEFINES / GLOBAL
 // =====================================================================================
+#if 0
 static Application* gs_pSingelton = nullptr;
+#endif
 
 uint64_t Application::ms_FrameCount = 0;
 
@@ -52,35 +54,8 @@ void Application::Destroy()
 }
 #endif
 
-
 // =====================================================================================
-//										Run 
-// =====================================================================================
-
-
-void Application::Run() 
-{
-	// Messages are dispatched to the window procedure (the WndProc function)
-	// until the WM_QUIT message is posted to the message queue using the 
-	// PostQuitMessage function (this happens in the WndProc function).
-	MSG msg = {};
-	while (msg.message != WM_QUIT)
-	{
-		if (::PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
-		{
-			::TranslateMessage(&msg);
-			::DispatchMessage(&msg);
-		}
-	}
-
-	// Flush any commands in the 
-	// commands queues before quiting.
-	Flush();
-}
-
-
-// =====================================================================================
-//								PROTECTED - Init 
+//										Init 
 // =====================================================================================
 
 
@@ -102,7 +77,7 @@ Application::Application(HINSTANCE hInstance) :
 }
 
 
-void Application::Initialize(const wchar_t* windowTitle, int width, int height, bool vSync)
+bool Application::Initialize(const wchar_t* windowTitle, int width, int height, bool vSync)
 {
 	EnableDebugLayer();
 
@@ -157,6 +132,8 @@ void Application::Initialize(const wchar_t* windowTitle, int width, int height, 
 
 	// Initialize frame counter
 	ms_FrameCount = 0;
+
+	return true;
 }
 
 
@@ -168,6 +145,32 @@ Application::~Application() {
 	// Since all DirectX 12 objects are held by ComPtr's, they will automatically 
 	//		be cleaned up when the application exits but this cleanup should not 
 	//		occur until the GPU is using them
+	Flush();
+}
+
+
+// =====================================================================================
+//										Run 
+// =====================================================================================
+
+
+void Application::Run()
+{
+	// Messages are dispatched to the window procedure (the WndProc function)
+	// until the WM_QUIT message is posted to the message queue using the 
+	// PostQuitMessage function (this happens in the WndProc function).
+	MSG msg = {};
+	while (msg.message != WM_QUIT)
+	{
+		if (::PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		{
+			::TranslateMessage(&msg);
+			::DispatchMessage(&msg);
+		}
+	}
+
+	// Flush any commands in the 
+	// commands queues before quiting.
 	Flush();
 }
 

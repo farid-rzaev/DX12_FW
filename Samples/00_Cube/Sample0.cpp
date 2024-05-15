@@ -93,7 +93,7 @@ void Sample0::Run()
 {
 	LoadContent();
 
-	Application::Run();
+	Game::Run();
 
 	UnloadContent();
 }
@@ -105,20 +105,22 @@ void Sample0::Run()
 
 
 Sample0::Sample0(HINSTANCE hInstance) :
-	Application(hInstance),
+	Game(hInstance),
 	m_ScissorRect(CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX)),
 	m_FoV(45.0f)
 {
 }
 
 
-void Sample0::Initialize(const wchar_t* windowTitle, int width, int height, bool vSync)
+bool Sample0::Initialize(const wchar_t* windowTitle, int width, int height, bool vSync)
 {
-	Application::Initialize(windowTitle, width, height, vSync);
+	if (!Game::Initialize(windowTitle, width, height, vSync)) return false;
 
 	// The first back buffer index will very likely be 0, but it depends
 	m_CurrentBackBufferIndex = Application::GetCurrentBackbufferIndex();
 	m_Viewport = CD3DX12_VIEWPORT(0.0f, 0.0f, (float)width, (float)height);
+
+	return true;
 }
 
 

@@ -1,11 +1,11 @@
 #pragma once
 
-#include <Framework/Application.h>
+#include <Framework/Game.h>
 
 #include <DirectXMath.h>
 
 
-class Sample0 : public Application
+class Sample0 : public Game
 {
 // ------------------------------------------------------------------------------------------
 //									Function members
@@ -20,7 +20,7 @@ public: // STATIC
 public:
 	// Init 
 	Sample0(HINSTANCE hInstance);
-	void Initialize(const wchar_t* windowTitle, int width, int height, bool vSync);
+	bool Initialize(const wchar_t* windowTitle, int width, int height, bool vSync);
 	virtual ~Sample0();
 
 	// Run

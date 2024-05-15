@@ -35,7 +35,7 @@ public: // STATIC
 public:
 	// Init 
 	Application(HINSTANCE hInstance);
-	void Initialize(const wchar_t* windowTitle, int width, int height, bool vSync);
+	virtual bool Initialize(const wchar_t* windowTitle, int width, int height, bool vSync);
 	virtual ~Application();
 
 	// Run
@@ -89,27 +89,27 @@ private:
 	// Window:
 	//   Making window a member (not inhereting from it)
 	//   as there could be multiple Windows in future.
-	std::shared_ptr<Window> m_Window					= nullptr;
+	std::shared_ptr<Window>			m_Window				= nullptr;
 
 private:
 	// APP instance handle
-	HINSTANCE m_hInstance;
+	HINSTANCE						m_hInstance;
 
 	// DirectX 12 Objects
-	ComPtr<ID3D12Device2> m_d3d12Device;
+	ComPtr<ID3D12Device2>			m_d3d12Device;
 
 	// Command Queues
-	std::shared_ptr<CommandQueue> m_DirectCommandQueue  = nullptr;
-	std::shared_ptr<CommandQueue> m_ComputeCommandQueue = nullptr;
-	std::shared_ptr<CommandQueue> m_CopyCommandQueue    = nullptr;
+	std::shared_ptr<CommandQueue>	m_DirectCommandQueue	= nullptr;
+	std::shared_ptr<CommandQueue>	m_ComputeCommandQueue	= nullptr;
+	std::shared_ptr<CommandQueue>	m_CopyCommandQueue		= nullptr;
 
 	// Heap with RTVs
-	ComPtr<ID3D12DescriptorHeap> m_RTVDescriptorHeap;
-	UINT m_RTVDescriptorSize;
+	ComPtr<ID3D12DescriptorHeap>	m_RTVDescriptorHeap;
+	UINT							m_RTVDescriptorSize;
 
 	// Frametimes
-	HighResolutionClock m_UpdateClock;
-	HighResolutionClock m_RenderClock;
+	HighResolutionClock				m_UpdateClock;
+	HighResolutionClock				m_RenderClock;
 
-	static uint64_t ms_FrameCount;
+	static uint64_t					ms_FrameCount;
 };
