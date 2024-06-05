@@ -111,7 +111,7 @@ bool Application::Initialize(const wchar_t* windowTitle, int width, int height, 
 
 	//  Create RTVs in DescriptorHeap
 	{
-		m_RTVDescriptorHeap = CreateDescriptorHeap(m_d3d12Device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, NUM_FRAMES_IN_FLIGHT);
+		m_RTVDescriptorHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, NUM_FRAMES_IN_FLIGHT);
 		// The size of a descriptor in a descriptor heap is vendor specific 
 		//   (Intel, NVidia, and AMD may store descriptors differently). 
 		// In order to correctly offset the index into the descriptor heap, 
@@ -150,7 +150,7 @@ Application::~Application() {
 // =====================================================================================
 
 
-void Application::Run()
+int Application::Run()
 {
 	// Messages are dispatched to the window procedure (the WndProc function)
 	// until the WM_QUIT message is posted to the message queue using the 
@@ -165,9 +165,10 @@ void Application::Run()
 		}
 	}
 
-	// Flush any commands in the 
-	// commands queues before quiting.
+	// Flush any commands in the commands queues before quiting.
 	Flush();
+
+	return static_cast<int>(msg.wParam);
 }
 
 
@@ -300,6 +301,10 @@ void Application::EnableDebugLayer()
 	// The IID_PPV_ARGS macro is used to retrieve an interface pointer, 
 	// supplying the IID value of the requested interface automatically
 	// based on the type of the interface pointer used.
+
+	// Enable these for full validation (will slow down rendering a lot).
+	//debugInterface->SetEnableGPUBasedValidation(TRUE);
+	//debugInterface->SetEnableSynchronizedCommandQueueValidation(TRUE);
 #endif
 }
 
@@ -371,7 +376,7 @@ ComPtr<ID3D12Device2> Application::CreateDevice(ComPtr<IDXGIAdapter4> adapter)
 	//		required for successful device creation.
 	ComPtr<ID3D12Device2> d3d12Device2;
 	ThrowIfFailed(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&d3d12Device2)));
-
+	//NAME_D3D12_OBJECT(d3d12Device2);
 
 	// 1) Enable debug messages in debug mode.
 	// 2) ID3D12InfoQueue interface is used to enable break points based on the severity
@@ -427,8 +432,8 @@ ComPtr<ID3D12Device2> Application::CreateDevice(ComPtr<IDXGIAdapter4> adapter)
 //
 // CBV, SRV, and UAV can be stored in the same heap but
 // RTV and Sampler views EACH require separate descriptor heaps.
-ComPtr<ID3D12DescriptorHeap> Application::CreateDescriptorHeap(ComPtr<ID3D12Device2> device,
-	D3D12_DESCRIPTOR_HEAP_TYPE type, UINT32 numDescriptors)
+ComPtr<ID3D12DescriptorHeap> Application::CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type,
+	UINT32 numDescriptors)
 {
 	D3D12_DESCRIPTOR_HEAP_DESC desc = {};
 	desc.Type = type;
@@ -437,7 +442,7 @@ ComPtr<ID3D12DescriptorHeap> Application::CreateDescriptorHeap(ComPtr<ID3D12Devi
 	desc.NodeMask = 0;
 
 	ComPtr<ID3D12DescriptorHeap> descriptorHeap;
-	ThrowIfFailed(device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&descriptorHeap)));
+	ThrowIfFailed(m_d3d12Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&descriptorHeap)));
 
 	return descriptorHeap;
 }

@@ -47,13 +47,15 @@ bool Game::Initialize(const wchar_t* windowTitle, int width, int height, bool vS
 // =====================================================================================
 
 
-void Game::Run()
+int Game::Run()
 {
 	LoadContent();
 
-	Application::Run();
+	int retCode = Application::Run();
 
 	UnloadContent();
+
+	return retCode;
 }
 
 

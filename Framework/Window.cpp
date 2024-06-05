@@ -32,28 +32,25 @@ void Window::RegisterWindowClass(HINSTANCE hInst)
 	// Register a window class for creating our render window with.
 	WNDCLASSEXW windowClass = {};
 
-	windowClass.cbSize = sizeof(WNDCLASSEX);
-	windowClass.style = CS_HREDRAW | CS_VREDRAW;
+	windowClass.cbSize	= sizeof(WNDCLASSEX);
+	windowClass.style	= CS_HREDRAW | CS_VREDRAW;
 	//windowClass.lpfnWndProc = &WndProc; // declared in Aplication::WndProc
 	windowClass.lpfnWndProc = DefWindowProc;
-	windowClass.cbClsExtra = 0;
-	windowClass.cbWndExtra = 0;
+	windowClass.cbClsExtra	= 0;
+	windowClass.cbWndExtra	= 0;
 	// hInstance - A handle to the instance that contains the window procedure for the class.
 	// This module instance handle is passed to the WinMain function.
-	windowClass.hInstance = hInst;
-	windowClass.hIcon = ::LoadIcon(hInst, NULL);
-	windowClass.hCursor = ::LoadCursor(NULL, IDC_ARROW);
+	windowClass.hInstance	= hInst;
+	windowClass.hCursor		= ::LoadCursor(nullptr, IDC_ARROW);
+	windowClass.hIcon		= ::LoadIcon(hInst, nullptr);
 	// This member can be a handle to the brush to be used for painting the background, 
 	//		or it can be a color value (COLOR_WINDOW, COLOR_BACKGROUND, ...).
 	// A color value must be one of the standard system colors (the value 1 must be added to the chosen color)
 	// If a color value is given, you must convert it to (HBRUSH)
-	windowClass.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-	windowClass.lpszMenuName = nullptr;
-	windowClass.lpszClassName = WINDOW_CLASS_NAME;
-	windowClass.hIconSm = ::LoadIcon(hInst, NULL);
-
-	//static ATOM atom = ::RegisterClassExW(&windowClass);
-	//assert(atom > 0);
+	windowClass.hbrBackground	= (HBRUSH)(COLOR_WINDOW + 1);
+	windowClass.lpszMenuName	= nullptr;
+	windowClass.lpszClassName	= WINDOW_CLASS_NAME;
+	windowClass.hIconSm			= ::LoadIcon(hInst, NULL);
 
 	if (!RegisterClassExW(&windowClass))
 	{

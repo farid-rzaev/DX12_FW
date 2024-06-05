@@ -89,13 +89,9 @@ void Sample0::Destroy()
 // =====================================================================================
 
 
-void Sample0::Run() 
+int Sample0::Run() 
 {
-	LoadContent();
-
-	Game::Run();
-
-	UnloadContent();
+	return Game::Run();
 }
 
 

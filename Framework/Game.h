@@ -22,7 +22,7 @@ public:
 		int width, int height, bool vSync)				override;
 
 	// Run
-	virtual void Run()									override;
+	virtual int Run()									override;
 
 protected: 
 	// CONTENT

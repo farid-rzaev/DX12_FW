@@ -24,7 +24,7 @@ public:
 	virtual ~Sample0();
 
 	// Run
-	virtual void Run() final;
+	virtual int Run() final;
 
 protected:
 	virtual void Update() final;
