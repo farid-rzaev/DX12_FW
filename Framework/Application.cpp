@@ -2,6 +2,9 @@
 
 #include <External/Helpers.h>
 
+// Framework
+#include "DescriptorAllocator.h"
+
 // D3D
 #include <d3dcompiler.h>
 #include <DirectXMath.h>
@@ -15,10 +18,11 @@
 //								   DEFINES / GLOBAL
 // =====================================================================================
 #if 0
-static Application* gs_pSingelton = nullptr;
+static Application*		gs_pSingelton = nullptr;
 #endif
 
-uint64_t Application::ms_FrameCount = 0;
+uint64_t				Application::ms_FrameCount = 0;
+ComPtr<ID3D12Device2>	Application::m_d3d12Device = nullptr;
 
 // =====================================================================================
 //									STATIC - INIT
@@ -109,6 +113,13 @@ bool Application::Initialize(const wchar_t* windowTitle, int width, int height, 
 		m_Window->CreateSwapChain(m_DirectCommandQueue->GetD3D12CommandQueue());
 	}
 
+	// Create descriptor allocators
+	for (int i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i)
+	{
+		m_DescriptorAllocators[i] = std::make_unique<DescriptorAllocator>(static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(i));
+	}
+
+	// ??? TODO - Remove me ???
 	//  Create RTVs in DescriptorHeap
 	{
 		m_RTVDescriptorHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, NUM_FRAMES_IN_FLIGHT);

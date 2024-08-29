@@ -17,6 +17,10 @@
 #include <d3d12.h>
 #include <dxgi1_6.h>
 
+// Forward Decls
+class DescriptorAllocator;
+
+// USINGs
 using Microsoft::WRL::ComPtr;
 
 
@@ -40,6 +44,10 @@ public:
 
 	// Run
 	virtual int Run();
+
+	// STATIC - Get and Set
+	static uint64_t GetFrameCount() { return ms_FrameCount; }
+	static ComPtr<ID3D12Device2> GetDevice() { return m_d3d12Device; }
 
 protected:
 	// Deleated
@@ -69,7 +77,6 @@ protected:
 	// Get and Set
 	UINT32 GetClientWidth() const { return m_Window->GetClientWidth(); }
 	UINT32 GetClientHeight() const { return m_Window->GetClientHeight(); }
-	ComPtr<ID3D12Device2> GetDevice() const { return m_d3d12Device; }
 	std::shared_ptr<CommandQueue> GetCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT) const;
 	UINT GetCurrentBackbufferIndex() const { return m_Window->GetCurrentBackBufferIndex(); }
 	ComPtr<ID3D12Resource> GetBackbuffer(UINT BackBufferIndex);
@@ -88,27 +95,30 @@ private:
 	// Window:
 	//   Making window a member (not inhereting from it)
 	//   as there could be multiple Windows in future.
-	std::shared_ptr<Window>			m_Window				= nullptr;
+	std::shared_ptr<Window>				 m_Window				= nullptr;
 
 private:
 	// APP instance handle
-	HINSTANCE						m_hInstance;
+	HINSTANCE							 m_hInstance;
 
 	// DirectX 12 Objects
-	ComPtr<ID3D12Device2>			m_d3d12Device;
+	static ComPtr<ID3D12Device2>		 m_d3d12Device;
+
+	// DescriptorAllocators
+	std::unique_ptr<DescriptorAllocator> m_DescriptorAllocators[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
 
 	// Command Queues
-	std::shared_ptr<CommandQueue>	m_DirectCommandQueue	= nullptr;
-	std::shared_ptr<CommandQueue>	m_ComputeCommandQueue	= nullptr;
-	std::shared_ptr<CommandQueue>	m_CopyCommandQueue		= nullptr;
-
-	// Heap with RTVs
-	ComPtr<ID3D12DescriptorHeap>	m_RTVDescriptorHeap;
-	UINT							m_RTVDescriptorSize;
-
-	// Frametimes
-	HighResolutionClock				m_UpdateClock;
-	HighResolutionClock				m_RenderClock;
-
-	static uint64_t					ms_FrameCount;
+	std::shared_ptr<CommandQueue>		 m_DirectCommandQueue	= nullptr;
+	std::shared_ptr<CommandQueue>		 m_ComputeCommandQueue	= nullptr;
+	std::shared_ptr<CommandQueue>		 m_CopyCommandQueue		= nullptr;
+										 
+	// Heap with RTVs					 
+	ComPtr<ID3D12DescriptorHeap>		 m_RTVDescriptorHeap;
+	UINT								 m_RTVDescriptorSize;
+										 
+	// Frametimes						 
+	HighResolutionClock					 m_UpdateClock;
+	HighResolutionClock					 m_RenderClock;
+										 
+	static uint64_t						 ms_FrameCount;
 };

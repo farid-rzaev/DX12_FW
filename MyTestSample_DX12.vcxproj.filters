@@ -38,6 +38,15 @@
     <ClCompile Include="External\IMGUI\imgui_widgets.cpp">
       <Filter>Framework\SRC\IMGUI</Filter>
     </ClCompile>
+    <ClCompile Include="Framework\DescriptorAllocation.cpp">
+      <Filter>Framework\SRC</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\DescriptorAllocator.cpp">
+      <Filter>Framework\SRC</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\DescriptorAllocatorPage.cpp">
+      <Filter>Framework\SRC</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Framework\Application.h">
@@ -93,6 +102,15 @@
     </ClInclude>
     <ClInclude Include="External\IMGUI\imstb_truetype.h">
       <Filter>Framework\H\IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\DescriptorAllocation.h">
+      <Filter>Framework\H</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\DescriptorAllocator.h">
+      <Filter>Framework\H</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\DescriptorAllocatorPage.h">
+      <Filter>Framework\H</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

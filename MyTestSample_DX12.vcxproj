@@ -95,6 +95,9 @@
     <ClCompile Include="External\Timer\HighResolutionClock.cpp" />
     <ClCompile Include="Framework\Application.cpp" />
     <ClCompile Include="Framework\CommandQueue.cpp" />
+    <ClCompile Include="Framework\DescriptorAllocation.cpp" />
+    <ClCompile Include="Framework\DescriptorAllocator.cpp" />
+    <ClCompile Include="Framework\DescriptorAllocatorPage.cpp" />
     <ClCompile Include="Framework\Game.cpp" />
     <ClCompile Include="Framework\Window.cpp" />
     <ClCompile Include="main.cpp" />
@@ -114,6 +117,9 @@
     <ClInclude Include="External\Timer\HighResolutionClock.h" />
     <ClInclude Include="Framework\Application.h" />
     <ClInclude Include="Framework\CommandQueue.h" />
+    <ClInclude Include="Framework\DescriptorAllocation.h" />
+    <ClInclude Include="Framework\DescriptorAllocator.h" />
+    <ClInclude Include="Framework\DescriptorAllocatorPage.h" />
     <ClInclude Include="Framework\Events\Events.h" />
     <ClInclude Include="Framework\Events\KeyCodes.h" />
     <ClInclude Include="Framework\Game.h" />
