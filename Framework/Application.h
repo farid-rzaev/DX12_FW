@@ -19,6 +19,7 @@
 
 // Forward Decls
 class DescriptorAllocator;
+class DescriptorAllocation;
 
 // USINGs
 using Microsoft::WRL::ComPtr;
@@ -71,6 +72,9 @@ protected:
 	void EnableDebugLayer();
 	ComPtr<IDXGIAdapter4> GetAdapter(bool useWarp);
 	ComPtr<ID3D12Device2> CreateDevice(ComPtr<IDXGIAdapter4> adapter);
+	// --
+	DescriptorAllocation AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors = 1);
+	void ReleaseStaleDescriptors(uint64_t finishedFrame);
 	ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type, UINT32 numDescriptors);
 	void UpdateRenderTargetViews(ComPtr<ID3D12Device2> device, ComPtr<ID3D12DescriptorHeap> descriptorHeap);
 

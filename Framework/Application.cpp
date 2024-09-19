@@ -119,6 +119,9 @@ bool Application::Initialize(const wchar_t* windowTitle, int width, int height, 
 		m_DescriptorAllocators[i] = std::make_unique<DescriptorAllocator>(static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(i));
 	}
 
+	DescriptorAllocation allocationRTV = AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, NUM_FRAMES_IN_FLIGHT);
+	allocationRTV.GetDescriptorHandle();
+
 	// ??? TODO - Remove me ???
 	//  Create RTVs in DescriptorHeap
 	{
@@ -207,7 +210,7 @@ void Application::Update()
 		wchar_t buffer[500];
 		auto fps = frameCount / totalTime;
 		swprintf(buffer, 500, L"FPS: %f\n", fps);
-		OutputDebugString(buffer);
+		OutputDebugStringW(buffer);
 
 		frameCount = 0;
 		totalTime = 0.0;
@@ -438,6 +441,20 @@ ComPtr<ID3D12Device2> Application::CreateDevice(ComPtr<IDXGIAdapter4> adapter)
 	return d3d12Device2;
 }
 
+// Allocate a number of CPU visible descriptors.
+DescriptorAllocation Application::AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors)
+{
+	return m_DescriptorAllocators[type]->Allocate(numDescriptors);
+}
+
+// Release stale descriptors. This should only be called with a completed frame counter.
+void Application::ReleaseStaleDescriptors(uint64_t finishedFrame)
+{
+	for (int i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i)
+	{
+		m_DescriptorAllocators[i]->ReleaseStaleDescriptors(finishedFrame);
+	}
+}
 
 // A descriptor heap can be considered an array of resource VIEWs.
 //
