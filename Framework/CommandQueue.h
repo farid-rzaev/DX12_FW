@@ -20,7 +20,7 @@ public:
 	// Get an available command list from the command queue.
 	ComPtr<ID3D12GraphicsCommandList2> GetCommandList();
 	UINT64 ExecuteCommandList(ComPtr<ID3D12GraphicsCommandList2> commandList);
-	ComPtr<ID3D12CommandQueue> CommandQueue::GetD3D12CommandQueue() const;
+	ComPtr<ID3D12CommandQueue> GetD3D12CommandQueue() const;
 
 protected:
 	ComPtr<ID3D12CommandAllocator> CreateCommandAllocator();
