@@ -1,7 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="main.cpp" />
     <ClCompile Include="Framework\Application.cpp">
       <Filter>Framework\SRC</Filter>
     </ClCompile>
@@ -44,14 +43,8 @@
     <ClCompile Include="Samples\02_DescHeap_DecAllocator_StateTrack_TexMipGenCS\Sample1.cpp">
       <Filter>Samples\02_DescHeap_DecAllocator_StateTrack_TexMipGenCS</Filter>
     </ClCompile>
-    <ClCompile Include="Samples\00_Cube__FrameworkSimple\Src\Sample0.cpp">
-      <Filter>Samples\00_Cube__FrameworkSimple\Src</Filter>
-    </ClCompile>
-    <ClCompile Include="Samples\00_Cube__FrameworkSimple\FrameworkSimple\Application.cpp">
-      <Filter>Samples\00_Cube__FrameworkSimple\FrameworkSimple</Filter>
-    </ClCompile>
-    <ClCompile Include="Samples\00_Cube__FrameworkSimple\FrameworkSimple\Game.cpp">
-      <Filter>Samples\00_Cube__FrameworkSimple\FrameworkSimple</Filter>
+    <ClCompile Include="Samples\01_Cube__DescHeap_DecAllocator_StateTrack\Sample1.cpp">
+      <Filter>Samples\01_Cube__DescHeap_DecAllocator_StateTrack</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -115,14 +108,8 @@
     <ClInclude Include="Samples\02_DescHeap_DecAllocator_StateTrack_TexMipGenCS\Sample1.h">
       <Filter>Samples\02_DescHeap_DecAllocator_StateTrack_TexMipGenCS</Filter>
     </ClInclude>
-    <ClInclude Include="Samples\00_Cube__FrameworkSimple\Src\Sample0.h">
-      <Filter>Samples\00_Cube__FrameworkSimple\Src</Filter>
-    </ClInclude>
-    <ClInclude Include="Samples\00_Cube__FrameworkSimple\FrameworkSimple\Application.h">
-      <Filter>Samples\00_Cube__FrameworkSimple\FrameworkSimple</Filter>
-    </ClInclude>
-    <ClInclude Include="Samples\00_Cube__FrameworkSimple\FrameworkSimple\Game.h">
-      <Filter>Samples\00_Cube__FrameworkSimple\FrameworkSimple</Filter>
+    <ClInclude Include="Samples\01_Cube__DescHeap_DecAllocator_StateTrack\Sample1.h">
+      <Filter>Samples\01_Cube__DescHeap_DecAllocator_StateTrack</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -162,25 +149,16 @@
     <Filter Include="Samples\01_Cube__DescHeap_DecAllocator_StateTrack">
       <UniqueIdentifier>{1e5b1583-1aa7-4bd8-8fae-06360d98c4a5}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Samples\00_Cube__FrameworkSimple">
-      <UniqueIdentifier>{0f2040f4-0df7-4d38-9504-510d1af89ca1}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Samples\00_Cube__FrameworkSimple\Shaders">
-      <UniqueIdentifier>{ddc3ca7a-6d5c-4dcc-9710-2bc87050094c}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Samples\00_Cube__FrameworkSimple\FrameworkSimple">
-      <UniqueIdentifier>{91a5ea9f-a506-47ef-82e4-30793bb4fd49}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Samples\00_Cube__FrameworkSimple\Src">
-      <UniqueIdentifier>{845c81a1-e1a1-41c4-982c-244c953bd7c8}</UniqueIdentifier>
+    <Filter Include="Samples\01_Cube__DescHeap_DecAllocator_StateTrack\Shaders">
+      <UniqueIdentifier>{fe195a7e-14e2-4eb8-a1d2-d84dd0bfd889}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Samples\00_Cube__FrameworkSimple\Shaders\PixelShader.hlsl">
-      <Filter>Samples\00_Cube__FrameworkSimple\Shaders</Filter>
+    <FxCompile Include="Samples\01_Cube__DescHeap_DecAllocator_StateTrack\Shaders\PixelShader.hlsl">
+      <Filter>Samples\01_Cube__DescHeap_DecAllocator_StateTrack\Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="Samples\00_Cube__FrameworkSimple\Shaders\VertexShader.hlsl">
-      <Filter>Samples\00_Cube__FrameworkSimple\Shaders</Filter>
+    <FxCompile Include="Samples\01_Cube__DescHeap_DecAllocator_StateTrack\Shaders\VertexShader.hlsl">
+      <Filter>Samples\01_Cube__DescHeap_DecAllocator_StateTrack\Shaders</Filter>
     </FxCompile>
   </ItemGroup>
 </Project>
