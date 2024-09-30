@@ -24,6 +24,7 @@
     <ProjectGuid>{75718DCF-30D0-4C49-9956-7E3D4F9FE318}</ProjectGuid>
     <RootNamespace>My00CubeFrameworkSimple</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>01_Cube__FrameworkFull</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

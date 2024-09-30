@@ -40,12 +40,6 @@
     <ClCompile Include="Framework\DescriptorAllocatorPage.cpp">
       <Filter>Framework\SRC</Filter>
     </ClCompile>
-    <ClCompile Include="Samples\02_DescHeap_DecAllocator_StateTrack_TexMipGenCS\Sample1.cpp">
-      <Filter>Samples\02_DescHeap_DecAllocator_StateTrack_TexMipGenCS</Filter>
-    </ClCompile>
-    <ClCompile Include="Samples\01_Cube__DescHeap_DecAllocator_StateTrack\Sample1.cpp">
-      <Filter>Samples\01_Cube__DescHeap_DecAllocator_StateTrack</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Framework\Application.h">
@@ -105,12 +99,6 @@
     <ClInclude Include="Framework\DescriptorAllocatorPage.h">
       <Filter>Framework\H</Filter>
     </ClInclude>
-    <ClInclude Include="Samples\02_DescHeap_DecAllocator_StateTrack_TexMipGenCS\Sample1.h">
-      <Filter>Samples\02_DescHeap_DecAllocator_StateTrack_TexMipGenCS</Filter>
-    </ClInclude>
-    <ClInclude Include="Samples\01_Cube__DescHeap_DecAllocator_StateTrack\Sample1.h">
-      <Filter>Samples\01_Cube__DescHeap_DecAllocator_StateTrack</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Framework">
@@ -131,9 +119,6 @@
     <Filter Include="External\D3D">
       <UniqueIdentifier>{327c5b89-83b4-41bb-9d21-2976f662900d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Samples">
-      <UniqueIdentifier>{030e7e25-0d6e-4315-aeba-057de3c72153}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Framework\H\Events">
       <UniqueIdentifier>{28b4c650-19c4-48d4-adba-3d1cbf4a0777}</UniqueIdentifier>
     </Filter>
@@ -143,22 +128,5 @@
     <Filter Include="Framework\SRC\IMGUI">
       <UniqueIdentifier>{36770e51-f42b-4206-bb1f-4ba13b3963bb}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Samples\02_DescHeap_DecAllocator_StateTrack_TexMipGenCS">
-      <UniqueIdentifier>{bab1bab4-f7e1-45ca-a122-d351fb77bdeb}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Samples\01_Cube__DescHeap_DecAllocator_StateTrack">
-      <UniqueIdentifier>{1e5b1583-1aa7-4bd8-8fae-06360d98c4a5}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Samples\01_Cube__DescHeap_DecAllocator_StateTrack\Shaders">
-      <UniqueIdentifier>{fe195a7e-14e2-4eb8-a1d2-d84dd0bfd889}</UniqueIdentifier>
-    </Filter>
-  </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="Samples\01_Cube__DescHeap_DecAllocator_StateTrack\Shaders\PixelShader.hlsl">
-      <Filter>Samples\01_Cube__DescHeap_DecAllocator_StateTrack\Shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="Samples\01_Cube__DescHeap_DecAllocator_StateTrack\Shaders\VertexShader.hlsl">
-      <Filter>Samples\01_Cube__DescHeap_DecAllocator_StateTrack\Shaders</Filter>
-    </FxCompile>
   </ItemGroup>
 </Project>
