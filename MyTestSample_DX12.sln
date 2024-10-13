@@ -7,9 +7,13 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DX12_FW", "MyTestSample_DX1
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{9E23556B-A805-412F-A4DC-04F8C80A233A}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "00_Cube__FrameworkSimple", "Samples\00_Cube__FrameworkSimple\00_Cube__FrameworkSimple.vcxproj", "{5B93379B-2ECC-4435-8C76-860CA5BC82E6}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SImple_Framework", "SImple_Framework", "{2D907E40-E309-44FC-BD2E-1F95C7DA1305}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "01_Cube__FrameworkSimple", "Samples\01_Cube__FrameworkFull\01_Cube__FrameworkSimple.vcxproj", "{75718DCF-30D0-4C49-9956-7E3D4F9FE318}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Full_Framework", "Full_Framework", "{B89BA7C3-47EE-48A8-898E-375D0BBB4F29}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "00_Cube", "Samples\Simple_Framework\00_Cube\00_Cube.vcxproj", "{5B93379B-2ECC-4435-8C76-860CA5BC82E6}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "01_Cube__FrameworkFull", "Samples\Full_Framework\00_Cube__DescHeap_DecAllocator_StateTrack\00_Cube__DescHeap_DecAllocator_StateTrack.vcxproj", "{75718DCF-30D0-4C49-9956-7E3D4F9FE318}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -48,8 +52,10 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{5B93379B-2ECC-4435-8C76-860CA5BC82E6} = {9E23556B-A805-412F-A4DC-04F8C80A233A}
-		{75718DCF-30D0-4C49-9956-7E3D4F9FE318} = {9E23556B-A805-412F-A4DC-04F8C80A233A}
+		{2D907E40-E309-44FC-BD2E-1F95C7DA1305} = {9E23556B-A805-412F-A4DC-04F8C80A233A}
+		{B89BA7C3-47EE-48A8-898E-375D0BBB4F29} = {9E23556B-A805-412F-A4DC-04F8C80A233A}
+		{5B93379B-2ECC-4435-8C76-860CA5BC82E6} = {2D907E40-E309-44FC-BD2E-1F95C7DA1305}
+		{75718DCF-30D0-4C49-9956-7E3D4F9FE318} = {B89BA7C3-47EE-48A8-898E-375D0BBB4F29}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {ACDB5BE7-3E35-45A9-8E7A-A65CDACEBA86}
