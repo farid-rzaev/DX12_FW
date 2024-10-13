@@ -3,6 +3,7 @@
 // Framework
 #include "Window.h"
 #include "CommandQueue.h"
+#include "DescriptorAllocation.h"
 
 // D3D12 extension library.
 #include <External/D3D/d3dx12.h>
@@ -19,11 +20,11 @@
 
 // Forward Decls
 class DescriptorAllocator;
-class DescriptorAllocation;
 
 // USINGs
 using Microsoft::WRL::ComPtr;
 
+//#define USE_DESCRIPTOR_ALLOCAOR
 
 class Application 
 {
@@ -76,7 +77,11 @@ protected:
 	DescriptorAllocation AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors = 1);
 	void ReleaseStaleDescriptors(uint64_t finishedFrame);
 	ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type, UINT32 numDescriptors);
+#if defined(USE_DESCRIPTOR_ALLOCAOR)
+	void UpdateRenderTargetViews();
+#else
 	void UpdateRenderTargetViews(ComPtr<ID3D12Device2> device, ComPtr<ID3D12DescriptorHeap> descriptorHeap);
+#endif
 
 	// Get and Set
 	UINT32 GetClientWidth() const { return m_Window->GetClientWidth(); }
@@ -110,6 +115,7 @@ private:
 
 	// DescriptorAllocators
 	std::unique_ptr<DescriptorAllocator> m_DescriptorAllocators[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
+	DescriptorAllocation				 m_allocationRTV;
 
 	// Command Queues
 	std::shared_ptr<CommandQueue>		 m_DirectCommandQueue	= nullptr;
