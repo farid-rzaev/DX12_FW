@@ -46,13 +46,13 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>$(SolutionDir)\_Output\Bin\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
-    <IntDir>$(SolutionDir)\_Output\Temp\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    <OutDir>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
+    <IntDir>$(SolutionDir)_Output\Temp\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>$(SolutionDir)\_Output\Bin\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
-    <IntDir>$(SolutionDir)\_Output\Temp\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    <OutDir>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
+    <IntDir>$(SolutionDir)_Output\Temp\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -61,7 +61,8 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir);$(OutDir)Shaders</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -77,7 +78,8 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir);$(OutDir)Shaders</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -94,15 +96,33 @@
     <ClCompile Include="External\IMGUI\imgui_widgets.cpp" />
     <ClCompile Include="External\Timer\HighResolutionClock.cpp" />
     <ClCompile Include="Framework\Application.cpp" />
+    <ClCompile Include="Framework\CommandList.cpp" />
     <ClCompile Include="Framework\CommandQueue.cpp" />
     <ClCompile Include="Framework\DescriptorAllocation.cpp" />
     <ClCompile Include="Framework\DescriptorAllocator.cpp" />
     <ClCompile Include="Framework\DescriptorAllocatorPage.cpp" />
+    <ClCompile Include="Framework\DynamicDescriptorHeap.cpp" />
     <ClCompile Include="Framework\Game.cpp" />
+    <ClCompile Include="Framework\Material\Buffer.cpp" />
+    <ClCompile Include="Framework\Material\ByteAddressBuffer.cpp" />
+    <ClCompile Include="Framework\Material\ConstantBuffer.cpp" />
+    <ClCompile Include="Framework\Material\IndexBuffer.cpp" />
+    <ClCompile Include="Framework\Material\Mesh.cpp" />
+    <ClCompile Include="Framework\Material\RenderTarget.cpp" />
+    <ClCompile Include="Framework\Material\Resource.cpp" />
+    <ClCompile Include="Framework\Material\StructuredBuffer.cpp" />
+    <ClCompile Include="Framework\Material\Texture.cpp" />
+    <ClCompile Include="Framework\Material\UploadBuffer.cpp" />
+    <ClCompile Include="Framework\Material\VertexBuffer.cpp" />
+    <ClCompile Include="Framework\PSOs\GenerateMipsPSO.cpp" />
+    <ClCompile Include="Framework\PSOs\PanoToCubemapPSO.cpp" />
+    <ClCompile Include="Framework\ResourceStateTracker.cpp" />
+    <ClCompile Include="Framework\RootSignature.cpp" />
     <ClCompile Include="Framework\Window.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="External\D3D\d3dx12.h" />
+    <ClInclude Include="External\Defines.h" />
     <ClInclude Include="External\Helpers.h" />
     <ClInclude Include="External\IMGUI\imconfig.h" />
     <ClInclude Include="External\IMGUI\imgui.h" />
@@ -113,14 +133,74 @@
     <ClInclude Include="External\IMGUI\imstb_truetype.h" />
     <ClInclude Include="External\Timer\HighResolutionClock.h" />
     <ClInclude Include="Framework\Application.h" />
+    <ClInclude Include="Framework\CommandList.h" />
     <ClInclude Include="Framework\CommandQueue.h" />
     <ClInclude Include="Framework\DescriptorAllocation.h" />
     <ClInclude Include="Framework\DescriptorAllocator.h" />
     <ClInclude Include="Framework\DescriptorAllocatorPage.h" />
+    <ClInclude Include="Framework\DynamicDescriptorHeap.h" />
     <ClInclude Include="Framework\Events\Events.h" />
     <ClInclude Include="Framework\Events\KeyCodes.h" />
     <ClInclude Include="Framework\Game.h" />
+    <ClInclude Include="Framework\Material\Buffer.h" />
+    <ClInclude Include="Framework\Material\ByteAddressBuffer.h" />
+    <ClInclude Include="Framework\Material\ConstantBuffer.h" />
+    <ClInclude Include="Framework\Material\IndexBuffer.h" />
+    <ClInclude Include="Framework\Material\Mesh.h" />
+    <ClInclude Include="Framework\Material\RenderTarget.h" />
+    <ClInclude Include="Framework\Material\Resource.h" />
+    <ClInclude Include="Framework\Material\StructuredBuffer.h" />
+    <ClInclude Include="Framework\Material\Texture.h" />
+    <ClInclude Include="Framework\Material\TextureUsage.h" />
+    <ClInclude Include="Framework\Material\UploadBuffer.h" />
+    <ClInclude Include="Framework\Material\VertexBuffer.h" />
+    <ClInclude Include="Framework\PSOs\GenerateMipsPSO.h" />
+    <ClInclude Include="Framework\PSOs\PanoToCubemapPSO.h" />
+    <ClInclude Include="Framework\ResourceStateTracker.h" />
+    <ClInclude Include="Framework\RootSignature.h" />
     <ClInclude Include="Framework\Window.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="Framework\Shaders\GenerateMips_CS.hlsl">
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
+      <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)Shaders\%(Filename).h</HeaderFileOutput>
+      <VariableName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">g_GenerateMips_CS</VariableName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.1</ShaderModel>
+      <VariableName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">g_GenerateMips_CS</VariableName>
+      <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)Shaders\%(Filename).h</HeaderFileOutput>
+    </FxCompile>
+    <FxCompile Include="Framework\Shaders\ImGUI_PS.hlsl">
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
+      <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)Shaders\%(Filename).h</HeaderFileOutput>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <VariableName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">g_ImGUI_PS</VariableName>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.1</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)Shaders\%(Filename).h</HeaderFileOutput>
+      <VariableName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">g_ImGUI_PS</VariableName>
+    </FxCompile>
+    <FxCompile Include="Framework\Shaders\ImGUI_VS.hlsl">
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
+      <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)Shaders\%(Filename).h</HeaderFileOutput>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <VariableName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">g_ImGUI_VS</VariableName>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.1</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)Shaders\%(Filename).h</HeaderFileOutput>
+      <VariableName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">g_ImGUI_VS</VariableName>
+    </FxCompile>
+    <FxCompile Include="Framework\Shaders\PanoToCubemap_CS.hlsl">
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
+      <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)Shaders\%(Filename).h</HeaderFileOutput>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
+      <VariableName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">g_PanoToCubemap_CS</VariableName>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.1</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compute</ShaderType>
+      <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)Shaders\%(Filename).h</HeaderFileOutput>
+      <VariableName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">g_PanoToCubemap_CS</VariableName>
+    </FxCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

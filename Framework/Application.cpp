@@ -94,9 +94,9 @@ bool Application::Initialize(const wchar_t* windowTitle, int width, int height, 
 		m_d3d12Device = CreateDevice(dxgiAdapter4);
 		ThrowIfFailed(m_d3d12Device, "Failed to create a device.");
 
-		m_DirectCommandQueue  = std::make_shared<CommandQueue> (m_d3d12Device, D3D12_COMMAND_LIST_TYPE_DIRECT);
-		m_ComputeCommandQueue = std::make_shared<CommandQueue> (m_d3d12Device, D3D12_COMMAND_LIST_TYPE_COMPUTE);
-		m_CopyCommandQueue    = std::make_shared<CommandQueue> (m_d3d12Device, D3D12_COMMAND_LIST_TYPE_COPY);
+		m_DirectCommandQueue  = std::make_shared<CommandQueue> (this, D3D12_COMMAND_LIST_TYPE_DIRECT);
+		m_ComputeCommandQueue = std::make_shared<CommandQueue> (this, D3D12_COMMAND_LIST_TYPE_COMPUTE);
+		m_CopyCommandQueue    = std::make_shared<CommandQueue> (this, D3D12_COMMAND_LIST_TYPE_COPY);
 		ThrowIfFailed((bool)m_DirectCommandQueue,  "Failed to create a DirectCommandQueue.");
 		ThrowIfFailed((bool)m_ComputeCommandQueue, "Failed to create a ComputeCommandQueue.");
 		ThrowIfFailed((bool)m_CopyCommandQueue,    "Failed to create a CopyCommandQueue.");
@@ -546,6 +546,11 @@ D3D12_CPU_DESCRIPTOR_HANDLE Application::GetCurrentBackbufferRTV()
 	return rtvHandle;
 }
 
+
+UINT Application::GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE type) const
+{
+	return m_d3d12Device->GetDescriptorHandleIncrementSize(type);
+}
 
 // =====================================================================================
 //									Support checks

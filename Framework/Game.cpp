@@ -27,7 +27,7 @@ bool Game::Initialize(const wchar_t* windowTitle, int width, int height, bool vS
 	}
 
 	// Only if Window is successfully created - set WndProc and PointerInjection
-	if (Application::Initialize(windowTitle, width, height, vSync)) 
+	if (Application::Initialize(windowTitle, width, height, vSync))
 	{
 		std::shared_ptr<Window> window = Application::GetWindow();
 		if (window)

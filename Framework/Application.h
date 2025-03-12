@@ -24,7 +24,7 @@ class DescriptorAllocator;
 // USINGs
 using Microsoft::WRL::ComPtr;
 
-//#define USE_DESCRIPTOR_ALLOCAOR
+#define USE_DESCRIPTOR_ALLOCAOR
 
 class Application 
 {
@@ -41,7 +41,7 @@ public: // STATIC
 public:
 	// Init 
 	Application(HINSTANCE hInstance);
-	virtual bool Initialize(const wchar_t* windowTitle, int width, int height, bool vSync);
+	virtual bool Initialize(const wchar_t* windowTitle, int width, int height, bool vSync = false);
 	virtual ~Application();
 
 	// Run
@@ -51,11 +51,7 @@ public:
 	static uint64_t GetFrameCount() { return ms_FrameCount; }
 	static ComPtr<ID3D12Device2> GetDevice() { return m_d3d12Device; }
 
-protected:
-	// Deleated
-	Application(const Application& app) = delete;
-	Application& operator=(const Application& app) = delete;
-
+public:
 	// Update & Render & Resize
 	virtual void Update();
 	virtual void Render();
@@ -93,9 +89,15 @@ protected:
 	double GetUpdateTotalTime() { return m_UpdateClock.GetTotalSeconds(); }
 	double GetRenderTotalTime() { return m_RenderClock.GetTotalSeconds(); }
 	std::shared_ptr<Window> GetWindow() { return m_Window; }
+	UINT GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE type) const;
 
 	// Support checks
 	DXGI_SAMPLE_DESC GetMultisampleQualityLevels(DXGI_FORMAT format, UINT numSamples, D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE) const;
+
+private:
+	// Deleated
+	Application(const Application& app) = delete;
+	Application& operator=(const Application& app) = delete;
 
 // ------------------------------------------------------------------------------------------
 //									Data members

@@ -18,8 +18,7 @@ public:
 	virtual ~Game();
 
 	// Init DX Runtime
-	virtual bool Initialize(const wchar_t* windowTitle,
-		int width, int height, bool vSync)				override;
+	virtual bool Initialize(const wchar_t* windowTitle, int width, int height, bool vSync = false)  override;
 
 	// Run
 	virtual int Run()									override;

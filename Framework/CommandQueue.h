@@ -1,25 +1,34 @@
 #pragma once
+
 #include <d3d12.h>
-#include <wrl.h>    // ComPtr
+#include <wrl.h>	// ComPtr
+
+#include <memory>	// shared_ptr
 #include <queue>
 
+
 using Microsoft::WRL::ComPtr;
+
+
+class Application;
 
 
 class CommandQueue
 {
 public:
-	CommandQueue(ComPtr<ID3D12Device2> device, D3D12_COMMAND_LIST_TYPE type);
+	CommandQueue(std::shared_ptr<Application> app, D3D12_COMMAND_LIST_TYPE type);
 	~CommandQueue();
 
-	UINT64 Signal();
-	bool IsFenceComplete(UINT64 fenceValue);
-	void WaitForFenceValue(UINT64 fenceValue);
+	uint64_t Signal();
+	bool IsFenceComplete(uint64_t fenceValue);
+	void WaitForFenceValue(uint64_t fenceValue);
 	void Flush();
 
+	// Returns the fence value to wait for this command list.
+	uint64_t ExecuteCommandList(ComPtr<ID3D12GraphicsCommandList2> commandList);
+	
 	// Get an available command list from the command queue.
 	ComPtr<ID3D12GraphicsCommandList2> GetCommandList();
-	UINT64 ExecuteCommandList(ComPtr<ID3D12GraphicsCommandList2> commandList);
 	ComPtr<ID3D12CommandQueue> GetD3D12CommandQueue() const;
 
 protected:
@@ -37,30 +46,29 @@ private /*helpers*/:
 	//		(together with the associated command allocator) is stored for later reuse.
 	struct CommandAllocatorEntry
 	{
-		UINT64 fenceValue;
+		uint64_t fenceValue;
 		ComPtr<ID3D12CommandAllocator> commandAllocator;
 	};
-	typedef ComPtr<ID3D12GraphicsCommandList2> CommandListEntry;
 
 	using CommandAllocatorQueue = std::queue<CommandAllocatorEntry>;
-	using CommandListQueue = std::queue<CommandListEntry>;
+	using CommandListQueue = std::queue< ComPtr<ID3D12GraphicsCommandList2> >;
 
 private /*main*/:
 	// There is no need to associate a fence value with the command lists since 
 	// they can be reused right after they have been executed on the command queue.
-	CommandListQueue	                        m_CommandListQueue;
-	CommandAllocatorQueue                       m_CommandAllocatorQueue;
+	CommandAllocatorQueue			m_CommandAllocatorQueue;
+	CommandListQueue				m_CommandListQueue;
 
 	// CommandQueue
-	D3D12_COMMAND_LIST_TYPE m_CommandListType;
-	ComPtr<ID3D12CommandQueue> m_d3d12CommandQueue;
+	D3D12_COMMAND_LIST_TYPE			m_CommandListType;
+	ComPtr<ID3D12CommandQueue>		m_d3d12CommandQueue;
 
 	// Synchronization objects
-	ComPtr<ID3D12Fence> m_d3d12Fence;
-	UINT64 m_FenceValue = 0;
-	HANDLE m_FenceEvent;
+	ComPtr<ID3D12Fence>				m_d3d12Fence;
+	HANDLE							m_FenceEvent;
+	uint64_t						m_FenceValue = 0;
 
-	// Device
-	ComPtr<ID3D12Device2> m_d3d12Device;
+	// Application
+	std::shared_ptr<Application>	m_application;
 };
 

@@ -1,0 +1,254 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="External\IMGUI\imgui.cpp">
+      <Filter>External\IMGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="External\IMGUI\imgui_demo.cpp">
+      <Filter>External\IMGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="External\IMGUI\imgui_draw.cpp">
+      <Filter>External\IMGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="External\IMGUI\imgui_impl_win32.cpp">
+      <Filter>External\IMGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="External\IMGUI\imgui_widgets.cpp">
+      <Filter>External\IMGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="External\Timer\HighResolutionClock.cpp">
+      <Filter>External\Timer</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Application.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\CommandQueue.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\DescriptorAllocation.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\DescriptorAllocator.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\DescriptorAllocatorPage.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Game.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Window.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Material\IndexBuffer.cpp">
+      <Filter>Src\Material</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Material\Mesh.cpp">
+      <Filter>Src\Material</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Material\Texture.cpp">
+      <Filter>Src\Material</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Material\VertexBuffer.cpp">
+      <Filter>Src\Material</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Material\Buffer.cpp">
+      <Filter>Src\Material</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Material\Resource.cpp">
+      <Filter>Src\Material</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\CommandList.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\ResourceStateTracker.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Material\UploadBuffer.cpp">
+      <Filter>Src\Material</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Material\ByteAddressBuffer.cpp">
+      <Filter>Src\Material</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Material\ConstantBuffer.cpp">
+      <Filter>Src\Material</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Material\StructuredBuffer.cpp">
+      <Filter>Src\Material</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Material\RenderTarget.cpp">
+      <Filter>Src\Material</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\DynamicDescriptorHeap.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\RootSignature.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\PSOs\GenerateMipsPSO.cpp">
+      <Filter>Src\PSOs</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\PSOs\PanoToCubemapPSO.cpp">
+      <Filter>Src\PSOs</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="External\D3D\d3dx12.h">
+      <Filter>External\D3DX</Filter>
+    </ClInclude>
+    <ClInclude Include="External\IMGUI\imconfig.h">
+      <Filter>External\IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="External\IMGUI\imgui.h">
+      <Filter>External\IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="External\IMGUI\imgui_impl_win32.h">
+      <Filter>External\IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="External\IMGUI\imgui_internal.h">
+      <Filter>External\IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="External\IMGUI\imstb_rectpack.h">
+      <Filter>External\IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="External\IMGUI\imstb_textedit.h">
+      <Filter>External\IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="External\IMGUI\imstb_truetype.h">
+      <Filter>External\IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="External\Timer\HighResolutionClock.h">
+      <Filter>External\Timer</Filter>
+    </ClInclude>
+    <ClInclude Include="External\Helpers.h">
+      <Filter>External</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Application.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\CommandQueue.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\DescriptorAllocation.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\DescriptorAllocator.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\DescriptorAllocatorPage.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Game.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Events\KeyCodes.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Window.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Events\Events.h">
+      <Filter>Src\Events</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Material\IndexBuffer.h">
+      <Filter>Src\Material</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Material\Mesh.h">
+      <Filter>Src\Material</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Material\Texture.h">
+      <Filter>Src\Material</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Material\VertexBuffer.h">
+      <Filter>Src\Material</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Material\Buffer.h">
+      <Filter>Src\Material</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Material\Resource.h">
+      <Filter>Src\Material</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\CommandList.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Material\TextureUsage.h">
+      <Filter>Src\Material</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\ResourceStateTracker.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Material\ByteAddressBuffer.h">
+      <Filter>Src\Material</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Material\ConstantBuffer.h">
+      <Filter>Src\Material</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Material\StructuredBuffer.h">
+      <Filter>Src\Material</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Material\UploadBuffer.h">
+      <Filter>Src\Material</Filter>
+    </ClInclude>
+    <ClInclude Include="External\Defines.h">
+      <Filter>External</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Material\RenderTarget.h">
+      <Filter>Src\Material</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\DynamicDescriptorHeap.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\RootSignature.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\PSOs\GenerateMipsPSO.h">
+      <Filter>Src\PSOs</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\PSOs\PanoToCubemapPSO.h">
+      <Filter>Src\PSOs</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="External">
+      <UniqueIdentifier>{dd598857-7373-4e83-8c2c-1bc567c9740a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="External\D3DX">
+      <UniqueIdentifier>{05c9ef80-89a9-4518-a3c9-2883bfc1d163}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="External\Timer">
+      <UniqueIdentifier>{41fda2d8-b4fc-4691-bcf6-48e2d805b716}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="External\IMGUI">
+      <UniqueIdentifier>{2885cfcc-c872-4849-b1ac-984b0e151cdd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Src">
+      <UniqueIdentifier>{7f6fc734-4921-4bb3-bf83-6e5791bb4234}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Src\Events">
+      <UniqueIdentifier>{59b686c3-663d-4a9e-9de8-38511c769120}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Src\Material">
+      <UniqueIdentifier>{812ee144-1c5a-4fb5-b93f-4975743f1e10}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Src\PSOs">
+      <UniqueIdentifier>{5c84f5b2-4d6a-471d-91cb-4283fb15730a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Src\Shaders">
+      <UniqueIdentifier>{09e57aad-85e5-4d9a-ad83-77b7c45dae5f}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="Framework\Shaders\GenerateMips_CS.hlsl">
+      <Filter>Src\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Framework\Shaders\ImGUI_PS.hlsl">
+      <Filter>Src\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Framework\Shaders\ImGUI_VS.hlsl">
+      <Filter>Src\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Framework\Shaders\PanoToCubemap_CS.hlsl">
+      <Filter>Src\Shaders</Filter>
+    </FxCompile>
+  </ItemGroup>
+</Project>
