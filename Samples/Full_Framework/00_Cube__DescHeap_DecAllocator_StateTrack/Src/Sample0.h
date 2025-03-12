@@ -5,7 +5,7 @@
 #include <DirectXMath.h>
 
 
-class Sample1 : public Game
+class Sample0 : public Game
 {
 // ------------------------------------------------------------------------------------------
 //									Function members
@@ -14,14 +14,14 @@ public: // STATIC
 #if 0
 	static void Create(HINSTANCE hInstance, const wchar_t* windowTitle, int width, int height, bool vSync);
 	static void Destroy();
-	static Sample1& Get();
+	static Sample0& Get();
 #endif
 
 public:
 	// Init 
-	Sample1(HINSTANCE hInstance);
+	Sample0(HINSTANCE hInstance);
 	bool Initialize(const wchar_t* windowTitle, int width, int height, bool vSync);
-	virtual ~Sample1();
+	virtual ~Sample0();
 
 	// Run
 	virtual int Run() final;

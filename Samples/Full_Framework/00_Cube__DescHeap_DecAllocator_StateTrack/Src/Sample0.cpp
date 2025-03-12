@@ -1,4 +1,4 @@
-#include "Sample1.h"
+#include "Sample0.h"
 
 #include <External/Helpers.h>
 
@@ -53,24 +53,24 @@ static WORD g_Indicies[36] =
 
 
 #if 0
-static Sample1* gs_pSingelton = nullptr;
+static Sample0* gs_pSingelton = nullptr;
 
-void Sample1::Create(HINSTANCE hInstance, const wchar_t* windowTitle, int width, int height, bool vSync)
+void Sample0::Create(HINSTANCE hInstance, const wchar_t* windowTitle, int width, int height, bool vSync)
 {
 	if (!gs_pSingelton)
 	{
-		gs_pSingelton = new Sample1(hInstance);
+		gs_pSingelton = new Sample0(hInstance);
 		gs_pSingelton->Initialize(windowTitle, width, height, vSync);
 	}
 }
 
-Sample1& Sample1::Get()
+Sample0& Sample0::Get()
 {
 	assert(gs_pSingelton);
 	return *gs_pSingelton;
 }
 
-void Sample1::Destroy()
+void Sample0::Destroy()
 {
 	if (gs_pSingelton)
 	{
@@ -89,7 +89,7 @@ void Sample1::Destroy()
 // =====================================================================================
 
 
-int Sample1::Run() 
+int Sample0::Run()
 {
 	return Game::Run();
 }
@@ -100,7 +100,7 @@ int Sample1::Run()
 // =====================================================================================
 
 
-Sample1::Sample1(HINSTANCE hInstance) :
+Sample0::Sample0(HINSTANCE hInstance) :
 	Game(hInstance),
 	m_ScissorRect(CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX)),
 	m_FoV(45.0f)
@@ -108,7 +108,7 @@ Sample1::Sample1(HINSTANCE hInstance) :
 }
 
 
-bool Sample1::Initialize(const wchar_t* windowTitle, int width, int height, bool vSync)
+bool Sample0::Initialize(const wchar_t* windowTitle, int width, int height, bool vSync)
 {
 	if (!Game::Initialize(windowTitle, width, height, vSync)) return false;
 
@@ -120,7 +120,7 @@ bool Sample1::Initialize(const wchar_t* windowTitle, int width, int height, bool
 }
 
 
-Sample1::~Sample1()
+Sample0::~Sample0()
 {
 
 }
@@ -131,7 +131,7 @@ Sample1::~Sample1()
 // =====================================================================================
 
 
-void Sample1::UpdateBufferResource(
+void Sample0::UpdateBufferResource(
 	ComPtr<ID3D12GraphicsCommandList2> commandList,
 	ID3D12Resource** pDestinationResource,
 	ID3D12Resource** pIntermediateResource,
@@ -180,7 +180,7 @@ void Sample1::UpdateBufferResource(
 }
 
 
-bool Sample1::LoadContent()
+bool Sample0::LoadContent()
 {
 	std::wstring shaderBlobPath = GetExePath();
 	assert(shaderBlobPath.size() != 0);
@@ -306,7 +306,7 @@ bool Sample1::LoadContent()
 }
 
 
-void Sample1::UnloadContent() {
+void Sample0::UnloadContent() {
 	m_ContentLoaded = false;
 }
 
@@ -316,7 +316,7 @@ void Sample1::UnloadContent() {
 // =====================================================================================
 
 
-void Sample1::Update()
+void Sample0::Update()
 { 
 	Application::Update(); 
 	double totalUpdateTime = Application::GetUpdateTotalTime();
@@ -364,7 +364,7 @@ void Sample1::Update()
 //						same draw or dispatch call).
 //				* A UAV barrier is not needed if the resource is being used as a 
 //						read - only(Read > Read) resource between draw or dispatches.
-void Sample1::Render()
+void Sample0::Render()
 {
 	Application::Render();
 	double totalRenderTime = Application::GetRenderTotalTime();
@@ -425,7 +425,7 @@ void Sample1::Render()
 }
 
 
-void Sample1::Resize(UINT32 width, UINT32 height)
+void Sample0::Resize(UINT32 width, UINT32 height)
 {
 	if (Application::GetClientWidth() != width || Application::GetClientHeight() != height)
 	{
@@ -449,7 +449,7 @@ void Sample1::Resize(UINT32 width, UINT32 height)
 }
 
 
-void Sample1::ResizeDepthBuffer(int width, int height)
+void Sample0::ResizeDepthBuffer(int width, int height)
 {
 	if (m_ContentLoaded)
 	{
@@ -498,7 +498,7 @@ void Sample1::ResizeDepthBuffer(int width, int height)
 // =====================================================================================
 
 
-void Sample1::TransitionResource(ComPtr<ID3D12GraphicsCommandList2> commandList, ComPtr<ID3D12Resource> resource,
+void Sample0::TransitionResource(ComPtr<ID3D12GraphicsCommandList2> commandList, ComPtr<ID3D12Resource> resource,
 	D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after)
 {
 	CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition
@@ -510,14 +510,14 @@ void Sample1::TransitionResource(ComPtr<ID3D12GraphicsCommandList2> commandList,
 }
 
 
-void Sample1::ClearRTV(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> commandList,
+void Sample0::ClearRTV(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> commandList,
 	D3D12_CPU_DESCRIPTOR_HANDLE rtv, FLOAT* clearColor)
 {
 	commandList->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
 }
 
 
-void Sample1::ClearDepth(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> commandList,
+void Sample0::ClearDepth(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> commandList,
 	D3D12_CPU_DESCRIPTOR_HANDLE dsv, FLOAT depth)
 {
 	commandList->ClearDepthStencilView(dsv, D3D12_CLEAR_FLAG_DEPTH, depth, 0, 0, nullptr);

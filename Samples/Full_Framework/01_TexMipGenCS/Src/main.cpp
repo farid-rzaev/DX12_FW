@@ -1,7 +1,7 @@
 // This is the exact copy of the 00_Cube project but hooked up to the FULL (not simplified) 
 // version of the framework DX12_FW.
 
-#include "Sample0.h"
+#include "Sample1.h"
 
 #include <dxgidebug.h>
 
@@ -16,18 +16,17 @@ void ReportLiveObjects()
 
 int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLine, int nCmdShow)
 {
-	const wchar_t* windowTitle = L"Learning DirectX 12";
 	int retCode = 0;
 
 #if 0
-	Sample0::Create(hInstance, windowTitle, 1280, 720, false);
+	Sample1::Create(hInstance, windowTitle, 1280, 720, false);
 	{
-		Sample0::Get().Run();
+		Sample1::Get().Run();
 	}
-	Sample0::Destroy();
+	Sample1::Destroy();
 #else
-	Sample0 sample(hInstance);
-	sample.Initialize(windowTitle, 1280, 720, false);
+	Sample1 sample(hInstance);
+	sample.Initialize(L"Learning DirectX 12 - Lesson 3", 1280, 720, false);
 	{
 		retCode = sample.Run();
 	}
