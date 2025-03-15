@@ -23,14 +23,14 @@
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
-    <CharacterSet>Unicode</CharacterSet>
+    <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>Unicode</CharacterSet>
+    <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -51,8 +51,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
-    <IntDir>$(SolutionDir)_Output\Temp\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    <OutDir>$(SolutionDir)_Output\$(Platform)\$(Configuration)\$(ProjectName)\Bin\</OutDir>
+    <IntDir>$(SolutionDir)_Output\$(Platform)\$(Configuration)\$(ProjectName)\Temp\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -61,7 +61,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir);$(OutDir)Shaders</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir);$(OutDir)Shaders;$(SolutionDir)External\DirectXTex\DirectXTex</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -89,12 +89,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="External\IMGUI\imgui.cpp" />
-    <ClCompile Include="External\IMGUI\imgui_demo.cpp" />
-    <ClCompile Include="External\IMGUI\imgui_draw.cpp" />
-    <ClCompile Include="External\IMGUI\imgui_impl_win32.cpp" />
-    <ClCompile Include="External\IMGUI\imgui_widgets.cpp" />
-    <ClCompile Include="External\Timer\HighResolutionClock.cpp" />
     <ClCompile Include="Framework\Application.cpp" />
     <ClCompile Include="Framework\CommandList.cpp" />
     <ClCompile Include="Framework\CommandQueue.cpp" />
@@ -121,17 +115,6 @@
     <ClCompile Include="Framework\Window.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="External\D3D\d3dx12.h" />
-    <ClInclude Include="External\Defines.h" />
-    <ClInclude Include="External\Helpers.h" />
-    <ClInclude Include="External\IMGUI\imconfig.h" />
-    <ClInclude Include="External\IMGUI\imgui.h" />
-    <ClInclude Include="External\IMGUI\imgui_impl_win32.h" />
-    <ClInclude Include="External\IMGUI\imgui_internal.h" />
-    <ClInclude Include="External\IMGUI\imstb_rectpack.h" />
-    <ClInclude Include="External\IMGUI\imstb_textedit.h" />
-    <ClInclude Include="External\IMGUI\imstb_truetype.h" />
-    <ClInclude Include="External\Timer\HighResolutionClock.h" />
     <ClInclude Include="Framework\Application.h" />
     <ClInclude Include="Framework\CommandList.h" />
     <ClInclude Include="Framework\CommandQueue.h" />

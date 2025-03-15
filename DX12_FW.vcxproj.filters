@@ -1,24 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="External\IMGUI\imgui.cpp">
-      <Filter>External\IMGUI</Filter>
-    </ClCompile>
-    <ClCompile Include="External\IMGUI\imgui_demo.cpp">
-      <Filter>External\IMGUI</Filter>
-    </ClCompile>
-    <ClCompile Include="External\IMGUI\imgui_draw.cpp">
-      <Filter>External\IMGUI</Filter>
-    </ClCompile>
-    <ClCompile Include="External\IMGUI\imgui_impl_win32.cpp">
-      <Filter>External\IMGUI</Filter>
-    </ClCompile>
-    <ClCompile Include="External\IMGUI\imgui_widgets.cpp">
-      <Filter>External\IMGUI</Filter>
-    </ClCompile>
-    <ClCompile Include="External\Timer\HighResolutionClock.cpp">
-      <Filter>External\Timer</Filter>
-    </ClCompile>
     <ClCompile Include="Framework\Application.cpp">
       <Filter>Src</Filter>
     </ClCompile>
@@ -93,36 +75,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="External\D3D\d3dx12.h">
-      <Filter>External\D3DX</Filter>
-    </ClInclude>
-    <ClInclude Include="External\IMGUI\imconfig.h">
-      <Filter>External\IMGUI</Filter>
-    </ClInclude>
-    <ClInclude Include="External\IMGUI\imgui.h">
-      <Filter>External\IMGUI</Filter>
-    </ClInclude>
-    <ClInclude Include="External\IMGUI\imgui_impl_win32.h">
-      <Filter>External\IMGUI</Filter>
-    </ClInclude>
-    <ClInclude Include="External\IMGUI\imgui_internal.h">
-      <Filter>External\IMGUI</Filter>
-    </ClInclude>
-    <ClInclude Include="External\IMGUI\imstb_rectpack.h">
-      <Filter>External\IMGUI</Filter>
-    </ClInclude>
-    <ClInclude Include="External\IMGUI\imstb_textedit.h">
-      <Filter>External\IMGUI</Filter>
-    </ClInclude>
-    <ClInclude Include="External\IMGUI\imstb_truetype.h">
-      <Filter>External\IMGUI</Filter>
-    </ClInclude>
-    <ClInclude Include="External\Timer\HighResolutionClock.h">
-      <Filter>External\Timer</Filter>
-    </ClInclude>
-    <ClInclude Include="External\Helpers.h">
-      <Filter>External</Filter>
-    </ClInclude>
     <ClInclude Include="Framework\Application.h">
       <Filter>Src</Filter>
     </ClInclude>
@@ -189,9 +141,6 @@
     <ClInclude Include="Framework\Material\UploadBuffer.h">
       <Filter>Src\Material</Filter>
     </ClInclude>
-    <ClInclude Include="External\Defines.h">
-      <Filter>External</Filter>
-    </ClInclude>
     <ClInclude Include="Framework\Material\RenderTarget.h">
       <Filter>Src\Material</Filter>
     </ClInclude>
@@ -209,18 +158,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <Filter Include="External">
-      <UniqueIdentifier>{dd598857-7373-4e83-8c2c-1bc567c9740a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="External\D3DX">
-      <UniqueIdentifier>{05c9ef80-89a9-4518-a3c9-2883bfc1d163}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="External\Timer">
-      <UniqueIdentifier>{41fda2d8-b4fc-4691-bcf6-48e2d805b716}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="External\IMGUI">
-      <UniqueIdentifier>{2885cfcc-c872-4849-b1ac-984b0e151cdd}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Src">
       <UniqueIdentifier>{7f6fc734-4921-4bb3-bf83-6e5791bb4234}</UniqueIdentifier>
     </Filter>

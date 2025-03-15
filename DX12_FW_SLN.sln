@@ -16,6 +16,41 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DX12_FW", "DX12_FW.vcxproj"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "01_TexMipGenCS", "Samples\Full_Framework\01_TexMipGenCS\01_TexMipGenCS.vcxproj", "{F8C63256-1361-4CC5-837D-D9C5CECD2888}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "External", "External", "{BFCAE7D7-BD2F-43C5-91E0-B293116146BF}"
+	ProjectSection(SolutionItems) = preProject
+		External\Defines.h = External\Defines.h
+		External\Helpers.h = External\Helpers.h
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Timer", "Timer", "{3453F312-4C53-4242-83D7-AC9B56100EFD}"
+	ProjectSection(SolutionItems) = preProject
+		External\Timer\HighResolutionClock.cpp = External\Timer\HighResolutionClock.cpp
+		External\Timer\HighResolutionClock.h = External\Timer\HighResolutionClock.h
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "IMGUI", "IMGUI", "{947D607B-4F17-4F55-A38A-5B322B900340}"
+	ProjectSection(SolutionItems) = preProject
+		External\IMGUI\imconfig.h = External\IMGUI\imconfig.h
+		External\IMGUI\imgui.cpp = External\IMGUI\imgui.cpp
+		External\IMGUI\imgui.h = External\IMGUI\imgui.h
+		External\IMGUI\imgui_demo.cpp = External\IMGUI\imgui_demo.cpp
+		External\IMGUI\imgui_draw.cpp = External\IMGUI\imgui_draw.cpp
+		External\IMGUI\imgui_impl_win32.cpp = External\IMGUI\imgui_impl_win32.cpp
+		External\IMGUI\imgui_impl_win32.h = External\IMGUI\imgui_impl_win32.h
+		External\IMGUI\imgui_internal.h = External\IMGUI\imgui_internal.h
+		External\IMGUI\imgui_widgets.cpp = External\IMGUI\imgui_widgets.cpp
+		External\IMGUI\imstb_rectpack.h = External\IMGUI\imstb_rectpack.h
+		External\IMGUI\imstb_textedit.h = External\IMGUI\imstb_textedit.h
+		External\IMGUI\imstb_truetype.h = External\IMGUI\imstb_truetype.h
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "D3DX", "D3DX", "{C4B5049C-D972-456E-B771-9C9573141A30}"
+	ProjectSection(SolutionItems) = preProject
+		External\D3D\d3dx12.h = External\D3D\d3dx12.h
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DirectXTex", "External\DirectXTex\DirectXTex.vcxproj", "{3A1CBA4F-2831-4128-9CB2-8108661F3D00}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -56,6 +91,14 @@ Global
 		{F8C63256-1361-4CC5-837D-D9C5CECD2888}.Release|x64.Build.0 = Release|x64
 		{F8C63256-1361-4CC5-837D-D9C5CECD2888}.Release|x86.ActiveCfg = Release|Win32
 		{F8C63256-1361-4CC5-837D-D9C5CECD2888}.Release|x86.Build.0 = Release|Win32
+		{3A1CBA4F-2831-4128-9CB2-8108661F3D00}.Debug|x64.ActiveCfg = Debug|x64
+		{3A1CBA4F-2831-4128-9CB2-8108661F3D00}.Debug|x64.Build.0 = Debug|x64
+		{3A1CBA4F-2831-4128-9CB2-8108661F3D00}.Debug|x86.ActiveCfg = Debug|Win32
+		{3A1CBA4F-2831-4128-9CB2-8108661F3D00}.Debug|x86.Build.0 = Debug|Win32
+		{3A1CBA4F-2831-4128-9CB2-8108661F3D00}.Release|x64.ActiveCfg = Release|x64
+		{3A1CBA4F-2831-4128-9CB2-8108661F3D00}.Release|x64.Build.0 = Release|x64
+		{3A1CBA4F-2831-4128-9CB2-8108661F3D00}.Release|x86.ActiveCfg = Release|Win32
+		{3A1CBA4F-2831-4128-9CB2-8108661F3D00}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -66,6 +109,10 @@ Global
 		{5B93379B-2ECC-4435-8C76-860CA5BC82E6} = {2D907E40-E309-44FC-BD2E-1F95C7DA1305}
 		{75718DCF-30D0-4C49-9956-7E3D4F9FE318} = {B89BA7C3-47EE-48A8-898E-375D0BBB4F29}
 		{F8C63256-1361-4CC5-837D-D9C5CECD2888} = {B89BA7C3-47EE-48A8-898E-375D0BBB4F29}
+		{3453F312-4C53-4242-83D7-AC9B56100EFD} = {BFCAE7D7-BD2F-43C5-91E0-B293116146BF}
+		{947D607B-4F17-4F55-A38A-5B322B900340} = {BFCAE7D7-BD2F-43C5-91E0-B293116146BF}
+		{C4B5049C-D972-456E-B771-9C9573141A30} = {BFCAE7D7-BD2F-43C5-91E0-B293116146BF}
+		{3A1CBA4F-2831-4128-9CB2-8108661F3D00} = {BFCAE7D7-BD2F-43C5-91E0-B293116146BF}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {ACDB5BE7-3E35-45A9-8E7A-A65CDACEBA86}

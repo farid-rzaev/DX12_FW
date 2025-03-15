@@ -36,6 +36,7 @@
 // Helpers
 #include <External/Helpers.h>
 #include <DirectXMath.h>
+#include <DirectXTex.h>
 #include <filesystem>
 
 std::map<std::wstring, ID3D12Resource* > CommandList::ms_TextureCache;
@@ -266,14 +267,14 @@ void CommandList::LoadTextureFromFile( Texture& texture, const std::wstring& fil
     }
     else
     {
-        TexMetadata metadata;
-        ScratchImage scratchImage;
+        DirectX::TexMetadata metadata;
+        DirectX::ScratchImage scratchImage;
 
         if ( filePath.extension() == ".dds" )
         {
             ThrowIfFailed( LoadFromDDSFile( 
                 fileName.c_str(),
-                DDS_FLAGS_NONE, 
+                DirectX::DDS_FLAGS_NONE,
                 &metadata,
                 scratchImage));
         }
@@ -295,7 +296,7 @@ void CommandList::LoadTextureFromFile( Texture& texture, const std::wstring& fil
         {
             ThrowIfFailed( LoadFromWICFile( 
                 fileName.c_str(), 
-                WIC_FLAGS_NONE, 
+                DirectX::WIC_FLAGS_NONE,
                 &metadata, 
                 scratchImage ) );
         }
@@ -303,20 +304,20 @@ void CommandList::LoadTextureFromFile( Texture& texture, const std::wstring& fil
         D3D12_RESOURCE_DESC textureDesc = {};
         switch ( metadata.dimension )
         {
-            case TEX_DIMENSION_TEXTURE1D:
+            case DirectX::TEX_DIMENSION_TEXTURE1D:
                 textureDesc = CD3DX12_RESOURCE_DESC::Tex1D( 
                     metadata.format, 
                     static_cast<UINT64>( metadata.width ), 
                     static_cast<UINT16>( metadata.arraySize) );
                 break;
-            case TEX_DIMENSION_TEXTURE2D:
+            case DirectX::TEX_DIMENSION_TEXTURE2D:
                 textureDesc = CD3DX12_RESOURCE_DESC::Tex2D( 
                     metadata.format, 
                     static_cast<UINT64>( metadata.width ), 
                     static_cast<UINT>( metadata.height ), 
                     static_cast<UINT16>( metadata.arraySize ) );
                 break;
-            case TEX_DIMENSION_TEXTURE3D:
+            case DirectX::TEX_DIMENSION_TEXTURE3D:
                 textureDesc = CD3DX12_RESOURCE_DESC::Tex3D( 
                     metadata.format, 
                     static_cast<UINT64>( metadata.width ), 
@@ -349,7 +350,7 @@ void CommandList::LoadTextureFromFile( Texture& texture, const std::wstring& fil
             textureResource.Get(), D3D12_RESOURCE_STATE_COMMON );
 
         std::vector<D3D12_SUBRESOURCE_DATA> subresources( scratchImage.GetImageCount() );
-        const Image* pImages = scratchImage.GetImages();
+        const DirectX::Image* pImages = scratchImage.GetImages();
         for ( int i = 0; i < scratchImage.GetImageCount(); ++i )
         {
             auto& subresource = subresources[i];
