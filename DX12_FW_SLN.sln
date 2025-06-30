@@ -51,6 +51,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "D3DX", "D3DX", "{C4B5049C-D
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DirectXTex", "External\DirectXTex\DirectXTex.vcxproj", "{3A1CBA4F-2831-4128-9CB2-8108661F3D00}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Threading", "Threading", "{B409B217-CF54-4E47-9F2E-0D57AAB60DB6}"
+	ProjectSection(SolutionItems) = preProject
+		External\Threading\ThreadSafeQueue.h = External\Threading\ThreadSafeQueue.h
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -113,6 +118,7 @@ Global
 		{947D607B-4F17-4F55-A38A-5B322B900340} = {BFCAE7D7-BD2F-43C5-91E0-B293116146BF}
 		{C4B5049C-D972-456E-B771-9C9573141A30} = {BFCAE7D7-BD2F-43C5-91E0-B293116146BF}
 		{3A1CBA4F-2831-4128-9CB2-8108661F3D00} = {BFCAE7D7-BD2F-43C5-91E0-B293116146BF}
+		{B409B217-CF54-4E47-9F2E-0D57AAB60DB6} = {BFCAE7D7-BD2F-43C5-91E0-B293116146BF}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {ACDB5BE7-3E35-45A9-8E7A-A65CDACEBA86}

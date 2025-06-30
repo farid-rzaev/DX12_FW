@@ -50,8 +50,7 @@ CommandList::CommandList(std::shared_ptr<Application> app, D3D12_COMMAND_LIST_TY
 
     ThrowIfFailed( device->CreateCommandAllocator( m_d3d12CommandListType, IID_PPV_ARGS( &m_d3d12CommandAllocator ) ) );
 
-    ThrowIfFailed( device->CreateCommandList( 0, m_d3d12CommandListType, m_d3d12CommandAllocator.Get(),
-                                              nullptr, IID_PPV_ARGS( &m_d3d12CommandList ) ) );
+    ThrowIfFailed( device->CreateCommandList( 0, m_d3d12CommandListType, m_d3d12CommandAllocator.Get(), nullptr, IID_PPV_ARGS( &m_d3d12CommandList ) ) );
 
     m_UploadBuffer = std::make_unique<UploadBuffer>();
 
