@@ -155,7 +155,7 @@ D3D12_UNORDERED_ACCESS_VIEW_DESC GetUAVDesc(const D3D12_RESOURCE_DESC& resDesc, 
 
 void Texture::CreateViews()
 {
-    if (m_d3d12Resource)
+    if (m_d3d12Resource && m_Application)
     {
         auto device = Application::GetDevice();
 

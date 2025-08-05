@@ -64,6 +64,6 @@ private /*main*/:
 	std::condition_variable							m_ProcessInFlightCommandListsThreadCV;
 
 	// Application
-	std::shared_ptr<Application>					m_application;
+	std::shared_ptr<Application>					m_Application = nullptr;
 };
 

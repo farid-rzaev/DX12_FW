@@ -51,12 +51,12 @@ private:
     void Free();
 
     // The base descriptor.
-    D3D12_CPU_DESCRIPTOR_HANDLE m_Descriptor;
+    D3D12_CPU_DESCRIPTOR_HANDLE                 m_Descriptor;
     // The number of descriptors in this allocation.
-    uint32_t m_NumHandles;
+    uint32_t                                    m_NumHandles;
     // The offset to the next descriptor.
-    uint32_t m_DescriptorSize;
+    uint32_t                                    m_DescriptorSize;
 
     // A pointer back to the original page where this allocation came from.
-    std::shared_ptr<DescriptorAllocatorPage> m_Page;
+    std::shared_ptr<DescriptorAllocatorPage>    m_Page = nullptr;
 };

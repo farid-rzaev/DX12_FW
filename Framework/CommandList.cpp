@@ -43,7 +43,7 @@ std::map<std::wstring, ID3D12Resource* > CommandList::ms_TextureCache;
 std::mutex CommandList::ms_TextureCacheMutex;
 
 CommandList::CommandList(std::shared_ptr<Application> app, D3D12_COMMAND_LIST_TYPE type)
-    : m_application(app)
+    : m_Application(app)
     , m_d3d12CommandListType(type)
 {
     auto device = Application::GetDevice();
@@ -58,7 +58,7 @@ CommandList::CommandList(std::shared_ptr<Application> app, D3D12_COMMAND_LIST_TY
 
     for ( int i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i )
     {
-        m_DynamicDescriptorHeap[i] = std::make_unique<DynamicDescriptorHeap>( static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>( i ) );
+        m_DynamicDescriptorHeap[i] = std::make_unique<DynamicDescriptorHeap>(m_Application, static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>( i ) );
         m_DescriptorHeaps[i] = nullptr;
     }
 }
@@ -380,7 +380,7 @@ void CommandList::GenerateMips( Texture& texture )
     {
         if ( !m_ComputeCommandList )
         {
-            m_ComputeCommandList = m_application->GetCommandQueue( D3D12_COMMAND_LIST_TYPE_COMPUTE )->GetCommandList();
+            m_ComputeCommandList = m_Application->GetCommandQueue( D3D12_COMMAND_LIST_TYPE_COMPUTE )->GetCommandList();
         }
         m_ComputeCommandList->GenerateMips( texture );
         return;
@@ -496,7 +496,7 @@ void CommandList::GenerateMips( Texture& texture )
     }
 
     // Generate mips with the UAV compatible resource.
-    GenerateMips_UAV(Texture(uavResource, texture.GetTextureUsage()), resourceDesc.Format );
+    GenerateMips_UAV(Texture(m_Application, uavResource, texture.GetTextureUsage()), resourceDesc.Format );
 
     if (aliasResource)
     {
@@ -510,7 +510,7 @@ void CommandList::GenerateMips_UAV( Texture& texture, DXGI_FORMAT format )
 {
     if ( !m_GenerateMipsPSO )
     {
-        m_GenerateMipsPSO = std::make_unique<GenerateMipsPSO>(m_application);
+        m_GenerateMipsPSO = std::make_unique<GenerateMipsPSO>(m_Application);
     }
 
     m_d3d12CommandList->SetPipelineState( m_GenerateMipsPSO->GetPipelineState().Get() );
@@ -602,7 +602,7 @@ void CommandList::PanoToCubemap(Texture& cubemapTexture, const Texture& panoText
     {
         if (!m_ComputeCommandList)
         {
-            m_ComputeCommandList = m_application->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COMPUTE)->GetCommandList();
+            m_ComputeCommandList = m_Application->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COMPUTE)->GetCommandList();
         }
         m_ComputeCommandList->PanoToCubemap(cubemapTexture, panoTexture);
         return;
@@ -610,7 +610,7 @@ void CommandList::PanoToCubemap(Texture& cubemapTexture, const Texture& panoText
 
     if (!m_PanoToCubemapPSO)
     {
-        m_PanoToCubemapPSO = std::make_unique<PanoToCubemapPSO>(m_application);
+        m_PanoToCubemapPSO = std::make_unique<PanoToCubemapPSO>(m_Application);
     }
 
     auto device = Application::GetDevice();
@@ -621,7 +621,7 @@ void CommandList::PanoToCubemap(Texture& cubemapTexture, const Texture& panoText
     CD3DX12_RESOURCE_DESC cubemapDesc(cubemapResource->GetDesc());
 
     auto stagingResource = cubemapResource;
-    Texture stagingTexture(stagingResource);
+    Texture stagingTexture(m_Application, stagingResource);
     // If the passed-in resource does not allow for UAV access
     // then create a staging resource that is used to generate
     // the cubemap.

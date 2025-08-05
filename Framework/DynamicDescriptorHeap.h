@@ -129,38 +129,38 @@ private:
     //   * D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER
     // This parameter also determines the type of GPU visible descriptor heap to 
     // create.
-    D3D12_DESCRIPTOR_HEAP_TYPE m_DescriptorHeapType;
+    D3D12_DESCRIPTOR_HEAP_TYPE                          m_DescriptorHeapType;
 
     // The number of descriptors to allocate in new GPU visible descriptor heaps.
-    uint32_t m_NumDescriptorsPerHeap;
+    uint32_t                                            m_NumDescriptorsPerHeap;
 
     // The increment size of a descriptor.
-    uint32_t m_DescriptorHandleIncrementSize;
+    uint32_t                                            m_DescriptorHandleIncrementSize;
 
     // The descriptor handle cache.
-    std::unique_ptr<D3D12_CPU_DESCRIPTOR_HANDLE[]> m_DescriptorHandleCache;
+    std::unique_ptr<D3D12_CPU_DESCRIPTOR_HANDLE[]>      m_DescriptorHandleCache;
 
     // Descriptor handle cache per descriptor table.
-    DescriptorTableCache m_DescriptorTableCache[MaxDescriptorTables];
+    DescriptorTableCache                                m_DescriptorTableCache[MaxDescriptorTables];
 
     // Each bit in the bit mask represents the index in the root signature
     // that contains a descriptor table.
-    uint32_t m_DescriptorTableBitMask;
+    uint32_t                                            m_DescriptorTableBitMask;
     // Each bit set in the bit mask represents a descriptor table
     // in the root signature that has changed since the last time the 
     // descriptors were copied.
-    uint32_t m_StaleDescriptorTableBitMask;
+    uint32_t                                            m_StaleDescriptorTableBitMask;
 
     using DescriptorHeapPool = std::queue< Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> >;
+    // --
+    DescriptorHeapPool                                  m_DescriptorHeapPool;
+    DescriptorHeapPool                                  m_AvailableDescriptorHeaps;
 
-    DescriptorHeapPool m_DescriptorHeapPool;
-    DescriptorHeapPool m_AvailableDescriptorHeaps;
+    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>        m_CurrentDescriptorHeap;
+    CD3DX12_CPU_DESCRIPTOR_HANDLE                       m_CurrentCPUDescriptorHandle;
+    CD3DX12_GPU_DESCRIPTOR_HANDLE                       m_CurrentGPUDescriptorHandle;
 
-    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_CurrentDescriptorHeap;
-    CD3DX12_CPU_DESCRIPTOR_HANDLE m_CurrentCPUDescriptorHandle;
-    CD3DX12_GPU_DESCRIPTOR_HANDLE m_CurrentGPUDescriptorHandle;
-
-    uint32_t m_NumFreeHandles;
+    uint32_t                                            m_NumFreeHandles;
     
-    std::shared_ptr<Application> m_Application;
+    std::shared_ptr<Application>                        m_Application = nullptr;
 };

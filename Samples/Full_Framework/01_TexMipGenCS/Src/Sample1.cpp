@@ -1,9 +1,11 @@
 #include "Sample1.h"
 
+#include <External/Helpers.h>
+
 #include <Framework/CommandQueue.h>
-#include <Framework/CommandList.h>  // TODO
-#include <Helpers.h>
-#include <Material.h>
+#include <Framework/CommandList.h> 
+
+#include "Material.h"
 
 #include <wrl.h>
 using namespace Microsoft::WRL;
@@ -100,8 +102,12 @@ Sample1::Sample1(HINSTANCE hInstance)
     , m_Shift(false)
     , m_Width(0)
     , m_Height(0)
+    , m_DefaultTexture  (shared_from_this())
+    , m_DirectXTexture  (shared_from_this())
+    , m_EarthTexture    (shared_from_this())
+    , m_MonaLisaTexture (shared_from_this())
+    , m_RenderTarget    (shared_from_this())
 {
-
     XMVECTOR cameraPos = XMVectorSet( 0, 5, -20, 1 );
     XMVECTOR cameraTarget = XMVectorSet( 0, 5, 0, 1 );
     XMVECTOR cameraUp = XMVectorSet( 0, 1, 0, 0 );
@@ -205,7 +211,7 @@ bool Sample1::LoadContent()
     DXGI_FORMAT depthBufferFormat = DXGI_FORMAT_D32_FLOAT;
 
     // Check the best multisample quality level that can be used for the given back buffer format.
-    DXGI_SAMPLE_DESC sampleDesc = Application::Get().GetMultisampleQualityLevels( backBufferFormat, D3D12_MAX_MULTISAMPLE_SAMPLE_COUNT );
+    DXGI_SAMPLE_DESC sampleDesc = GetMultisampleQualityLevels( backBufferFormat, D3D12_MAX_MULTISAMPLE_SAMPLE_COUNT );
 
     D3D12_RT_FORMAT_ARRAY rtvFormats = {};
     rtvFormats.NumRenderTargets = 1;
@@ -238,9 +244,8 @@ bool Sample1::LoadContent()
     colorClearValue.Color[2] = 0.9f;
     colorClearValue.Color[3] = 1.0f;
 
-    Texture colorTexture = Texture( colorDesc, &colorClearValue, 
-                                    TextureUsage::RenderTarget, 
-                                    L"Color Render Target" );
+    Texture colorTexture = Texture(shared_from_this(), colorDesc, &colorClearValue,
+                                   TextureUsage::RenderTarget, L"Color Render Target");
 
     // Create a depth buffer.
     auto depthDesc = CD3DX12_RESOURCE_DESC::Tex2D( depthBufferFormat, 
@@ -252,9 +257,8 @@ bool Sample1::LoadContent()
     depthClearValue.Format = depthDesc.Format;
     depthClearValue.DepthStencil = { 1.0f, 0 };
 
-    Texture depthTexture = Texture( depthDesc, &depthClearValue, 
-                                    TextureUsage::Depth, 
-                                    L"Depth Render Target" );
+    Texture depthTexture = Texture(shared_from_this(), depthDesc, &depthClearValue,
+                                   TextureUsage::Depth, L"Depth Render Target");
 
     // Attach the textures to the render target.
     m_RenderTarget.AttachTexture( AttachmentPoint::Color0, colorTexture );
@@ -404,7 +408,7 @@ void Sample1::OnRender( RenderEventArgs& e )
 {
     Game::OnRender( e );
 
-    auto commandQueue = Application::Get().GetCommandQueue( D3D12_COMMAND_LIST_TYPE_DIRECT );
+    auto commandQueue = GetCommandQueue( D3D12_COMMAND_LIST_TYPE_DIRECT );
     auto commandList = commandQueue->GetCommandList();
 
     // Clear the render targets.
@@ -596,7 +600,7 @@ void Sample1::OnRender( RenderEventArgs& e )
     }
 
     // Present
-    m_pWindow->Present( m_RenderTarget.GetTexture(AttachmentPoint::Color0) );
+    Present( m_RenderTarget.GetTexture(AttachmentPoint::Color0) );
 }
 
 static bool g_AllowFullscreenToggle = true;
@@ -618,13 +622,13 @@ void Sample1::OnKeyPressed( KeyEventArgs& e )
             case KeyCode::F11:
                 if ( g_AllowFullscreenToggle )
                 {
-                    m_pWindow->ToggleFullscreen();
+                    GetWindow()->ToggleFullscreen();
                     g_AllowFullscreenToggle = false;
                 }
                 break;
                 }
             case KeyCode::V:
-                m_pWindow->ToggleVSync();
+                GetWindow()->ToggleVSync();
                 break;
             case KeyCode::R:
                 // Reset camera transform

@@ -14,8 +14,8 @@ public:
     // Use to upload data to the GPU
     struct Allocation
     {
-        void* CPU;
-        D3D12_GPU_VIRTUAL_ADDRESS GPU;
+        void*                       CPU = nullptr;
+        D3D12_GPU_VIRTUAL_ADDRESS   GPU;
     };
 
      // @param (pageSize) - The size to use to allocate new pages in GPU memory.
@@ -56,17 +56,16 @@ private:
         void Reset();
 
     private:
-
-        Microsoft::WRL::ComPtr<ID3D12Resource> m_d3d12Resource;
+        Microsoft::WRL::ComPtr<ID3D12Resource>  m_d3d12Resource;
 
         // Base pointer.
-        void* m_CPUPtr;
-        D3D12_GPU_VIRTUAL_ADDRESS m_GPUPtr;
+        void*                                   m_CPUPtr = nullptr;
+        D3D12_GPU_VIRTUAL_ADDRESS               m_GPUPtr;
 
         // Allocated page size.
-        size_t m_PageSize;
+        size_t                                  m_PageSize;
         // Current allocation offset in bytes.
-        size_t m_Offset;
+        size_t                                  m_Offset;
     };
 
     // A pool of memory pages.
@@ -74,14 +73,14 @@ private:
 
     // Request a page from the pool of available pages
     // or create a new page if there are no available pages.
-    std::shared_ptr<Page> RequestPage();
+    std::shared_ptr<Page>   RequestPage();
 
-    PagePool m_PagePool;
-    PagePool m_AvailablePages;
+    PagePool                m_PagePool;
+    PagePool                m_AvailablePages;
 
-    std::shared_ptr<Page> m_CurrentPage;
+    std::shared_ptr<Page>   m_CurrentPage = nullptr;
 
     // The size of each page of memory.
-    size_t m_PageSize;
+    size_t                  m_PageSize;
 
 };

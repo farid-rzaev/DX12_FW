@@ -299,52 +299,52 @@ private:
     using TrackedObjects = std::vector < Microsoft::WRL::ComPtr<ID3D12Object> >;
 
     D3D12_COMMAND_LIST_TYPE m_d3d12CommandListType;
-    Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> m_d3d12CommandList;
-    Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_d3d12CommandAllocator;
+    Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2>  m_d3d12CommandList;
+    Microsoft::WRL::ComPtr<ID3D12CommandAllocator>      m_d3d12CommandAllocator;
 
     // For copy queues, it may be necessary to generate mips while loading textures.
     // Mips can't be generated on copy queues but must be generated on compute or
     // direct queues. In this case, a Compute command list is generated and executed 
     // after the copy queue is finished uploading the first sub resource.
-    std::shared_ptr<CommandList> m_ComputeCommandList;
+    std::shared_ptr<CommandList>                        m_ComputeCommandList;
 
     // Keep track of the currently bound root signatures to minimize root
     // signature changes.
-    ID3D12RootSignature* m_RootSignature;
+    ID3D12RootSignature*                                m_RootSignature;
 
     // Resource created in an upload heap. Useful for drawing of dynamic geometry
     // or for uploading constant buffer data that changes every draw call.
-    std::unique_ptr<UploadBuffer> m_UploadBuffer;
+    std::unique_ptr<UploadBuffer>                       m_UploadBuffer;
 
     // Resource state tracker is used by the command list to track (per command list)
     // the current state of a resource. The resource state tracker also tracks the 
     // global state of a resource in order to minimize resource state transitions.
-    std::unique_ptr<ResourceStateTracker> m_ResourceStateTracker;
+    std::unique_ptr<ResourceStateTracker>               m_ResourceStateTracker;
 
     // The dynamic descriptor heap allows for descriptors to be staged before
     // being committed to the command list. Dynamic descriptors need to be
     // committed before a Draw or Dispatch.
-    std::unique_ptr<DynamicDescriptorHeap> m_DynamicDescriptorHeap[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
+    std::unique_ptr<DynamicDescriptorHeap>              m_DynamicDescriptorHeap[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
 
     // Keep track of the currently bound descriptor heaps. Only change descriptor 
     // heaps if they are different than the currently bound descriptor heaps.
-    ID3D12DescriptorHeap* m_DescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
+    ID3D12DescriptorHeap*                               m_DescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
 
 	// Pipeline state object for Mip map generation.
-	std::unique_ptr<GenerateMipsPSO> m_GenerateMipsPSO;
+	std::unique_ptr<GenerateMipsPSO>                    m_GenerateMipsPSO;
     // Pipeline state object for converting panorama (equirectangular) to cubemaps
-    std::unique_ptr<PanoToCubemapPSO> m_PanoToCubemapPSO;
+    std::unique_ptr<PanoToCubemapPSO>                   m_PanoToCubemapPSO;
 
     // Objects that are being tracked by a command list that is "in-flight" on 
     // the command-queue and cannot be deleted. To ensure objects are not deleted 
     // until the command list is finished executing, a reference to the object
     // is stored. The referenced objects are released when the command list is 
     // reset.
-    TrackedObjects m_TrackedObjects;
+    TrackedObjects                                      m_TrackedObjects;
 
     // Keep track of loaded textures to avoid loading the same texture multiple times.
-    static std::map<std::wstring, ID3D12Resource* > ms_TextureCache;
-    static std::mutex ms_TextureCacheMutex;
+    static std::map<std::wstring, ID3D12Resource*>      ms_TextureCache;
+    static std::mutex                                   ms_TextureCacheMutex;
 
-    std::shared_ptr<Application> m_application;
+    std::shared_ptr<Application>                        m_Application = nullptr;
 };

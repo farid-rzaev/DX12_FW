@@ -2,6 +2,7 @@
 
 #include <Framework/Application.h>
 #include <Framework/CommandList.h>
+#include <Framework/ResourceStateTracker.h>
 
 #include <External/Helpers.h>
 
@@ -29,7 +30,7 @@
 
 
 CommandQueue::CommandQueue(std::shared_ptr<Application> app, D3D12_COMMAND_LIST_TYPE type)
-	: m_application(app)
+	: m_Application(app)
 	, m_CommandListType(type)
 	, m_FenceValue(0)
 	, m_bProcessInFlightCommandLists(true)
@@ -123,7 +124,7 @@ std::shared_ptr<CommandList> CommandQueue::GetCommandList()
 	else
 	{
 		// Otherwise create a new command list.
-		commandList = std::make_shared<CommandList>(m_CommandListType);
+		commandList = std::make_shared<CommandList>(m_Application, m_CommandListType);
 	}
 
 	return commandList;
@@ -192,7 +193,7 @@ uint64_t CommandQueue::ExecuteCommandLists(const std::vector<std::shared_ptr<Com
 	// after the initial resource command lists have finished.
 	if (generateMipsCommandLists.size() > 0)
 	{
-		auto computeQueue = Application::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COMPUTE);
+		auto computeQueue = m_Application->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COMPUTE);
 		computeQueue->Wait(*this);
 		computeQueue->ExecuteCommandLists(generateMipsCommandLists);
 	}

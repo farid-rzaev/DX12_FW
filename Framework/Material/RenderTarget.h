@@ -8,6 +8,8 @@
 
 #include "Texture.h"
 
+class Application;
+
 // Don't use scoped enums to avoid the explicit cast required to use these as array indices.
 enum AttachmentPoint
 {
@@ -27,7 +29,7 @@ class RenderTarget
 {
 public:
     // Create an empty render target.
-    RenderTarget();
+    RenderTarget(std::shared_ptr<Application> app);
 
     RenderTarget(const RenderTarget& copy)                = default;
     RenderTarget(RenderTarget&& copy)                     = default;

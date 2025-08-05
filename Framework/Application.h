@@ -26,7 +26,7 @@ using Microsoft::WRL::ComPtr;
 
 #define USE_DESCRIPTOR_ALLOCAOR
 
-class Application 
+class Application : public std::enable_shared_from_this<Application>
 {
 // ------------------------------------------------------------------------------------------
 //									Function members
@@ -96,8 +96,8 @@ public:
 
 private:
 	// Deleated
-	Application(const Application& app) = delete;
-	Application& operator=(const Application& app) = delete;
+	Application(const Application& app)				= delete;
+	Application& operator=(const Application& app)	= delete;
 
 // ------------------------------------------------------------------------------------------
 //									Data members

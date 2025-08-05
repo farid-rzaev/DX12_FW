@@ -2,6 +2,8 @@
 
 #include <External/Helpers.h>
 
+#include <Framework/CommandList.h>
+
 #include <d3dcompiler.h>
 
 
@@ -191,7 +193,7 @@ bool Sample0::LoadContent()
 
 	// Upload vertex buffer data.
 	ComPtr<ID3D12Resource> intermediateVertexBuffer;
-	UpdateBufferResource(commandList,
+	UpdateBufferResource(commandList->GetGraphicsCommandList().Get(),
 		&m_VertexBuffer, &intermediateVertexBuffer,
 		_countof(g_Vertices), sizeof(VertexPosColor), g_Vertices);
 
@@ -202,7 +204,7 @@ bool Sample0::LoadContent()
 
 	// Upload index buffer data.
 	ComPtr<ID3D12Resource> intermediateIndexBuffer;
-	UpdateBufferResource(commandList,
+	UpdateBufferResource(commandList->GetGraphicsCommandList().Get(),
 		&m_IndexBuffer, &intermediateIndexBuffer,
 		_countof(g_Indicies), sizeof(WORD), g_Indicies);
 
@@ -370,7 +372,7 @@ void Sample0::Render()
 	double totalRenderTime = Application::GetRenderTotalTime();
 
 	auto commandQueue = Application::GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
-	auto commandList = commandQueue->GetCommandList();
+	auto commandList = commandQueue->GetCommandList()->GetGraphicsCommandList().Get();
 	
 	m_CurrentBackBufferIndex = Application::GetCurrentBackbufferIndex();
 	auto backBuffer = Application::GetBackbuffer(m_CurrentBackBufferIndex);
@@ -417,7 +419,7 @@ void Sample0::Render()
 		TransitionResource(commandList, backBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 
 		// Execute
-		m_FenceValues[m_CurrentBackBufferIndex] = commandQueue->ExecuteCommandList(commandList);
+		m_FenceValues[m_CurrentBackBufferIndex] = commandQueue->ExecuteCommandList(commandQueue->GetCommandList());
 
 		m_CurrentBackBufferIndex = Application::Present();
 		commandQueue->WaitForFenceValue(m_FenceValues[m_CurrentBackBufferIndex]);

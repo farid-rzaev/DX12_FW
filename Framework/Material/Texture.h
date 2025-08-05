@@ -15,18 +15,20 @@ class Application;
 class Texture : public Resource
 {
 public:
-    explicit Texture(std::shared_ptr<Application> app,
-                     TextureUsage textureUsage = TextureUsage::Albedo, 
-                     const std::wstring& name = L"" );
-    explicit Texture(std::shared_ptr<Application> app,
-                     const D3D12_RESOURCE_DESC& resourceDesc,
-                     const D3D12_CLEAR_VALUE* clearValue = nullptr,
-                     TextureUsage textureUsage = TextureUsage::Albedo,
-                     const std::wstring& name = L"" );
-    explicit Texture(std::shared_ptr<Application> app,
+    explicit Texture(std::shared_ptr<Application>           app,
+                     TextureUsage                           textureUsage    = TextureUsage::Albedo, 
+                     const std::wstring&                    name            = L"" );
+
+    explicit Texture(std::shared_ptr<Application>           app,
+                     const D3D12_RESOURCE_DESC&             resourceDesc,
+                     const D3D12_CLEAR_VALUE*               clearValue      = nullptr,
+                     TextureUsage                           textureUsage    = TextureUsage::Albedo,
+                     const std::wstring&                    name            = L"" );
+
+    explicit Texture(std::shared_ptr<Application>           app,
                      Microsoft::WRL::ComPtr<ID3D12Resource> resource,
-                     TextureUsage textureUsage = TextureUsage::Albedo,
-                     const std::wstring& name = L"");
+                     TextureUsage                           textureUsage    = TextureUsage::Albedo,
+                     const std::wstring&                    name            = L"");
 
     Texture(const Texture& copy);
     Texture(Texture&& copy);
@@ -101,16 +103,16 @@ private:
     DescriptorAllocation CreateShaderResourceView(const D3D12_SHADER_RESOURCE_VIEW_DESC* srvDesc) const;
     DescriptorAllocation CreateUnorderedAccessView(const D3D12_UNORDERED_ACCESS_VIEW_DESC* uavDesc) const;
 
-    mutable std::unordered_map<size_t, DescriptorAllocation> m_ShaderResourceViews;
-    mutable std::unordered_map<size_t, DescriptorAllocation> m_UnorderedAccessViews;
+    mutable std::unordered_map<size_t, DescriptorAllocation>    m_ShaderResourceViews;
+    mutable std::unordered_map<size_t, DescriptorAllocation>    m_UnorderedAccessViews;
 
-    mutable std::mutex m_ShaderResourceViewsMutex;
-    mutable std::mutex m_UnorderedAccessViewsMutex;
+    mutable std::mutex                                          m_ShaderResourceViewsMutex;
+    mutable std::mutex                                          m_UnorderedAccessViewsMutex;
 
-    DescriptorAllocation m_RenderTargetView;
-    DescriptorAllocation m_DepthStencilView;
+    DescriptorAllocation                                        m_RenderTargetView;
+    DescriptorAllocation                                        m_DepthStencilView;
 
-    TextureUsage m_TextureUsage;
+    TextureUsage                                                m_TextureUsage;
 
-    std::shared_ptr<Application> m_Application;
+    std::shared_ptr<Application>                                m_Application = nullptr;
 };
