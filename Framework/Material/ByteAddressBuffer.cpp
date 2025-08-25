@@ -2,7 +2,7 @@
 
 #include <Framework/Application.h>
 
-#include <External/Helpers.h>
+#include <Framework/3RD_Party/Helpers.h>
 
 ByteAddressBuffer::ByteAddressBuffer(std::shared_ptr<Application> app, const std::wstring& name)
     : Buffer(name)

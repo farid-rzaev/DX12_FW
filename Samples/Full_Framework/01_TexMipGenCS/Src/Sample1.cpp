@@ -1,7 +1,5 @@
 #include "Sample1.h"
 
-#include <External/Helpers.h>
-
 #include <Framework/CommandQueue.h>
 #include <Framework/CommandList.h> 
 
@@ -10,7 +8,8 @@
 #include <wrl.h>
 using namespace Microsoft::WRL;
 
-#include <External/D3D/d3dx12.h>
+#include <Framework/3RD_Party/Helpers.h>
+#include <Framework/3RD_Party/D3D/d3dx12.h>
 #include <d3dcompiler.h>
 #include <DirectXColors.h>
 

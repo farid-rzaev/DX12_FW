@@ -1,6 +1,6 @@
 #pragma once
 
-#include <External/Defines.h>
+#include <Framework/3RD_Party/Defines.h>
 
 #include <wrl.h>
 #include <d3d12.h>

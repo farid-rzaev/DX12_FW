@@ -2,8 +2,8 @@
 
 #include <Framework/Application.h>
 
-#include <External/D3D/d3dx12.h>
-#include <External/Helpers.h>
+#include <Framework/3RD_Party/D3D/d3dx12.h>
+#include <Framework/3RD_Party/Helpers.h>
 
 ConstantBuffer::ConstantBuffer(std::shared_ptr<Application> app, const std::wstring& name)
     : Buffer(name)

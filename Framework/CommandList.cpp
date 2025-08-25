@@ -34,7 +34,7 @@
 // ------------------------------------------------------------------------------------------------------
 
 // Helpers
-#include <External/Helpers.h>
+#include <Framework/3RD_Party/Helpers.h>
 #include <DirectXMath.h>
 #include <DirectXTex.h>
 #include <filesystem>

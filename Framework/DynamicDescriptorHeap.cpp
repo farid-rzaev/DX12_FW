@@ -4,7 +4,7 @@
 #include <Framework/CommandList.h>
 #include <Framework/RootSignature.h>
 
-#include <External/Helpers.h>
+#include <Framework/3RD_Party/Helpers.h>
 
 DynamicDescriptorHeap::DynamicDescriptorHeap(std::shared_ptr<Application> app, D3D12_DESCRIPTOR_HEAP_TYPE heapType, uint32_t numDescriptorsPerHeap)
     : m_Application(app)

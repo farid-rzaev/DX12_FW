@@ -13,8 +13,8 @@
 #include "Framework/CommandQueue.h"
 
 // D3D12 extension library.
-#include <External/D3D/d3dx12.h>
-#include <External/Timer/HighResolutionClock.h>
+#include <Framework/3RD_Party/D3D/d3dx12.h>
+#include <Framework/3RD_Party/Timer/HighResolutionClock.h>
 
 // ComPtr
 #include <wrl.h>

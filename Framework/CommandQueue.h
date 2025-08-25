@@ -6,7 +6,7 @@
 #include <memory>	// shared_ptr
 #include <queue>
 
-#include <External/Threading/ThreadSafeQueue.h>
+#include <Framework/3RD_Party/Threading/ThreadSafeQueue.h>
 
 class Application;
 class CommandList;

@@ -1,6 +1,6 @@
 #include "Sample0.h"
 
-#include <External/Helpers.h>
+#include <Framework/3RD_Party/Helpers.h>
 
 #include <Framework/CommandList.h>
 

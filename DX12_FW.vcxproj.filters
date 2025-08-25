@@ -73,6 +73,24 @@
     <ClCompile Include="Framework\PSOs\PanoToCubemapPSO.cpp">
       <Filter>Src\PSOs</Filter>
     </ClCompile>
+    <ClCompile Include="Framework\3RD_Party\IMGUI\imgui.cpp">
+      <Filter>Src\3RD_Party\IMGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\3RD_Party\IMGUI\imgui_demo.cpp">
+      <Filter>Src\3RD_Party\IMGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\3RD_Party\IMGUI\imgui_draw.cpp">
+      <Filter>Src\3RD_Party\IMGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\3RD_Party\IMGUI\imgui_impl_win32.cpp">
+      <Filter>Src\3RD_Party\IMGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\3RD_Party\IMGUI\imgui_widgets.cpp">
+      <Filter>Src\3RD_Party\IMGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\3RD_Party\Timer\HighResolutionClock.cpp">
+      <Filter>Src\3RD_Party\Timer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Framework\Application.h">
@@ -156,6 +174,42 @@
     <ClInclude Include="Framework\PSOs\PanoToCubemapPSO.h">
       <Filter>Src\PSOs</Filter>
     </ClInclude>
+    <ClInclude Include="Framework\3RD_Party\D3D\d3dx12.h">
+      <Filter>Src\3RD_Party\D3D</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\3RD_Party\IMGUI\imconfig.h">
+      <Filter>Src\3RD_Party\IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\3RD_Party\IMGUI\imgui.h">
+      <Filter>Src\3RD_Party\IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\3RD_Party\IMGUI\imgui_impl_win32.h">
+      <Filter>Src\3RD_Party\IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\3RD_Party\IMGUI\imgui_internal.h">
+      <Filter>Src\3RD_Party\IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\3RD_Party\IMGUI\imstb_rectpack.h">
+      <Filter>Src\3RD_Party\IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\3RD_Party\IMGUI\imstb_textedit.h">
+      <Filter>Src\3RD_Party\IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\3RD_Party\IMGUI\imstb_truetype.h">
+      <Filter>Src\3RD_Party\IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\3RD_Party\Timer\HighResolutionClock.h">
+      <Filter>Src\3RD_Party\Timer</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\3RD_Party\Threading\ThreadSafeQueue.h">
+      <Filter>Src\3RD_Party\Threading</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\3RD_Party\Defines.h">
+      <Filter>Src\3RD_Party</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\3RD_Party\Helpers.h">
+      <Filter>Src\3RD_Party</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Src">
@@ -172,6 +226,21 @@
     </Filter>
     <Filter Include="Src\Shaders">
       <UniqueIdentifier>{09e57aad-85e5-4d9a-ad83-77b7c45dae5f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Src\3RD_Party">
+      <UniqueIdentifier>{99611423-4dd3-410f-a251-6589a34ee26e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Src\3RD_Party\D3D">
+      <UniqueIdentifier>{fc13fb34-d3a4-42c4-adf3-ae09896585f6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Src\3RD_Party\IMGUI">
+      <UniqueIdentifier>{4e9a97b5-3fbb-4916-8733-5efeef19a208}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Src\3RD_Party\Threading">
+      <UniqueIdentifier>{638457b0-c994-4932-a8a7-847fd68ea5d9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Src\3RD_Party\Timer">
+      <UniqueIdentifier>{fcfe6cf2-ca52-456f-9bde-be84c475c843}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

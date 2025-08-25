@@ -5,7 +5,7 @@
 
 #include <Framework/DescriptorAllocation.h>
 
-#include <External/D3D/d3dx12.h>
+#include <Framework/3RD_Party/D3D/d3dx12.h>
 
 #include <mutex>
 #include <unordered_map>

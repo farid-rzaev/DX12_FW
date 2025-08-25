@@ -2,7 +2,7 @@
 
 #include <DirectXMath.h>
 
-#include <External/Helpers.h>
+#include <Framework/3RD_Party/Helpers.h>
 
 RenderTarget::RenderTarget(std::shared_ptr<Application> app)
     : m_Size(0,0)

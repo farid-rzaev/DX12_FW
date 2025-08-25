@@ -92,6 +92,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Framework\3RD_Party\IMGUI\imgui.cpp" />
+    <ClCompile Include="Framework\3RD_Party\IMGUI\imgui_demo.cpp" />
+    <ClCompile Include="Framework\3RD_Party\IMGUI\imgui_draw.cpp" />
+    <ClCompile Include="Framework\3RD_Party\IMGUI\imgui_impl_win32.cpp" />
+    <ClCompile Include="Framework\3RD_Party\IMGUI\imgui_widgets.cpp" />
+    <ClCompile Include="Framework\3RD_Party\Timer\HighResolutionClock.cpp" />
     <ClCompile Include="Framework\Application.cpp" />
     <ClCompile Include="Framework\CommandList.cpp" />
     <ClCompile Include="Framework\CommandQueue.cpp" />
@@ -118,6 +124,18 @@
     <ClCompile Include="Framework\Window.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Framework\3RD_Party\D3D\d3dx12.h" />
+    <ClInclude Include="Framework\3RD_Party\Defines.h" />
+    <ClInclude Include="Framework\3RD_Party\Helpers.h" />
+    <ClInclude Include="Framework\3RD_Party\IMGUI\imconfig.h" />
+    <ClInclude Include="Framework\3RD_Party\IMGUI\imgui.h" />
+    <ClInclude Include="Framework\3RD_Party\IMGUI\imgui_impl_win32.h" />
+    <ClInclude Include="Framework\3RD_Party\IMGUI\imgui_internal.h" />
+    <ClInclude Include="Framework\3RD_Party\IMGUI\imstb_rectpack.h" />
+    <ClInclude Include="Framework\3RD_Party\IMGUI\imstb_textedit.h" />
+    <ClInclude Include="Framework\3RD_Party\IMGUI\imstb_truetype.h" />
+    <ClInclude Include="Framework\3RD_Party\Threading\ThreadSafeQueue.h" />
+    <ClInclude Include="Framework\3RD_Party\Timer\HighResolutionClock.h" />
     <ClInclude Include="Framework\Application.h" />
     <ClInclude Include="Framework\CommandList.h" />
     <ClInclude Include="Framework\CommandQueue.h" />

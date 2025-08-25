@@ -1,6 +1,6 @@
 #include "Application.h"
 
-#include <External/Helpers.h>
+#include <Framework/3RD_Party/Helpers.h>
 
 // Framework
 #include "DescriptorAllocator.h"

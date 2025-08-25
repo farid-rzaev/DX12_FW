@@ -7,7 +7,7 @@
 // The DynamicDescriptorHeap class is based on the one provided by the MiniEngine:
 // https://github.com/Microsoft/DirectX-Graphics-Samples
 
-#include <External/D3D/d3dx12.h>
+#include <Framework/3RD_Party/D3D/d3dx12.h>
 
 #include <wrl.h>
 

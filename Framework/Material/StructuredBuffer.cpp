@@ -3,7 +3,7 @@
 #include <Framework/Application.h>
 #include <Framework/ResourceStateTracker.h>
 
-#include <External/D3D/d3dx12.h>
+#include <Framework/3RD_Party/D3D/d3dx12.h>
 
 
 StructuredBuffer::StructuredBuffer(std::shared_ptr<Application> app, const std::wstring& name)

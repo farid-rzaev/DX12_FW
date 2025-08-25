@@ -4,7 +4,7 @@
 
 #include <Framework/Events/Events.h>
 
-#include <External/IMGUI/imgui.h>
+#include <Framework/3RD_Party/IMGUI/imgui.h>
 
 #include <memory>
 #include <string>

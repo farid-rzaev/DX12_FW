@@ -2,7 +2,7 @@
 
 #include <Framework/Application.h>
 
-#include <External/Helpers.h>
+#include <Framework/3RD_Party/Helpers.h>
 
 UploadBuffer::UploadBuffer(size_t pageSize)
     : m_PageSize(pageSize)

@@ -9,7 +9,7 @@
 
 #include "DescriptorAllocation.h"
 
-#include <External/D3D/d3dx12.h>
+#include <Framework/3RD_Party/D3D/d3dx12.h>
 
 #include <d3d12.h>
 

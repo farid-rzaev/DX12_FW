@@ -3,7 +3,7 @@
 #include <Framework/Application.h>
 #include <Framework/ResourceStateTracker.h>
 
-#include <External/Helpers.h>
+#include <Framework/3RD_Party/Helpers.h>
 
 Resource::Resource(const std::wstring& name)
     : m_ResourceName(name)
