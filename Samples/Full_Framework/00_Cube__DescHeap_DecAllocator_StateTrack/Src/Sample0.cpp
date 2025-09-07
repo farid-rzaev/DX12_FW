@@ -372,7 +372,7 @@ void Sample0::Render()
 	double totalRenderTime = Application::GetRenderTotalTime();
 
 	auto commandQueue = Application::GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
-	auto commandList = commandQueue->GetCommandList()->GetGraphicsCommandList().Get();
+	auto commandList = commandQueue->GetCommandList()->GetGraphicsCommandList();
 	
 	m_CurrentBackBufferIndex = Application::GetCurrentBackbufferIndex();
 	auto backBuffer = Application::GetBackbuffer(m_CurrentBackBufferIndex);

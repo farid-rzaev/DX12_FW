@@ -1,6 +1,6 @@
 #include "Window.h"
 
-#include <External/Helpers.h>
+#include <Framework/3RD_Party/Helpers.h>
 
 #include <cassert>
 #include <algorithm> // std::min and std::max.

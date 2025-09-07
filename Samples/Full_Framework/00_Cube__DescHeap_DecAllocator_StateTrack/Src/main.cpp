@@ -26,10 +26,10 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
 	}
 	Sample0::Destroy();
 #else
-	Sample0 sample(hInstance);
-	sample.Initialize(windowTitle, 1280, 720, false);
+	std::shared_ptr<Sample0> sample = std::make_shared<Sample0>(hInstance);
+	sample->Initialize(windowTitle, 1280, 720, false);
 	{
-		retCode = sample.Run();
+		retCode = sample->Run();
 	}
 #endif
 
