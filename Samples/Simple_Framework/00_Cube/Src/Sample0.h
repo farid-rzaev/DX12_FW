@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../FrameworkSimple/Game.h"
+#include "FrameworkSimple/Game.h"
 
 #include <DirectXMath.h>
 

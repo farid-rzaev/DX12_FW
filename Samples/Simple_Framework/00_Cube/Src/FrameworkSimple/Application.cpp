@@ -1,6 +1,9 @@
 #include "Application.h"
 
-#include <Framework/3RD_Party/Helpers.h>
+#include <External/Helpers.h>
+
+// Framework
+#include "DescriptorAllocator.h"
 
 // D3D
 #include <d3dcompiler.h>
@@ -110,6 +113,17 @@ bool Application::Initialize(const wchar_t* windowTitle, int width, int height, 
 		m_Window->CreateSwapChain(m_DirectCommandQueue->GetD3D12CommandQueue());
 	}
 
+#if defined(USE_DESCRIPTOR_ALLOCAOR)
+	// Create descriptor allocators
+	for (int i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i)
+	{
+		m_DescriptorAllocators[i] = std::make_unique<DescriptorAllocator>(static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(i));
+	}
+
+	m_allocationRTV = AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, NUM_FRAMES_IN_FLIGHT);
+
+	UpdateRenderTargetViews();
+#else
 	//  Create RTVs in DescriptorHeap
 	{
 		m_RTVDescriptorHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, NUM_FRAMES_IN_FLIGHT);
@@ -123,6 +137,7 @@ bool Application::Initialize(const wchar_t* windowTitle, int width, int height, 
 		// Render target views are fill into the descriptor heap
 		UpdateRenderTargetViews(m_d3d12Device, m_RTVDescriptorHeap);
 	}
+#endif
 
 	// Show Window
 	m_Window->Show();
@@ -227,15 +242,35 @@ void Application::Resize(UINT32 width, UINT32 height)
 
 		m_Window->ResizeBackBuffers(width, height);
 
+
+#if defined(USE_DESCRIPTOR_ALLOCAOR)
+		// After the swap chain buffers have been resized, the descriptors 
+		// that refer to those buffers needs to be updated. 
+		UpdateRenderTargetViews();
+#else
 		// After the swap chain buffers have been resized, the descriptors 
 		// that refer to those buffers needs to be updated. 
 		UpdateRenderTargetViews(m_d3d12Device, m_RTVDescriptorHeap);
+#endif
 	}
 }
 
+#if defined(USE_DESCRIPTOR_ALLOCAOR)
+// A render target view (RTV) describes a resource that can be attached to a bind slot of the output merger stage
+void Application::UpdateRenderTargetViews()
+{
+	for (int i = 0; i < NUM_FRAMES_IN_FLIGHT; ++i)
+	{
+		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_allocationRTV.GetDescriptorHandle(i);
+	
+		ComPtr<ID3D12Resource> backBuffer = m_Window->UpdateBackBufferCache(i);
 
-// A render target view (RTV) describes a resource that can be attached to a 
-//		bind slot of the output merger stage
+		// nullptr - description is used to create a default descriptor for the resource
+		m_d3d12Device->CreateRenderTargetView(backBuffer.Get(), nullptr, rtvHandle);
+	}
+}
+#else
+// A render target view (RTV) describes a resource that can be attached to a bind slot of the output merger stage
 void Application::UpdateRenderTargetViews(ComPtr<ID3D12Device2> device, ComPtr<ID3D12DescriptorHeap> descriptorHeap)
 {
 	// The size of a single descriptor in a descriptor heap is vendor specific and is queried 
@@ -253,6 +288,7 @@ void Application::UpdateRenderTargetViews(ComPtr<ID3D12Device2> device, ComPtr<I
 		rtvHandle.Offset(rtvDescriptorSize);
 	}
 }
+#endif
 
 
 // =====================================================================================
@@ -428,6 +464,21 @@ ComPtr<ID3D12Device2> Application::CreateDevice(ComPtr<IDXGIAdapter4> adapter)
 	return d3d12Device2;
 }
 
+// Allocate a number of CPU visible descriptors.
+DescriptorAllocation Application::AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors)
+{
+	return m_DescriptorAllocators[type]->Allocate(numDescriptors);
+}
+
+// Release stale descriptors. This should only be called with a completed frame counter.
+void Application::ReleaseStaleDescriptors(uint64_t finishedFrame)
+{
+	for (int i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i)
+	{
+		m_DescriptorAllocators[i]->ReleaseStaleDescriptors(finishedFrame);
+	}
+}
+
 // A descriptor heap can be considered an array of resource VIEWs.
 //
 // CBV, SRV, and UAV can be stored in the same heap but
@@ -483,12 +534,16 @@ ComPtr<ID3D12Resource> Application::GetBackbuffer(UINT BackBufferIndex)
 
 D3D12_CPU_DESCRIPTOR_HANDLE Application::GetCurrentBackbufferRTV()
 {
-	CD3DX12_CPU_DESCRIPTOR_HANDLE rtv(
+#if defined(USE_DESCRIPTOR_ALLOCAOR)
+	UINT bbIndex = GetCurrentBackbufferIndex();
+	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_allocationRTV.GetDescriptorHandle(bbIndex);
+#else
+	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(
 		m_RTVDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
 		GetCurrentBackbufferIndex(), m_RTVDescriptorSize
 	);
-
-	return rtv;
+#endif
+	return rtvHandle;
 }
 
 

@@ -1,10 +1,9 @@
 #pragma once
 
-#include "../FrameworkSimple/Application.h"
-
+#include <Framework/Application.h>
 #include <Framework/Events/Events.h>
 
-#include <Framework/3RD_Party/IMGUI/imgui.h>
+#include <External/IMGUI/imgui.h>
 
 #include <memory>
 #include <string>

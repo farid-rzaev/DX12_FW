@@ -1,20 +1,13 @@
 #pragma once
 
-// --------------------------------------------------------------------------------------------------------------------------------------
-//										README
-// --------------------------------------------------------------------------------------------------------------------------------------
-// This is a simplified version of /Framework/Application.h/ that is using with raw DescriptorsHeaps and minimal level of abstractions.
-// The purpose of this sample is to keep minimal level of abstractions for quick experiments or raw DX12 API functionality.
-// The simplified version is missing: DescriptorAllocator, StateTracker, TextureMipGen.
-// --------------------------------------------------------------------------------------------------------------------------------------
-
 // Framework
-#include "Framework/Window.h"
-#include "Framework/CommandQueue.h"
+#include "Window.h"
+#include "CommandQueue.h"
+#include "DescriptorAllocation.h"
 
 // D3D12 extension library.
-#include <Framework/3RD_Party/D3D/d3dx12.h>
-#include <Framework/3RD_Party/Timer/HighResolutionClock.h>
+#include <External/D3D/d3dx12.h>
+#include <External/Timer/HighResolutionClock.h>
 
 // ComPtr
 #include <wrl.h>
@@ -25,9 +18,13 @@
 #include <d3d12.h>
 #include <dxgi1_6.h>
 
+// Forward Decls
+class DescriptorAllocator;
+
 // USINGs
 using Microsoft::WRL::ComPtr;
 
+//#define USE_DESCRIPTOR_ALLOCAOR
 
 class Application 
 {
@@ -76,8 +73,15 @@ protected:
 	void EnableDebugLayer();
 	ComPtr<IDXGIAdapter4> GetAdapter(bool useWarp);
 	ComPtr<ID3D12Device2> CreateDevice(ComPtr<IDXGIAdapter4> adapter);
+	// --
+	DescriptorAllocation AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors = 1);
+	void ReleaseStaleDescriptors(uint64_t finishedFrame);
 	ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type, UINT32 numDescriptors);
+#if defined(USE_DESCRIPTOR_ALLOCAOR)
+	void UpdateRenderTargetViews();
+#else
 	void UpdateRenderTargetViews(ComPtr<ID3D12Device2> device, ComPtr<ID3D12DescriptorHeap> descriptorHeap);
+#endif
 
 	// Get and Set
 	UINT32 GetClientWidth() const { return m_Window->GetClientWidth(); }
@@ -108,6 +112,10 @@ private:
 
 	// DirectX 12 Objects
 	static ComPtr<ID3D12Device2>		 m_d3d12Device;
+
+	// DescriptorAllocators
+	std::unique_ptr<DescriptorAllocator> m_DescriptorAllocators[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
+	DescriptorAllocation				 m_allocationRTV;
 
 	// Command Queues
 	std::shared_ptr<CommandQueue>		 m_DirectCommandQueue	= nullptr;
