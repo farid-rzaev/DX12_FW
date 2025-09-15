@@ -149,14 +149,28 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="FrameworkSimple\Application.cpp" />
-    <ClCompile Include="FrameworkSimple\Game.cpp" />
+    <ClCompile Include="Src\FrameworkSimple\Application.cpp" />
+    <ClCompile Include="Src\FrameworkSimple\CommandQueue.cpp" />
+    <ClCompile Include="Src\FrameworkSimple\DescriptorAllocation.cpp" />
+    <ClCompile Include="Src\FrameworkSimple\DescriptorAllocator.cpp" />
+    <ClCompile Include="Src\FrameworkSimple\DescriptorAllocatorPage.cpp" />
+    <ClCompile Include="Src\FrameworkSimple\Game.cpp" />
+    <ClCompile Include="Src\FrameworkSimple\HighResolutionClock.cpp" />
+    <ClCompile Include="Src\FrameworkSimple\Window.cpp" />
     <ClCompile Include="Src\main.cpp" />
     <ClCompile Include="Src\Sample0.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="FrameworkSimple\Application.h" />
-    <ClInclude Include="FrameworkSimple\Game.h" />
+    <ClInclude Include="Src\FrameworkSimple\Application.h" />
+    <ClInclude Include="Src\FrameworkSimple\CommandQueue.h" />
+    <ClInclude Include="Src\FrameworkSimple\d3dx12.h" />
+    <ClInclude Include="Src\FrameworkSimple\DescriptorAllocation.h" />
+    <ClInclude Include="Src\FrameworkSimple\DescriptorAllocator.h" />
+    <ClInclude Include="Src\FrameworkSimple\DescriptorAllocatorPage.h" />
+    <ClInclude Include="Src\FrameworkSimple\Game.h" />
+    <ClInclude Include="Src\FrameworkSimple\Helpers.h" />
+    <ClInclude Include="Src\FrameworkSimple\HighResolutionClock.h" />
+    <ClInclude Include="Src\FrameworkSimple\Window.h" />
     <ClInclude Include="Src\Sample0.h" />
   </ItemGroup>
   <ItemGroup>

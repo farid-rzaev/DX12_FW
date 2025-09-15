@@ -6,8 +6,8 @@
 #include "DescriptorAllocation.h"
 
 // D3D12 extension library.
-#include <External/D3D/d3dx12.h>
-#include <External/Timer/HighResolutionClock.h>
+#include "d3dx12.h"
+#include "HighResolutionClock.h"
 
 // ComPtr
 #include <wrl.h>

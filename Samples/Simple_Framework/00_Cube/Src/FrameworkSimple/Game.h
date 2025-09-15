@@ -1,14 +1,19 @@
 #pragma once
 
-#include <Framework/Application.h>
-#include <Framework/Events/Events.h>
-
-#include <External/IMGUI/imgui.h>
+#include "Application.h"
 
 #include <memory>
 #include <string>
 
 class Application;
+
+struct UpdateEventArgs;
+struct RenderEventArgs;
+struct KeyEventArgs;
+struct MouseButtonEventArgs;
+struct MouseMotionEventArgs;
+struct MouseWheelEventArgs;
+struct ResizeEventArgs;
 
 class Game : public Application
 {
