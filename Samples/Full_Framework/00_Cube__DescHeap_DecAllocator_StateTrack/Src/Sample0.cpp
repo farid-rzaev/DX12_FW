@@ -372,7 +372,8 @@ void Sample0::Render()
 	double totalRenderTime = Application::GetRenderTotalTime();
 
 	auto commandQueue = Application::GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
-	auto commandList = commandQueue->GetCommandList()->GetGraphicsCommandList();
+	auto commandList = commandQueue->GetCommandList();
+	auto d3dCommandList = commandList->GetGraphicsCommandList();
 	
 	m_CurrentBackBufferIndex = Application::GetCurrentBackbufferIndex();
 	auto backBuffer = Application::GetBackbuffer(m_CurrentBackBufferIndex);
@@ -382,33 +383,33 @@ void Sample0::Render()
 
 	// Clear RT
 	{
-		TransitionResource(commandList, backBuffer, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		TransitionResource(d3dCommandList, backBuffer, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
 		FLOAT clearColor[] = { 0.4f, 0.6f, 0.9f, 1.0f };
-		ClearRTV(commandList, rtv, clearColor);
-		ClearDepth(commandList, dsv);
+		ClearRTV(d3dCommandList, rtv, clearColor);
+		ClearDepth(d3dCommandList, dsv);
 	}
 
 	// Set Graphics state
-	commandList->SetPipelineState(m_PipelineState.Get());
-	commandList->SetGraphicsRootSignature(m_RootSignature.Get());
+	d3dCommandList->SetPipelineState(m_PipelineState.Get());
+	d3dCommandList->SetGraphicsRootSignature(m_RootSignature.Get());
 
-	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	commandList->IASetVertexBuffers(0, 1, &m_VertexBufferView);
-	commandList->IASetIndexBuffer(&m_IndexBufferView);
+	d3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	d3dCommandList->IASetVertexBuffers(0, 1, &m_VertexBufferView);
+	d3dCommandList->IASetIndexBuffer(&m_IndexBufferView);
 
-	commandList->RSSetViewports(1, &m_Viewport);
-	commandList->RSSetScissorRects(1, &m_ScissorRect);
+	d3dCommandList->RSSetViewports(1, &m_Viewport);
+	d3dCommandList->RSSetScissorRects(1, &m_ScissorRect);
 
-	commandList->OMSetRenderTargets(1, &rtv, FALSE, &dsv);
+	d3dCommandList->OMSetRenderTargets(1, &rtv, FALSE, &dsv);
 
 	// Update the MVP matrix
 	XMMATRIX mvpMatrix = XMMatrixMultiply(m_ModelMatrix, m_ViewMatrix);
 	mvpMatrix = XMMatrixMultiply(mvpMatrix, m_ProjectionMatrix);
-	commandList->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &mvpMatrix, 0);
+	d3dCommandList->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &mvpMatrix, 0);
 
 	// Draw
-	commandList->DrawIndexedInstanced(_countof(g_Indicies), 1, 0, 0, 0);
+	d3dCommandList->DrawIndexedInstanced(_countof(g_Indicies), 1, 0, 0, 0);
 
 	// PRESENT image
 	{
@@ -416,10 +417,10 @@ void Sample0::Render()
 		//     to the screen.
 		// !!! Before presenting, the back buffer resource must be 
 		//     transitioned to the PRESENT state.
-		TransitionResource(commandList, backBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+		TransitionResource(d3dCommandList, backBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 
 		// Execute
-		m_FenceValues[m_CurrentBackBufferIndex] = commandQueue->ExecuteCommandList(commandQueue->GetCommandList());
+		m_FenceValues[m_CurrentBackBufferIndex] = commandQueue->ExecuteCommandList(commandList);
 
 		m_CurrentBackBufferIndex = Application::Present();
 		commandQueue->WaitForFenceValue(m_FenceValues[m_CurrentBackBufferIndex]);

@@ -9,7 +9,7 @@
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
-    <Filter Include="FrameworkSimple">
+    <Filter Include="Src\FrameworkSimple">
       <UniqueIdentifier>{ad99c980-9894-4430-a90c-638c23966b2d}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -21,28 +21,28 @@
       <Filter>Src</Filter>
     </ClCompile>
     <ClCompile Include="Src\FrameworkSimple\Application.cpp">
-      <Filter>FrameworkSimple</Filter>
+      <Filter>Src\FrameworkSimple</Filter>
     </ClCompile>
     <ClCompile Include="Src\FrameworkSimple\CommandQueue.cpp">
-      <Filter>FrameworkSimple</Filter>
+      <Filter>Src\FrameworkSimple</Filter>
     </ClCompile>
     <ClCompile Include="Src\FrameworkSimple\DescriptorAllocation.cpp">
-      <Filter>FrameworkSimple</Filter>
+      <Filter>Src\FrameworkSimple</Filter>
     </ClCompile>
     <ClCompile Include="Src\FrameworkSimple\DescriptorAllocator.cpp">
-      <Filter>FrameworkSimple</Filter>
+      <Filter>Src\FrameworkSimple</Filter>
     </ClCompile>
     <ClCompile Include="Src\FrameworkSimple\DescriptorAllocatorPage.cpp">
-      <Filter>FrameworkSimple</Filter>
+      <Filter>Src\FrameworkSimple</Filter>
     </ClCompile>
     <ClCompile Include="Src\FrameworkSimple\Game.cpp">
-      <Filter>FrameworkSimple</Filter>
+      <Filter>Src\FrameworkSimple</Filter>
     </ClCompile>
     <ClCompile Include="Src\FrameworkSimple\Window.cpp">
-      <Filter>FrameworkSimple</Filter>
+      <Filter>Src\FrameworkSimple</Filter>
     </ClCompile>
     <ClCompile Include="Src\FrameworkSimple\HighResolutionClock.cpp">
-      <Filter>FrameworkSimple</Filter>
+      <Filter>Src\FrameworkSimple</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -50,34 +50,34 @@
       <Filter>Src</Filter>
     </ClInclude>
     <ClInclude Include="Src\FrameworkSimple\Application.h">
-      <Filter>FrameworkSimple</Filter>
+      <Filter>Src\FrameworkSimple</Filter>
     </ClInclude>
     <ClInclude Include="Src\FrameworkSimple\CommandQueue.h">
-      <Filter>FrameworkSimple</Filter>
+      <Filter>Src\FrameworkSimple</Filter>
     </ClInclude>
     <ClInclude Include="Src\FrameworkSimple\d3dx12.h">
-      <Filter>FrameworkSimple</Filter>
+      <Filter>Src\FrameworkSimple</Filter>
     </ClInclude>
     <ClInclude Include="Src\FrameworkSimple\DescriptorAllocation.h">
-      <Filter>FrameworkSimple</Filter>
+      <Filter>Src\FrameworkSimple</Filter>
     </ClInclude>
     <ClInclude Include="Src\FrameworkSimple\DescriptorAllocator.h">
-      <Filter>FrameworkSimple</Filter>
+      <Filter>Src\FrameworkSimple</Filter>
     </ClInclude>
     <ClInclude Include="Src\FrameworkSimple\DescriptorAllocatorPage.h">
-      <Filter>FrameworkSimple</Filter>
+      <Filter>Src\FrameworkSimple</Filter>
     </ClInclude>
     <ClInclude Include="Src\FrameworkSimple\Game.h">
-      <Filter>FrameworkSimple</Filter>
+      <Filter>Src\FrameworkSimple</Filter>
     </ClInclude>
     <ClInclude Include="Src\FrameworkSimple\Helpers.h">
-      <Filter>FrameworkSimple</Filter>
+      <Filter>Src\FrameworkSimple</Filter>
     </ClInclude>
     <ClInclude Include="Src\FrameworkSimple\Window.h">
-      <Filter>FrameworkSimple</Filter>
+      <Filter>Src\FrameworkSimple</Filter>
     </ClInclude>
     <ClInclude Include="Src\FrameworkSimple\HighResolutionClock.h">
-      <Filter>FrameworkSimple</Filter>
+      <Filter>Src\FrameworkSimple</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
