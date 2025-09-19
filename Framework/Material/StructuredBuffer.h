@@ -9,11 +9,10 @@ class Application;
 class StructuredBuffer : public Buffer
 {
 public:
-    StructuredBuffer(std::shared_ptr<Application> app, const std::wstring& name = L"");
-    StructuredBuffer(std::shared_ptr<Application> app, 
-        const D3D12_RESOURCE_DESC& resDesc,
-        size_t numElements, size_t elementSize,
-        const std::wstring& name = L"");
+    StructuredBuffer(const std::wstring& name = L"");
+    StructuredBuffer(const D3D12_RESOURCE_DESC& resDesc,
+                     size_t numElements, size_t elementSize,
+                     const std::wstring& name = L"");
 
     // Get the number of elements contained in this buffer.
     virtual size_t GetNumElements() const

@@ -59,7 +59,7 @@ void RootSignature::SetRootSignatureDesc(
     // Make sure any previously allocated root signature description is cleaned up first.
     Destroy();
 
-    auto device = Application::GetDevice();
+    auto device = Application::Get().GetDevice();
 
     UINT numParameters = rootSignatureDesc.NumParameters;
     D3D12_ROOT_PARAMETER1* pParameters = numParameters > 0 ? new D3D12_ROOT_PARAMETER1[numParameters] : nullptr;

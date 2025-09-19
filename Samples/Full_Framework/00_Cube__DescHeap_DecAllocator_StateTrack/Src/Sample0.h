@@ -19,7 +19,7 @@ public: // STATIC
 
 public:
 	// Init 
-	Sample0(HINSTANCE hInstance);
+	Sample0();
 	bool Initialize(const wchar_t* windowTitle, int width, int height, bool vSync);
 	virtual ~Sample0();
 
@@ -56,7 +56,7 @@ protected:
 //									Data members
 // ------------------------------------------------------------------------------------------
 private:
-	bool m_ContentLoaded;
+	bool m_ContentLoaded = false;
 
 	// Vertex buffer for the cube.
 	ComPtr<ID3D12Resource> m_VertexBuffer;

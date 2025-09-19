@@ -65,7 +65,7 @@ UploadBuffer::Page::Page(size_t sizeInBytes)
     , m_CPUPtr(nullptr)
     , m_GPUPtr(D3D12_GPU_VIRTUAL_ADDRESS(0))
 {
-    auto device = Application::GetDevice();
+    auto device = Application::Get().GetDevice();
 
     ThrowIfFailed(device->CreateCommittedResource(
         &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),

@@ -10,18 +10,18 @@
 
 class Application;
 
-class Game : public Application
+class Game
 {
 public:
 	// Create DX demo
-	Game(HINSTANCE hInstance);
+	Game();
 	virtual ~Game();
 
 	// Init DX Runtime
-	virtual bool Initialize(const wchar_t* windowTitle, int width, int height, bool vSync = false)  override;
+	virtual bool Initialize(const wchar_t* windowTitle, int width, int height, bool vSync = false);
 
 	// Run
-	virtual int Run()									override;
+	virtual int Run();
 
 protected: 
 	// CONTENT
@@ -29,9 +29,9 @@ protected:
 	virtual void UnloadContent()						= 0;
 
 	// Rendering
-	virtual void Update()								override;
-	virtual void Render()								override;
-	virtual void Resize(UINT32 width, UINT32 height)	override;
+	virtual void Update()							;
+	virtual void Render()							;
+	virtual void Resize(UINT32 width, UINT32 height);
 
 protected:
 

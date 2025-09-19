@@ -7,7 +7,7 @@ DescriptorAllocatorPage::DescriptorAllocatorPage( D3D12_DESCRIPTOR_HEAP_TYPE typ
     : m_HeapType( type )
     , m_NumDescriptorsInHeap( numDescriptors )
 {
-    auto device = Application::GetDevice();
+    auto device = Application::Get().GetDevice();
 
     D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
     heapDesc.Type = m_HeapType;

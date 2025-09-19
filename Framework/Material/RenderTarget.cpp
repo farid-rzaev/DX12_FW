@@ -4,10 +4,10 @@
 
 #include <Framework/3RD_Party/Helpers.h>
 
-RenderTarget::RenderTarget(std::shared_ptr<Application> app)
-    : m_Size(0,0)
+RenderTarget::RenderTarget()
+    : m_Textures(AttachmentPoint::NumAttachmentPoints)
+    , m_Size(0,0)
 {
-    m_Textures.resize(AttachmentPoint::NumAttachmentPoints, Texture(app));
 }
 
 // Attach a texture to the render target.

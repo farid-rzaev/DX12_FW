@@ -29,7 +29,7 @@ class RenderTarget
 {
 public:
     // Create an empty render target.
-    RenderTarget(std::shared_ptr<Application> app);
+    RenderTarget();
 
     RenderTarget(const RenderTarget& copy)                = default;
     RenderTarget(RenderTarget&& copy)                     = default;

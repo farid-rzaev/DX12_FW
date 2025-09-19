@@ -23,7 +23,7 @@ class RootSignature;
 class DynamicDescriptorHeap
 {
 public:
-    DynamicDescriptorHeap(std::shared_ptr<Application> app, D3D12_DESCRIPTOR_HEAP_TYPE heapType, uint32_t numDescriptorsPerHeap = 1024);
+    DynamicDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE heapType, uint32_t numDescriptorsPerHeap = 1024);
 
     virtual ~DynamicDescriptorHeap();
 
@@ -161,6 +161,4 @@ private:
     CD3DX12_GPU_DESCRIPTOR_HANDLE                       m_CurrentGPUDescriptorHandle;
 
     uint32_t                                            m_NumFreeHandles;
-    
-    std::shared_ptr<Application>                        m_Application = nullptr;
 };

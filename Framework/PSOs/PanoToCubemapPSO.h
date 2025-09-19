@@ -34,7 +34,7 @@ class Application;
 class PanoToCubemapPSO
 {
 public:
-    PanoToCubemapPSO(std::shared_ptr<Application> app);
+    PanoToCubemapPSO();
 
     const RootSignature& GetRootSignature() const
     {

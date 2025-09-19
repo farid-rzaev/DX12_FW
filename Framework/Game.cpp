@@ -1,5 +1,7 @@
 #include "Game.h"
 
+#include <Framework/Application.h>
+
 #include <DirectXMath.h>
 
 
@@ -7,7 +9,7 @@
 //										Init 
 // =====================================================================================
 
-Game::Game(HINSTANCE hInstance) : Application(hInstance)
+Game::Game()
 {
 }
 
@@ -27,14 +29,14 @@ bool Game::Initialize(const wchar_t* windowTitle, int width, int height, bool vS
 	}
 
 	// Only if Window is successfully created - set WndProc and PointerInjection
-	if (Application::Initialize(windowTitle, width, height, vSync))
+	if (Application::Get().Initialize(windowTitle, width, height, vSync))
 	{
-		std::shared_ptr<Window> window = Application::GetWindow();
+		std::shared_ptr<Window> window = Application::Get().GetWindow();
 		if (window)
 		{
 			// Both of these calls should be called after CreateWindow() call
 			window->SetCustomWndProc(Game::WndProc);	// reset the Default WndProc of the window to app's static method
-			window->SetUserPtr((void*)this);			// inject (this) pointer to retrive then in WndProc (as WndProc is not a member of a class)
+			window->SetUserPtr((void*)this);			// inject (this) pointer to retrive then in WndProc (as WndProc is static and has no access to "this" ptr)
 		}
 	}
 
@@ -51,7 +53,7 @@ int Game::Run()
 {
 	LoadContent();
 
-	int retCode = Application::Run();
+	int retCode = Application::Get().Run();
 
 	UnloadContent();
 
@@ -66,17 +68,17 @@ int Game::Run()
 
 void Game::Update()
 {
-	Application::Update();
+	Application::Get().Update();
 }
 
 void Game::Render()
 {
-	Application::Render();
+	Application::Get().Render();
 }
 
 void Game::Resize(UINT32 width, UINT32 height)
 {
-	Application::Resize(width, height);
+	Application::Get().Resize(width, height);
 }
 
 
@@ -154,22 +156,24 @@ void Game::OnWindowDestroy()
 // The window procedure handles any window messages sent to the application. 
 LRESULT CALLBACK Game::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	Game* app = (Game*) GetWindowLongPtr(hwnd, GWLP_USERDATA);
-	//Application * app = gs_pSingelton;
+	// Retrive from window injected Game the injected pointer
+	Game* game = (Game*) GetWindowLongPtr(hwnd, GWLP_USERDATA);
+
+	Application* app = &Application::Get();
 
 	// In order to prevent the application from handling events before the necessary 
 	// DirectX 12 objects are created, the m_IsInitialized flag is checked. This flag
 	// is set to true in the initialization function after all of the required assets 
 	// have been loaded. Trying to resize or render the screen before the swap chain, 
 	// command list and command allocators have been created would be disastrous.
-	if (app)
+	if (game)
 	//if (app->m_IsInitialized)
 	{
 		switch (message)
 		{
 		case WM_PAINT:
-			app->Update();
-			app->Render();
+			game->Update();
+			game->Render();
 			break;
 		case WM_SYSKEYDOWN:
 		case WM_KEYDOWN:

@@ -11,7 +11,7 @@ class Application;
 class ByteAddressBuffer : public Buffer
 {
 public:
-    ByteAddressBuffer(std::shared_ptr<Application> app, const std::wstring& name = L"");
+    ByteAddressBuffer(const std::wstring& name = L"");
     ByteAddressBuffer(const D3D12_RESOURCE_DESC& resDesc,
         size_t numElements, size_t elementSize,
         const std::wstring& name = L"");

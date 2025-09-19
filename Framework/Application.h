@@ -26,44 +26,40 @@ using Microsoft::WRL::ComPtr;
 
 #define USE_DESCRIPTOR_ALLOCAOR
 
-class Application : public std::enable_shared_from_this<Application>
+class Application
 {
 // ------------------------------------------------------------------------------------------
 //									Function members
 // ------------------------------------------------------------------------------------------
 public: // STATIC
-#if 0 
-	static void Create(HINSTANCE hInstance, const wchar_t* windowTitle, int width, int height, bool vSync);
+	static void Create(HINSTANCE hInstance);
 	static void Destroy();
 	static Application & Get();
-#endif
 
 public:
 	// Init 
-	Application(HINSTANCE hInstance);
-	virtual bool Initialize(const wchar_t* windowTitle, int width, int height, bool vSync = false);
-	virtual ~Application();
+	bool Initialize(const wchar_t* windowTitle, int width, int height, bool vSync = false);
 
 	// Run
-	virtual int Run();
+	int Run();
 
 	// STATIC - Get and Set
-	static uint64_t GetFrameCount() { return ms_FrameCount; }
-	static ComPtr<ID3D12Device2> GetDevice() { return m_d3d12Device; }
+	uint64_t				GetFrameCount()	{ return m_FrameCount; }
+	ComPtr<ID3D12Device2>	GetDevice()		{ return m_d3d12Device; }
 
 public:
 	// Update & Render & Resize
-	virtual void Update();
-	virtual void Render();
-	virtual void Resize(UINT32 width, UINT32 height);
-	UINT8 Present() { return m_Window->Present(); }
+	void	Update();
+	void	Render();
+	void	Resize(UINT32 width, UINT32 height);
+	UINT8	Present() { return m_Window->Present(); }
 
 	// Sync frames
 	void Flush();
 
 	// Fullscreen
 	void SetFullscreen(bool fullscreen) { m_Window->SetFullscreen(fullscreen); }
-	void ToggleFullscreen() { m_Window->ToggleFullscreen(); }
+	void ToggleFullscreen()				{ m_Window->ToggleFullscreen(); }
 	
 	// DX12 Helpers
 	void EnableDebugLayer();
@@ -95,7 +91,11 @@ public:
 	DXGI_SAMPLE_DESC GetMultisampleQualityLevels(DXGI_FORMAT format, UINT numSamples, D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE) const;
 
 private:
-	// Deleated
+	// Singleton - private to prevent instantiation
+	Application(HINSTANCE hInstance);
+	~Application();
+
+	// DELETED - Not supporting copy/assign
 	Application(const Application& app)				= delete;
 	Application& operator=(const Application& app)	= delete;
 
@@ -113,7 +113,7 @@ private:
 	HINSTANCE							 m_hInstance;
 
 	// DirectX 12 Objects
-	static ComPtr<ID3D12Device2>		 m_d3d12Device;
+	ComPtr<ID3D12Device2>				 m_d3d12Device			= nullptr;
 
 	// DescriptorAllocators
 	std::unique_ptr<DescriptorAllocator> m_DescriptorAllocators[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
@@ -132,5 +132,5 @@ private:
 	HighResolutionClock					 m_UpdateClock;
 	HighResolutionClock					 m_RenderClock;
 										 
-	static uint64_t						 ms_FrameCount;
+	uint64_t							 m_FrameCount			= 0;
 };

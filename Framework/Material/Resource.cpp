@@ -17,7 +17,7 @@ Resource::Resource(const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_VA
         m_d3d12ClearValue = std::make_unique<D3D12_CLEAR_VALUE>(*clearValue);
     }
     
-    auto device = Application::GetDevice();
+    auto device = Application::Get().GetDevice();
 
     ThrowIfFailed( device->CreateCommittedResource(
         &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
@@ -139,7 +139,7 @@ void Resource::CheckFeatureSupport()
     if (m_d3d12Resource)
     {
         auto desc = m_d3d12Resource->GetDesc();
-        auto device = Application::GetDevice();
+        auto device = Application::Get().GetDevice();
 
         m_FormatSupport.Format = desc.Format;
         ThrowIfFailed(device->CheckFeatureSupport(

@@ -102,8 +102,8 @@ int Sample0::Run()
 // =====================================================================================
 
 
-Sample0::Sample0(HINSTANCE hInstance) :
-	Game(hInstance),
+Sample0::Sample0() :
+	Game(),
 	m_ScissorRect(CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX)),
 	m_FoV(45.0f)
 {
@@ -115,7 +115,7 @@ bool Sample0::Initialize(const wchar_t* windowTitle, int width, int height, bool
 	if (!Game::Initialize(windowTitle, width, height, vSync)) return false;
 
 	// The first back buffer index will very likely be 0, but it depends
-	m_CurrentBackBufferIndex = Application::GetCurrentBackbufferIndex();
+	m_CurrentBackBufferIndex = Application::Get().GetCurrentBackbufferIndex();
 	m_Viewport = CD3DX12_VIEWPORT(0.0f, 0.0f, (float)width, (float)height);
 
 	return true;
@@ -140,7 +140,7 @@ void Sample0::UpdateBufferResource(
 	size_t numElements, size_t elementSize, const void* bufferData,
 	D3D12_RESOURCE_FLAGS flags)
 {
-	auto device = Application::GetDevice();
+	auto device = Application::Get().GetDevice();
 
 	size_t bufferSize = numElements * elementSize;
 
@@ -187,9 +187,9 @@ bool Sample0::LoadContent()
 	std::wstring shaderBlobPath = GetExePath();
 	assert(shaderBlobPath.size() != 0);
 
-	auto device = Application::GetDevice();
-	auto commandQueue = Application::GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COPY);
-	auto commandList = commandQueue->GetCommandList();
+	auto device			= Application::Get().GetDevice();
+	auto commandQueue	= Application::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COPY);
+	auto commandList	= commandQueue->GetCommandList();
 
 	// Upload vertex buffer data.
 	ComPtr<ID3D12Resource> intermediateVertexBuffer;
@@ -302,7 +302,7 @@ bool Sample0::LoadContent()
 	m_ContentLoaded = true;
 
 	// Resize/Create the depth buffer.
-	ResizeDepthBuffer(Application::GetClientWidth(), Application::GetClientHeight());
+	ResizeDepthBuffer(Application::Get().GetClientWidth(), Application::Get().GetClientHeight());
 
 	return true;
 }
@@ -320,8 +320,8 @@ void Sample0::UnloadContent() {
 
 void Sample0::Update()
 { 
-	Application::Update(); 
-	double totalUpdateTime = Application::GetUpdateTotalTime();
+	Application::Get().Update();
+	double totalUpdateTime = Application::Get().GetUpdateTotalTime();
 
 	// Update the model matrix.
 	float angle = static_cast<float>(totalUpdateTime * 90.0);
@@ -335,7 +335,7 @@ void Sample0::Update()
 	m_ViewMatrix = XMMatrixLookAtLH(eyePosition, focusPoint, upDirection);
 
 	// Update the projection matrix.
-	float aspectRatio = Application::GetClientWidth() / static_cast<float>(Application::GetClientHeight());
+	float aspectRatio = Application::Get().GetClientWidth() / static_cast<float>(Application::Get().GetClientHeight());
 	m_ProjectionMatrix = XMMatrixPerspectiveFovLH(XMConvertToRadians(m_FoV), aspectRatio, 0.1f, 100.0f);
 }
 
@@ -368,17 +368,17 @@ void Sample0::Update()
 //						read - only(Read > Read) resource between draw or dispatches.
 void Sample0::Render()
 {
-	Application::Render();
-	double totalRenderTime = Application::GetRenderTotalTime();
+	Application::Get().Render();
+	double totalRenderTime = Application::Get().GetRenderTotalTime();
 
-	auto commandQueue = Application::GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
-	auto commandList = commandQueue->GetCommandList();
+	auto commandQueue	= Application::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
+	auto commandList	= commandQueue->GetCommandList();
 	auto d3dCommandList = commandList->GetGraphicsCommandList();
 	
-	m_CurrentBackBufferIndex = Application::GetCurrentBackbufferIndex();
-	auto backBuffer = Application::GetBackbuffer(m_CurrentBackBufferIndex);
+	m_CurrentBackBufferIndex = Application::Get().GetCurrentBackbufferIndex();
+	auto backBuffer = Application::Get().GetBackbuffer(m_CurrentBackBufferIndex);
 
-	auto rtv = Application::GetCurrentBackbufferRTV();
+	auto rtv = Application::Get().GetCurrentBackbufferRTV();
 	auto dsv = m_DSVHeap->GetCPUDescriptorHandleForHeapStart();
 
 	// Clear RT
@@ -422,7 +422,7 @@ void Sample0::Render()
 		// Execute
 		m_FenceValues[m_CurrentBackBufferIndex] = commandQueue->ExecuteCommandList(commandList);
 
-		m_CurrentBackBufferIndex = Application::Present();
+		m_CurrentBackBufferIndex = Application::Get().Present();
 		commandQueue->WaitForFenceValue(m_FenceValues[m_CurrentBackBufferIndex]);
 	}
 }
@@ -430,15 +430,15 @@ void Sample0::Render()
 
 void Sample0::Resize(UINT32 width, UINT32 height)
 {
-	if (Application::GetClientWidth() != width || Application::GetClientHeight() != height)
+	if (Application::Get().GetClientWidth() != width || Application::Get().GetClientHeight() != height)
 	{
 		// RenderTargets
 		{
-			Application::Resize(width, height);
+			Application::Get().Resize(width, height);
 
 			// Since the index of back buffer may not be the same, it is important
 			// to update the current back buffer index as known by the application.
-			m_CurrentBackBufferIndex = Application::GetCurrentBackbufferIndex();
+			m_CurrentBackBufferIndex = Application::Get().GetCurrentBackbufferIndex();
 		}
 
 		// Viewport and DephBuffer
@@ -457,12 +457,12 @@ void Sample0::ResizeDepthBuffer(int width, int height)
 	if (m_ContentLoaded)
 	{
 		// Flush any GPU commands that might be referencing the depth buffer.
-		Application::Flush();
+		Application::Get().Flush();
 
 		width = std::max(1, width);
 		height = std::max(1, height);
 
-		auto device = Application::GetDevice();
+		auto device = Application::Get().GetDevice();
 
 		// Resize screen dependent resources.
 		// Create a depth buffer.

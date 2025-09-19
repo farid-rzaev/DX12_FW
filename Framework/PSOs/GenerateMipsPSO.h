@@ -34,7 +34,7 @@ class Application;
 class GenerateMipsPSO
 {
 public:
-    GenerateMipsPSO(std::shared_ptr<Application> app);
+    GenerateMipsPSO();
 
     const RootSignature& GetRootSignature() const
     {

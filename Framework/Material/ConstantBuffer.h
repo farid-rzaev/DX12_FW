@@ -9,7 +9,7 @@
 class ConstantBuffer : public Buffer
 {
 public:
-    ConstantBuffer(std::shared_ptr<Application> app, const std::wstring & name = L"");
+    ConstantBuffer(const std::wstring & name = L"");
     virtual ~ConstantBuffer();
 
     // Inherited from Buffer

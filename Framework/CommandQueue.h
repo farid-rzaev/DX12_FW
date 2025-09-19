@@ -14,7 +14,7 @@ class CommandList;
 class CommandQueue
 {
 public:
-	CommandQueue(std::shared_ptr<Application> app, D3D12_COMMAND_LIST_TYPE type);
+	CommandQueue(D3D12_COMMAND_LIST_TYPE type);
 	~CommandQueue();
 
 	uint64_t Signal();
@@ -62,8 +62,5 @@ private /*main*/:
 	std::atomic_bool								m_bProcessInFlightCommandLists;
 	std::mutex										m_ProcessInFlightCommandListsThreadMutex;
 	std::condition_variable							m_ProcessInFlightCommandListsThreadCV;
-
-	// Application
-	std::shared_ptr<Application>					m_Application = nullptr;
 };
 

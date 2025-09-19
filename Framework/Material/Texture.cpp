@@ -7,31 +7,26 @@
 
 //#include <type_traits> // std::hash
 
-Texture::Texture(std::shared_ptr<Application> app, TextureUsage textureUsage, const std::wstring& name )
-    : m_Application(app)
-    , Resource(name)
+Texture::Texture(TextureUsage textureUsage, const std::wstring& name )
+    : Resource(name)
     , m_TextureUsage(textureUsage)
 {
 }
 
-Texture::Texture(std::shared_ptr<Application> app,
-                 const D3D12_RESOURCE_DESC& resourceDesc,
+Texture::Texture(const D3D12_RESOURCE_DESC& resourceDesc,
                  const D3D12_CLEAR_VALUE* clearValue, 
                  TextureUsage textureUsage,
                  const std::wstring& name)
-    : m_Application(app)
-    , Resource(resourceDesc, clearValue, name )
+    : Resource(resourceDesc, clearValue, name )
     , m_TextureUsage(textureUsage)
 {
     CreateViews();
 }
 
-Texture::Texture(std::shared_ptr<Application> app, 
-                 Microsoft::WRL::ComPtr<ID3D12Resource> resource,
+Texture::Texture(Microsoft::WRL::ComPtr<ID3D12Resource> resource,
                  TextureUsage textureUsage,
                  const std::wstring& name)
-    : m_Application(app)
-    , Resource(resource, name)
+    : Resource(resource, name)
     , m_TextureUsage(textureUsage)
 {
     CreateViews();
@@ -82,7 +77,7 @@ void Texture::Resize(uint32_t width, uint32_t height, uint32_t depthOrArraySize 
         resDesc.Height = std::max( height, 1u );
         resDesc.DepthOrArraySize = depthOrArraySize;
 
-        auto device = Application::GetDevice();
+        auto device = Application::Get().GetDevice();
 
         ThrowIfFailed( device->CreateCommittedResource(
             &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
@@ -155,22 +150,23 @@ D3D12_UNORDERED_ACCESS_VIEW_DESC GetUAVDesc(const D3D12_RESOURCE_DESC& resDesc, 
 
 void Texture::CreateViews()
 {
-    if (m_d3d12Resource && m_Application)
+    if (m_d3d12Resource)
     {
-        auto device = Application::GetDevice();
+        auto& app   = Application::Get();
+        auto device = app.GetDevice();
 
         CD3DX12_RESOURCE_DESC desc(m_d3d12Resource->GetDesc());
 
         if ((desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) != 0 &&
             CheckRTVSupport())
         {
-            m_RenderTargetView = m_Application->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+            m_RenderTargetView = app.AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
             device->CreateRenderTargetView(m_d3d12Resource.Get(), nullptr, m_RenderTargetView.GetDescriptorHandle());
         }
         if ((desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL) != 0 &&
             CheckDSVSupport())
         {
-            m_DepthStencilView = m_Application->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+            m_DepthStencilView = app.AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
             device->CreateDepthStencilView(m_d3d12Resource.Get(), nullptr, m_DepthStencilView.GetDescriptorHandle());
         }
     }
@@ -185,9 +181,11 @@ void Texture::CreateViews()
 
 DescriptorAllocation Texture::CreateShaderResourceView(const D3D12_SHADER_RESOURCE_VIEW_DESC* srvDesc) const
 {
-    auto srv = m_Application->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    auto& app = Application::Get();
+    auto device = app.GetDevice();
 
-    auto device = Application::GetDevice();
+    auto srv = app.AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
     device->CreateShaderResourceView(m_d3d12Resource.Get(), srvDesc, srv.GetDescriptorHandle() );
 
     return srv;
@@ -195,9 +193,11 @@ DescriptorAllocation Texture::CreateShaderResourceView(const D3D12_SHADER_RESOUR
 
 DescriptorAllocation Texture::CreateUnorderedAccessView(const D3D12_UNORDERED_ACCESS_VIEW_DESC* uavDesc) const
 {
-    auto uav = m_Application->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    auto& app = Application::Get();
+    auto device = app.GetDevice();
 
-    auto device = Application::GetDevice();
+    auto uav = app.AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
     device->CreateUnorderedAccessView(m_d3d12Resource.Get(), nullptr, uavDesc, uav.GetDescriptorHandle());
 
     return uav;

@@ -6,7 +6,7 @@
 #include <Framework/3RD_Party/D3D/d3dx12.h>
 
 
-StructuredBuffer::StructuredBuffer(std::shared_ptr<Application> app, const std::wstring& name)
+StructuredBuffer::StructuredBuffer(const std::wstring& name)
     : Buffer(name)
     , m_CounterBuffer(
         CD3DX12_RESOURCE_DESC::Buffer(4, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS),
@@ -15,12 +15,13 @@ StructuredBuffer::StructuredBuffer(std::shared_ptr<Application> app, const std::
     , m_NumElements(0)
     , m_ElementSize(0)
 {
-    m_SRV = app->AllocateDescriptors( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
-    m_UAV = app->AllocateDescriptors( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
+    auto& app = Application::Get();
+
+    m_SRV = app.AllocateDescriptors( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
+    m_UAV = app.AllocateDescriptors( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
 }
 
 StructuredBuffer::StructuredBuffer(
-    std::shared_ptr<Application> app, 
     const D3D12_RESOURCE_DESC& resDesc,
     size_t numElements, size_t elementSize,
     const std::wstring& name
@@ -33,13 +34,15 @@ StructuredBuffer::StructuredBuffer(
     , m_NumElements(numElements)
     , m_ElementSize(elementSize)
 {
-    m_SRV = app->AllocateDescriptors( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
-    m_UAV = app->AllocateDescriptors( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
+    auto& app = Application::Get();
+
+    m_SRV = app.AllocateDescriptors( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
+    m_UAV = app.AllocateDescriptors( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
 }
 
 void StructuredBuffer::CreateViews( size_t numElements, size_t elementSize )
 {
-    auto device = Application::GetDevice();
+    auto device = Application::Get().GetDevice();
 
     m_NumElements = numElements;
     m_ElementSize = elementSize;

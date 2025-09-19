@@ -4,11 +4,13 @@
 
 #include <Framework/3RD_Party/Helpers.h>
 
-ByteAddressBuffer::ByteAddressBuffer(std::shared_ptr<Application> app, const std::wstring& name)
+ByteAddressBuffer::ByteAddressBuffer(const std::wstring& name)
     : Buffer(name)
 {
-    m_SRV = app->AllocateDescriptors( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
-    m_UAV = app->AllocateDescriptors( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
+    auto& app = Application::Get();
+
+    m_SRV = app.AllocateDescriptors( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
+    m_UAV = app.AllocateDescriptors( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
 }
 
 ByteAddressBuffer::ByteAddressBuffer(const D3D12_RESOURCE_DESC& resDesc,
@@ -19,7 +21,7 @@ ByteAddressBuffer::ByteAddressBuffer(const D3D12_RESOURCE_DESC& resDesc,
 
 void ByteAddressBuffer::CreateViews( size_t numElements, size_t elementSize )
 {
-    auto device = Application::GetDevice();
+    auto device = Application::Get().GetDevice();
 
     // Make sure buffer size is aligned to 4 bytes.
     m_BufferSize = Math::AlignUp(numElements * elementSize, 4);

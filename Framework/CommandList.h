@@ -31,7 +31,7 @@ class VertexBuffer;
 class CommandList
 {
 public:
-    CommandList(std::shared_ptr<Application> app, D3D12_COMMAND_LIST_TYPE type);
+    CommandList(D3D12_COMMAND_LIST_TYPE type);
     virtual ~CommandList();
 
     D3D12_COMMAND_LIST_TYPE GetCommandListType() const
@@ -346,5 +346,5 @@ private:
     static std::map<std::wstring, ID3D12Resource*>      ms_TextureCache;
     static std::mutex                                   ms_TextureCacheMutex;
 
-    std::shared_ptr<Application>                        m_Application = nullptr;
+    Application&                                        m_Application;
 };

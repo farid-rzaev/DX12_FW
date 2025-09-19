@@ -17,46 +17,39 @@
 // =====================================================================================
 //								   DEFINES / GLOBAL
 // =====================================================================================
-#if 0
-static Application*		gs_pSingelton = nullptr;
-#endif
 
-uint64_t				Application::ms_FrameCount = 0;
-ComPtr<ID3D12Device2>	Application::m_d3d12Device = nullptr;
+static Application*		gs_pSingleton = nullptr;
 
 // =====================================================================================
 //									STATIC - INIT
 // =====================================================================================
 
 
-#if 0
-void Application::Create(HINSTANCE hInstance, const wchar_t* windowTitle, int width, int height, bool vSync)
+void Application::Create(HINSTANCE hInstance)
 {
-	if (!gs_pSingelton)
+	if (!gs_pSingleton)
 	{
-		gs_pSingelton = new Application(hInstance);
-		gs_pSingelton->Initialize(windowTitle, width, height, vSync);
+		gs_pSingleton = new Application(hInstance);
 	}
 }
 
 Application& Application::Get()
 {
-	assert(gs_pSingelton);
-	return *gs_pSingelton;
+	assert(gs_pSingleton);
+	return *gs_pSingleton;
 }
 
 void Application::Destroy()
 {
-	if (gs_pSingelton)
+	if (gs_pSingleton)
 	{
 		//assert(gs_Windows.empty() && gs_WindowByName.empty() &&
 		//	"All windows should be destroyed before destroying the application instance.");
 
-		delete gs_pSingelton;
-		gs_pSingelton = nullptr;
+		delete gs_pSingleton;
+		gs_pSingleton = nullptr;
 	}
 }
-#endif
 
 // =====================================================================================
 //										Init 
@@ -94,9 +87,9 @@ bool Application::Initialize(const wchar_t* windowTitle, int width, int height, 
 		m_d3d12Device = CreateDevice(dxgiAdapter4);
 		ThrowIfFailed(m_d3d12Device, "Failed to create a device.");
 
-		m_DirectCommandQueue  = std::make_shared<CommandQueue> (shared_from_this(), D3D12_COMMAND_LIST_TYPE_DIRECT);
-		m_ComputeCommandQueue = std::make_shared<CommandQueue> (shared_from_this(), D3D12_COMMAND_LIST_TYPE_COMPUTE);
-		m_CopyCommandQueue    = std::make_shared<CommandQueue> (shared_from_this(), D3D12_COMMAND_LIST_TYPE_COPY);
+		m_DirectCommandQueue  = std::make_shared<CommandQueue> (D3D12_COMMAND_LIST_TYPE_DIRECT);
+		m_ComputeCommandQueue = std::make_shared<CommandQueue> (D3D12_COMMAND_LIST_TYPE_COMPUTE);
+		m_CopyCommandQueue    = std::make_shared<CommandQueue> (D3D12_COMMAND_LIST_TYPE_COPY);
 		ThrowIfFailed((bool)m_DirectCommandQueue,  "Failed to create a DirectCommandQueue.");
 		ThrowIfFailed((bool)m_ComputeCommandQueue, "Failed to create a ComputeCommandQueue.");
 		ThrowIfFailed((bool)m_CopyCommandQueue,    "Failed to create a CopyCommandQueue.");
@@ -143,7 +136,7 @@ bool Application::Initialize(const wchar_t* windowTitle, int width, int height, 
 	m_Window->Show();
 
 	// Initialize frame counter
-	ms_FrameCount = 0;
+	m_FrameCount = 0;
 
 	return true;
 }

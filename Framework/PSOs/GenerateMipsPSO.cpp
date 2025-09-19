@@ -10,9 +10,10 @@
 #include <Framework/3RD_Party/Helpers.h>
 
 
-GenerateMipsPSO::GenerateMipsPSO(std::shared_ptr<Application> app)
+GenerateMipsPSO::GenerateMipsPSO()
 {
-    auto device = Application::GetDevice();
+    auto& app   = Application::Get();
+    auto device = app.GetDevice();
 
     D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
     featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
@@ -64,7 +65,7 @@ GenerateMipsPSO::GenerateMipsPSO(std::shared_ptr<Application> app)
     ThrowIfFailed( device->CreatePipelineState( &pipelineStateStreamDesc, IID_PPV_ARGS( &m_PipelineState ) ) );
 
     // Create some default texture UAV's to pad any unused UAV's during mip map generation.
-    m_DefaultUAV = app->AllocateDescriptors( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 4 );
+    m_DefaultUAV = app.AllocateDescriptors( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 4 );
 
     for ( UINT i = 0; i < 4; ++i )
     {
