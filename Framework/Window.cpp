@@ -2,16 +2,42 @@
 
 #include <Framework/3RD_Party/Helpers.h>
 
+#include <Framework/Application.h>
+#include <Framework/CommandQueue.h>
+#include <Framework/CommandList.h>
+#include <Framework/ResourceStateTracker.h>
+
 #include <cassert>
 #include <algorithm> // std::min and std::max.
+
+
+// =====================================================================================
+//										INIT 
+// =====================================================================================
 
 
 Window::Window(UINT32 width, UINT32 height, bool vSync) 
 	: m_ClientWidth(width)
 	, m_ClientHeight(height)
 	, m_VSync(vSync)
+	, m_FenceValues{0}
+	, m_FrameValues{0}
 {
 	m_TearingSupported = CheckTearingSupport();
+
+	for (int i = 0; i < NUM_FRAMES_IN_FLIGHT; ++i)
+	{
+		m_BackBufferTextures[i].SetName(L"Backbuffer[" + std::to_wstring(i) + L"]");
+	}
+}
+
+void Window::InitAndCreate(HINSTANCE hInst, const wchar_t* windowTitle)
+{
+	RegisterWindowClass(hInst);
+	CreateWindow(hInst, windowTitle);
+	CreateSwapChain();
+
+	UpdateRenderTargetViews();
 }
 
 
@@ -25,7 +51,113 @@ Window::~Window()
 }
 
 
-// Before creating an instance of an OS window, the window class corresponding to that window must be registered. 
+// =====================================================================================
+//										MAIN 
+// =====================================================================================
+
+
+// A resize event is triggered when the window is created the first time. 
+// It is also triggered when switching to full-screen mode or if the user 
+// resizes the window by dragging the window border frame while in windowed mode.
+// The Resize function will resize the swap chain buffers if the client area of 
+// the window changes.
+void Window::Resize(UINT32 width, UINT32 height)
+{
+	if (m_ClientWidth == width && m_ClientHeight == height)
+	{
+		return;
+	}
+
+	// Flush the GPU Command Queue to make sure the swap chain's back buffers are not being referenced by an in-flight command list.
+	Application::Get().Flush();
+
+	// Release all references to back buffer textures.
+	m_RenderTarget.AttachTexture(Color0, Texture());
+	for (int i = 0; i < NUM_FRAMES_IN_FLIGHT; ++i)
+	{
+		ResourceStateTracker::RemoveGlobalResourceState(m_BackBufferTextures[i].GetD3D12Resource().Get());
+		m_BackBufferTextures[i].Reset();
+	}
+
+	// Don't allow 0 size swap chain back buffers.
+	m_ClientWidth = std::max(1u, width);
+	m_ClientHeight = std::max(1u, height);
+
+	DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
+	ThrowIfFailed(m_SwapChain->GetDesc(&swapChainDesc));
+	ThrowIfFailed(m_SwapChain->ResizeBuffers(swapChainDesc.BufferCount, m_ClientWidth, m_ClientHeight, swapChainDesc.BufferDesc.Format, swapChainDesc.Flags));
+
+	m_CurrentBackBufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
+
+	UpdateRenderTargetViews();
+}
+
+
+UINT Window::Present(const Texture& texture)
+{
+	auto commandQueue = Application::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
+	auto commandList = commandQueue->GetCommandList();
+	
+	auto& backBuffer = m_BackBufferTextures[m_CurrentBackBufferIndex];
+
+	if (texture.IsValid())
+	{
+		if (texture.GetD3D12ResourceDesc().SampleDesc.Count > 1)
+		{
+			commandList->ResolveSubresource(backBuffer, texture);
+		}
+		else
+		{
+			commandList->CopyResource(backBuffer, texture);
+		}
+	}
+
+	RenderTarget renderTarget;
+	renderTarget.AttachTexture(AttachmentPoint::Color0, backBuffer);
+
+	commandList->TransitionBarrier(backBuffer, D3D12_RESOURCE_STATE_PRESENT);
+	commandQueue->ExecuteCommandList(commandList);
+
+	// If tearing is supported, it is recommended to always use the 
+	// DXGI_PRESENT_ALLOW_TEARING flag when presenting with a sync interval of 0.
+	// The requirements for using the DXGI_PRESENT_ALLOW_TEARING flag when 
+	// presenting are :
+	//
+	//		- The swap chain must be created with the DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING flag.
+	//		- The sync interval passed into Present(or Present1) must be 0.
+	//		- The DXGI_PRESENT_ALLOW_TEARING flag cannot be used in an application that is 
+	//			currently in full screen exclusive mode (set by calling SetFullscreenState(TRUE)).
+	//			It can only be used in windowed mode.To use this flag in 
+	//			full screen Win32 apps, the application should present 
+	//			to a fullscreen borderless window and disable automatic Alt + Enter 
+	//			fullscreen switching using  IDXGIFactory::MakeWindowAssociation.
+	UINT syncInterval = m_VSync ? 1 : 0;
+	UINT presentFlags = m_TearingSupported && !m_VSync ? DXGI_PRESENT_ALLOW_TEARING : 0;
+	ThrowIfFailed(m_SwapChain->Present(syncInterval, presentFlags));
+
+	m_FenceValues[m_CurrentBackBufferIndex] = commandQueue->Signal();
+	m_FrameValues[m_CurrentBackBufferIndex] = Application::Get().GetFrameCount();
+	
+	// Updating current back buffer index:
+	// When using the DXGI_SWAP_EFFECT_FLIP_DISCARD flip model, the order of 
+	//     back buffer indicies is not guaranteed to be sequential. 
+	//	   The IDXGISwapChain3::GetCurrentBackBufferIndex method is used to 
+	//     get the index of the swap chain's current back buffer.
+	m_CurrentBackBufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
+	// --
+	// Buffer 3 frames in flight - by waiting not for the previous frame, but a frame before the prev one.
+	commandQueue->WaitForFenceValue(m_FenceValues[m_CurrentBackBufferIndex]);
+
+	return m_CurrentBackBufferIndex;
+}
+
+
+// =====================================================================================
+//										HELPERS 
+// =====================================================================================
+
+
+// Before creating an instance of an OS window, the window class corresponding to that window must be registered.
 // The window class will be automatically unregistered when the application terminates.
 void Window::RegisterWindowClass(HINSTANCE hInst)
 {
@@ -110,7 +242,7 @@ HWND Window::CreateWindow(HINSTANCE hInst, const wchar_t* windowTitle)
 
 
 // The primary purpose of the swap chain is to present the rendered image to the screen. 
-void Window::CreateSwapChain(ComPtr<ID3D12CommandQueue> commandQueue)
+void Window::CreateSwapChain()
 {
 	ComPtr<IDXGISwapChain4> dxgiSwapChain4;
 	ComPtr<IDXGIFactory4> dxgiFactory4;
@@ -153,12 +285,15 @@ void Window::CreateSwapChain(ComPtr<ID3D12CommandQueue> commandQueue)
 	// It is recommended to always allow tearing if tearing support is available.
 	swapChainDesc.Flags = m_TearingSupported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
 
+	ID3D12CommandQueue* pCommandQueue = Application::Get().GetCommandQueue()->GetD3D12CommandQueue().Get();
+	ThrowIfFailed(pCommandQueue, "Can't be NULL or SwapChain won't be created.");
+
 	ComPtr<IDXGISwapChain1> swapChain1;
 	ThrowIfFailed(dxgiFactory4->CreateSwapChainForHwnd(
-		commandQueue.Get(),	// cannot be NULL !!!
+		pCommandQueue,	// cannot be NULL !!!
 		g_hWnd,
 		&swapChainDesc,
-		nullptr,			// optional param to create a full-screen swap chain. Set it to NULL to create a windowed swap chain.
+		nullptr,		// optional param to create a full-screen swap chain. Set it to NULL to create a windowed swap chain.
 		nullptr,
 		&swapChain1));
 
@@ -168,92 +303,25 @@ void Window::CreateSwapChain(ComPtr<ID3D12CommandQueue> commandQueue)
 
 	ThrowIfFailed(swapChain1.As(&m_SwapChain));
 
-	// To render to the swap chain's back buffers, a render target view (RTV) 
-	//		needs to be created for each of the swap chain's back buffers.
+	// To render to the swap chain's back buffers, a render target view (RTV) needs to be created for each of the swap chain's back buffers.
+
+	m_CurrentBackBufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
 }
 
 
-void Window::ResizeBackBuffers(UINT32 width, UINT32 height)
+void Window::UpdateRenderTargetViews()
 {
 	for (int i = 0; i < NUM_FRAMES_IN_FLIGHT; ++i)
 	{
-		// Releasing local references to the swap chain's back buffers
-		// as after Resize we'll get the new ones.
-		// Any references to the back buffers must be released
-		// before the swap chain can be resized.
-		m_BackBuffers[i].Reset();
+		ComPtr<ID3D12Resource> backBuffer;
+		ThrowIfFailed(m_SwapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
+
+		ResourceStateTracker::AddGlobalResourceState(backBuffer.Get(), D3D12_RESOURCE_STATE_COMMON);
+
+		m_BackBufferTextures[i].SetD3D12Resource(backBuffer);
+		m_BackBufferTextures[i].CreateViews();
 	}
-
-	// Don't allow 0 size swap chain back buffers.
-	m_ClientWidth = std::max(1u, width) ;
-	m_ClientHeight = std::max(1u, height);
-
-	DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
-	ThrowIfFailed(m_SwapChain->GetDesc(&swapChainDesc));
-	ThrowIfFailed(m_SwapChain->ResizeBuffers(swapChainDesc.BufferCount, m_ClientWidth, m_ClientHeight,
-		swapChainDesc.BufferDesc.Format, swapChainDesc.Flags));
-
 }
-
-
-ComPtr<ID3D12Resource> Window::UpdateBackBufferCache(UINT8 index)
-{ 
-	ThrowIfFailed(m_SwapChain->GetBuffer(index, IID_PPV_ARGS(&m_BackBuffers[index])));
-
-	return m_BackBuffers[index];
-}
-
-
-UINT8 Window::Present()
-{
-	// If tearing is supported, it is recommended to always use the 
-	// DXGI_PRESENT_ALLOW_TEARING flag when presenting with a sync interval of 0.
-	// The requirements for using the DXGI_PRESENT_ALLOW_TEARING flag when 
-	// presenting are :
-	//
-	//		- The swap chain must be created with the DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING flag.
-	//		- The sync interval passed into Present(or Present1) must be 0.
-	//		- The DXGI_PRESENT_ALLOW_TEARING flag cannot be used in an application that is 
-	//			currently in full screen exclusive mode (set by calling SetFullscreenState(TRUE)).
-	//			It can only be used in windowed mode.To use this flag in 
-	//			full screen Win32 apps, the application should present 
-	//			to a fullscreen borderless window and disable automatic Alt + Enter 
-	//			fullscreen switching using  IDXGIFactory::MakeWindowAssociation.
-	UINT syncInterval = m_VSync ? 1 : 0;
-	UINT presentFlags = m_TearingSupported && !m_VSync ? DXGI_PRESENT_ALLOW_TEARING : 0;
-	ThrowIfFailed(m_SwapChain->Present(syncInterval, presentFlags));
-
-	// Updating current back buffer index:
-	// When using the DXGI_SWAP_EFFECT_FLIP_DISCARD flip model, the order of 
-	//     back buffer indicies is not guaranteed to be sequential. 
-	//	   The IDXGISwapChain3::GetCurrentBackBufferIndex method is used to 
-	//     get the index of the swap chain's current back buffer.
-	return m_SwapChain->GetCurrentBackBufferIndex();
-}
-
-
-// =====================================================================================
-//							  Pointer Injections
-// =====================================================================================
-
-
-void Window::SetUserPtr(void* userPtr)
-{
-	// inject Application pointer into window
-	SetWindowLongPtr(g_hWnd, GWLP_USERDATA, (LONG_PTR)userPtr);
-}
-
-
-void Window::SetCustomWndProc(WNDPROC wndProc)
-{
-	// Reset the Default WndProc of the window to app's static method
-	SetWindowLongPtr(g_hWnd, GWLP_WNDPROC, (LONG_PTR)wndProc);
-}
-
-
-// =====================================================================================
-//								 Helpers
-// =====================================================================================
 
 
 // Variable refresh rate displays (NVidia's G-Sync and AMD's FreeSync) require 
@@ -280,6 +348,30 @@ bool Window::CheckTearingSupport()
 
 	return allowTearing == TRUE;
 }
+
+
+// =====================================================================================
+//							  Pointer Injections
+// =====================================================================================
+
+
+void Window::SetUserPtr(void* userPtr)
+{
+	// inject Application pointer into window
+	SetWindowLongPtr(g_hWnd, GWLP_USERDATA, (LONG_PTR)userPtr);
+}
+
+
+void Window::SetCustomWndProc(WNDPROC wndProc)
+{
+	// Reset the Default WndProc of the window to app's static method
+	SetWindowLongPtr(g_hWnd, GWLP_WNDPROC, (LONG_PTR)wndProc);
+}
+
+
+// =====================================================================================
+//								 SET / GET
+// =====================================================================================
 
 
 // Since the swap chain's swap effect is using a flip effect, it is NOT necessary 
@@ -379,4 +471,10 @@ void Window::SetFullscreen(bool fullscreen)
 			::ShowWindow(g_hWnd, SW_NORMAL);
 		}
 	}
+}
+
+const RenderTarget& Window::GetRenderTarget() const
+{
+	m_RenderTarget.AttachTexture(AttachmentPoint::Color0, m_BackBufferTextures[m_CurrentBackBufferIndex]);
+	return m_RenderTarget;
 }

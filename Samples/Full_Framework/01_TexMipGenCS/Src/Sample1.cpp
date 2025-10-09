@@ -2,6 +2,7 @@
 
 #include <Framework/CommandQueue.h>
 #include <Framework/CommandList.h> 
+#include <Framework/Material/RenderTarget.h> 
 
 #include "Material.h"
 
@@ -10,6 +11,7 @@ using namespace Microsoft::WRL;
 
 #include <Framework/3RD_Party/Helpers.h>
 #include <Framework/3RD_Party/D3D/d3dx12.h>
+
 #include <d3dcompiler.h>
 #include <DirectXColors.h>
 
@@ -23,6 +25,7 @@ using namespace DirectX;
 #if defined(max)
 #undef max
 #endif
+
 
 struct Mat
 {
@@ -85,8 +88,8 @@ XMMATRIX XM_CALLCONV LookAtMatrix( FXMVECTOR Position, FXMVECTOR Direction, FXMV
     return M;
 }
 
-Sample1::Sample1(HINSTANCE hInstance)
-    : Game(hInstance)
+Sample1::Sample1()
+    : Game()
     , m_ScissorRect(CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX))
     , m_Viewport(CD3DX12_VIEWPORT(0.f, 0.f, 0.f, 0.f))
     , m_Forward(0)
@@ -101,11 +104,6 @@ Sample1::Sample1(HINSTANCE hInstance)
     , m_Shift(false)
     , m_Width(0)
     , m_Height(0)
-    , m_DefaultTexture  (shared_from_this())
-    , m_DirectXTexture  (shared_from_this())
-    , m_EarthTexture    (shared_from_this())
-    , m_MonaLisaTexture (shared_from_this())
-    , m_RenderTarget    (shared_from_this())
 {
     XMVECTOR cameraPos = XMVectorSet( 0, 5, -20, 1 );
     XMVECTOR cameraTarget = XMVectorSet( 0, 5, 0, 1 );
@@ -126,17 +124,28 @@ Sample1::~Sample1()
 
 bool Sample1::Initialize(const wchar_t* windowTitle, int width, int height, bool vSync)
 {
+    m_Width = width; m_Height = height;
+
     if (!Game::Initialize(windowTitle, width, height, vSync)) return false;
 
     m_Viewport = CD3DX12_VIEWPORT(0.0f, 0.0f, (float)width, (float)height);
     return true;
 }
 
+
 bool Sample1::LoadContent()
 {
-    auto device = Application::GetDevice();
-    auto commandQueue = Application::GetCommandQueue( D3D12_COMMAND_LIST_TYPE_COPY );
+    auto& app = Application::Get();
+    auto device = app.GetDevice();
+    auto commandQueue = app.GetCommandQueue( D3D12_COMMAND_LIST_TYPE_COPY );
     auto commandList = commandQueue->GetCommandList();
+
+    // Set solution dir as current working dirrectory
+    std::wstring exe_path_str = GetExePath();
+    ThrowIfFailed(exe_path_str.empty() == false, "Can't find the .exe path!");
+
+    SetWorkingDirToSolutionDir(exe_path_str);
+
 
     // Create a Cube mesh
     m_CubeMesh = Mesh::CreateCube( *commandList );
@@ -153,11 +162,11 @@ bool Sample1::LoadContent()
 
     // Load the vertex shader.
     ComPtr<ID3DBlob> vertexShaderBlob;
-    ThrowIfFailed( D3DReadFileToBlob( L"data/shaders/Sample1/VertexShader.cso", &vertexShaderBlob ) );
+    ThrowIfFailed( D3DReadFileToBlob( (exe_path_str + L"\\VertexShader.cso").c_str(), &vertexShaderBlob));
 
     // Load the pixel shader.
     ComPtr<ID3DBlob> pixelShaderBlob;
-    ThrowIfFailed( D3DReadFileToBlob( L"data/shaders/Sample1/PixelShader.cso", &pixelShaderBlob ) );
+    ThrowIfFailed( D3DReadFileToBlob( (exe_path_str + L"\\PixelShader.cso").c_str(), &pixelShaderBlob));
 
     // Create a root signature.
     D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
@@ -210,7 +219,7 @@ bool Sample1::LoadContent()
     DXGI_FORMAT depthBufferFormat = DXGI_FORMAT_D32_FLOAT;
 
     // Check the best multisample quality level that can be used for the given back buffer format.
-    DXGI_SAMPLE_DESC sampleDesc = GetMultisampleQualityLevels( backBufferFormat, D3D12_MAX_MULTISAMPLE_SAMPLE_COUNT );
+    DXGI_SAMPLE_DESC sampleDesc = app.GetMultisampleQualityLevels( backBufferFormat, D3D12_MAX_MULTISAMPLE_SAMPLE_COUNT );
 
     D3D12_RT_FORMAT_ARRAY rtvFormats = {};
     rtvFormats.NumRenderTargets = 1;
@@ -243,8 +252,7 @@ bool Sample1::LoadContent()
     colorClearValue.Color[2] = 0.9f;
     colorClearValue.Color[3] = 1.0f;
 
-    Texture colorTexture = Texture(shared_from_this(), colorDesc, &colorClearValue,
-                                   TextureUsage::RenderTarget, L"Color Render Target");
+    Texture colorTexture = Texture(colorDesc, &colorClearValue, TextureUsage::RenderTarget, L"Color Render Target");
 
     // Create a depth buffer.
     auto depthDesc = CD3DX12_RESOURCE_DESC::Tex2D( depthBufferFormat, 
@@ -256,8 +264,7 @@ bool Sample1::LoadContent()
     depthClearValue.Format = depthDesc.Format;
     depthClearValue.DepthStencil = { 1.0f, 0 };
 
-    Texture depthTexture = Texture(shared_from_this(), depthDesc, &depthClearValue,
-                                   TextureUsage::Depth, L"Depth Render Target");
+    Texture depthTexture = Texture(depthDesc, &depthClearValue, TextureUsage::Depth, L"Depth Render Target");
 
     // Attach the textures to the render target.
     m_RenderTarget.AttachTexture( AttachmentPoint::Color0, colorTexture );
@@ -269,37 +276,40 @@ bool Sample1::LoadContent()
     return true;
 }
 
-void Sample1::OnResize( ResizeEventArgs& e )
+void Sample1::OnResize(ResizeEventArgs& e)
 {
-    Game::OnResize( e );
-
-    if ( m_Width != e.Width || m_Height != e.Height )
+    if ( m_Width == e.Width && m_Height == e.Height )
     {
-        m_Width = std::max( 1, e.Width );
-        m_Height = std::max( 1, e.Height );
-
-        float aspectRatio = m_Width / (float)m_Height;
-        m_Camera.set_Projection( 45.0f, aspectRatio, 0.1f, 100.0f );
-
-        m_Viewport = CD3DX12_VIEWPORT( 0.0f, 0.0f,
-            static_cast<float>(m_Width), static_cast<float>(m_Height));
-
-        m_RenderTarget.Resize( m_Width, m_Height );
+        return;
     }
+
+    Game::OnResize(e);
+
+    m_Width = std::max( 1, e.Width );
+    m_Height = std::max( 1, e.Height );
+
+    float aspectRatio = m_Width / (float)m_Height;
+    m_Camera.set_Projection( 45.0f, aspectRatio, 0.1f, 100.0f );
+
+    m_Viewport = CD3DX12_VIEWPORT( 0.0f, 0.0f, static_cast<float>(m_Width), static_cast<float>(m_Height));
+
+    m_RenderTarget.Resize( m_Width, m_Height );
 }
 
 void Sample1::UnloadContent()
 {
 }
 
-void Sample1::OnUpdate( UpdateEventArgs& e )
+void Sample1::OnUpdate()
 {
+    Game::OnUpdate();
+
+    double elapsedTime = Game::GetUpdateDeltaSeconds();
+
     static uint64_t frameCount = 0;
     static double totalTime = 0.0;
 
-    Game::OnUpdate( e );
-
-    totalTime += e.ElapsedTime;
+    totalTime += elapsedTime;
     frameCount++;
 
     if ( totalTime > 1.0 )
@@ -317,8 +327,8 @@ void Sample1::OnUpdate( UpdateEventArgs& e )
     // Update the camera.
     float speedMultipler = ( m_Shift ? 16.0f : 4.0f );
 
-    XMVECTOR cameraTranslate = XMVectorSet( m_Right - m_Left, 0.0f, m_Forward - m_Backward, 1.0f ) * speedMultipler * static_cast<float>( e.ElapsedTime );
-    XMVECTOR cameraPan = XMVectorSet( 0.0f, m_Up - m_Down, 0.0f, 1.0f ) * speedMultipler * static_cast<float>( e.ElapsedTime );
+    XMVECTOR cameraTranslate = XMVectorSet( m_Right - m_Left, 0.0f, m_Forward - m_Backward, 1.0f ) * speedMultipler * static_cast<float>( elapsedTime );
+    XMVECTOR cameraPan = XMVectorSet( 0.0f, m_Up - m_Down, 0.0f, 1.0f ) * speedMultipler * static_cast<float>( elapsedTime );
     m_Camera.Translate( cameraTranslate, Space::Local );
     m_Camera.Translate( cameraPan, Space::Local );
 
@@ -338,7 +348,7 @@ void Sample1::OnUpdate( UpdateEventArgs& e )
     static float lightAnimTime = 0.0f;
     if ( m_AnimateLights )
     {
-        lightAnimTime += static_cast<float>( e.ElapsedTime ) * 0.5f * XM_PI;
+        lightAnimTime += static_cast<float>( elapsedTime ) * 0.5f * XM_PI;
     }
 
     const float radius = 8.0f;
@@ -403,11 +413,12 @@ void XM_CALLCONV ComputeMatrices( FXMMATRIX model, CXMMATRIX view, CXMMATRIX vie
     mat.ModelViewProjectionMatrix = model * viewProjection;
 }
 
-void Sample1::OnRender( RenderEventArgs& e )
+void Sample1::OnRender()
 {
-    Game::OnRender( e );
+    Game::OnRender();
 
-    auto commandQueue = GetCommandQueue( D3D12_COMMAND_LIST_TYPE_DIRECT );
+    auto& app = Application::Get();
+    auto commandQueue = app.GetCommandQueue( D3D12_COMMAND_LIST_TYPE_DIRECT );
     auto commandList = commandQueue->GetCommandList();
 
     // Clear the render targets.
@@ -599,7 +610,7 @@ void Sample1::OnRender( RenderEventArgs& e )
     }
 
     // Present
-    Present( m_RenderTarget.GetTexture(AttachmentPoint::Color0) );
+    app.Present( m_RenderTarget.GetTexture(AttachmentPoint::Color0) );
 }
 
 static bool g_AllowFullscreenToggle = true;
@@ -608,12 +619,14 @@ void Sample1::OnKeyPressed( KeyEventArgs& e )
 {
     Game::OnKeyPressed( e );
 
-    if ( !ImGui::GetIO().WantCaptureKeyboard )
+    Application* pApp = &Application::Get();
+
+    if (pApp && !ImGui::GetIO().WantCaptureKeyboard)
     {
         switch ( e.Key )
         {
             case KeyCode::Escape:
-                Application::Get().Quit( 0 );
+                PostQuitMessage(0);
                 break;
             case KeyCode::Enter:
                 if ( e.Alt )
@@ -621,13 +634,13 @@ void Sample1::OnKeyPressed( KeyEventArgs& e )
             case KeyCode::F11:
                 if ( g_AllowFullscreenToggle )
                 {
-                    GetWindow()->ToggleFullscreen();
+                    pApp->ToggleFullscreen();
                     g_AllowFullscreenToggle = false;
                 }
                 break;
                 }
             case KeyCode::V:
-                GetWindow()->ToggleVSync();
+                pApp->ToggleVSync();
                 break;
             case KeyCode::R:
                 // Reset camera transform

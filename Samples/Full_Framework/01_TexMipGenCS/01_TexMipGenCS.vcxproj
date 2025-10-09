@@ -72,10 +72,10 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(SolutionDir);$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir);$(SolutionDir)External;$(IncludePath)</IncludePath>
     <OutDir>$(SolutionDir)\_Output\Bin\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
     <IntDir>$(SolutionDir)\_Output\Temp\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
-    <LibraryPath>$(SolutionDir)\_Output\Bin\$(Platform)\$(Configuration)\DX12_FW\;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\DX12_FW\;$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\DirectXTex\;$(LibraryPath)</LibraryPath>
     <ExecutablePath>$(VC_ExecutablePath_x64);$(CommonExecutablePath)</ExecutablePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -173,6 +173,9 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\DX12_FW.vcxproj">
       <Project>{63670e49-1270-41c0-98e9-e8092e27bc6d}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\External\DirectXTex\DirectXTex.vcxproj">
+      <Project>{3a1cba4f-2831-4128-9cb2-8108661f3d00}</Project>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

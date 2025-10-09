@@ -10,13 +10,6 @@ class Sample0 : public Game
 // ------------------------------------------------------------------------------------------
 //									Function members
 // ------------------------------------------------------------------------------------------
-public: // STATIC
-#if 0
-	static void Create(HINSTANCE hInstance, const wchar_t* windowTitle, int width, int height, bool vSync);
-	static void Destroy();
-	static Sample0& Get();
-#endif
-
 public:
 	// Init 
 	Sample0(HINSTANCE hInstance);

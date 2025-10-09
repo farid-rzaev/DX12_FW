@@ -16,6 +16,11 @@ DescriptorAllocatorPage::DescriptorAllocatorPage( D3D12_DESCRIPTOR_HEAP_TYPE typ
     ThrowIfFailed( device->CreateDescriptorHeap( &heapDesc, IID_PPV_ARGS( &m_d3d12DescriptorHeap ) ) );
 
     m_BaseDescriptor = m_d3d12DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+    // The size of a descriptor in a descriptor heap is vendor specific 
+	//   (Intel, NVidia, and AMD may store descriptors differently). 
+	// In order to correctly offset the index into the descriptor heap, 
+	//   the size of a single element in the descriptor heap needs 
+	//   to be queried during initialization - m_RTVDescriptorSize.
     m_DescriptorHandleIncrementSize = device->GetDescriptorHandleIncrementSize( m_HeapType );
     m_NumFreeHandles = m_NumDescriptorsInHeap;
 

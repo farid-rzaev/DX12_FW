@@ -18,7 +18,7 @@
 class Sample1 : public Game
 {
 public:
-    Sample1(HINSTANCE hInstance);
+    Sample1();
     virtual ~Sample1();
 
     virtual bool Initialize(const wchar_t* windowTitle, int width, int height, bool vSync = false)  override;
@@ -28,8 +28,8 @@ public:
 
 protected:
     // Update the game logic.
-    virtual void OnUpdate(UpdateEventArgs& e) override;
-    virtual void OnRender(RenderEventArgs& e) override;
+    virtual void OnUpdate() override;
+    virtual void OnRender() override;
     virtual void OnResize(ResizeEventArgs& e) override; 
 
     // Invoked by the registered window when a key is pressed while the window has focus.

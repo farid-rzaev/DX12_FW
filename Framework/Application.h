@@ -24,7 +24,6 @@ class DescriptorAllocator;
 // USINGs
 using Microsoft::WRL::ComPtr;
 
-#define USE_DESCRIPTOR_ALLOCAOR
 
 class Application
 {
@@ -34,64 +33,48 @@ class Application
 public: // STATIC
 	static void Create(HINSTANCE hInstance);
 	static void Destroy();
-	static Application & Get();
+	static Application& Get();
 
-public:
-	// Init 
+public: // MAIN
 	bool Initialize(const wchar_t* windowTitle, int width, int height, bool vSync = false);
+	int  Run();
 
-	// Run
-	int Run();
+	UINT8 Present(const Texture& texture = Texture()) { return m_Window->Present(texture); }
 
-	// STATIC - Get and Set
-	uint64_t				GetFrameCount()	{ return m_FrameCount; }
-	ComPtr<ID3D12Device2>	GetDevice()		{ return m_d3d12Device; }
-
-public:
-	// Update & Render & Resize
-	void	Update();
-	void	Render();
-	void	Resize(UINT32 width, UINT32 height);
-	UINT8	Present() { return m_Window->Present(); }
-
-	// Sync frames
+	// SYNC frames
 	void Flush();
 
-	// Fullscreen
-	void SetFullscreen(bool fullscreen) { m_Window->SetFullscreen(fullscreen); }
-	void ToggleFullscreen()				{ m_Window->ToggleFullscreen(); }
+public: // DX12 HELPERs
+	ComPtr<ID3D12Device2>		  CreateDevice(ComPtr<IDXGIAdapter4> adapter);
+	void						  EnableDebugLayer();
+	ComPtr<IDXGIAdapter4>		  GetAdapter(bool useWarp);
 	
-	// DX12 Helpers
-	void EnableDebugLayer();
-	ComPtr<IDXGIAdapter4> GetAdapter(bool useWarp);
-	ComPtr<ID3D12Device2> CreateDevice(ComPtr<IDXGIAdapter4> adapter);
-	// --
-	DescriptorAllocation AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors = 1);
-	void ReleaseStaleDescriptors(uint64_t finishedFrame);
-	ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type, UINT32 numDescriptors);
-#if defined(USE_DESCRIPTOR_ALLOCAOR)
-	void UpdateRenderTargetViews();
-#else
-	void UpdateRenderTargetViews(ComPtr<ID3D12Device2> device, ComPtr<ID3D12DescriptorHeap> descriptorHeap);
-#endif
+	DescriptorAllocation		  AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors = 1);
+	void						  ReleaseStaleDescriptors(uint64_t finishedFrame);
+	ComPtr<ID3D12DescriptorHeap>  CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type, UINT32 numDescriptors);
 
-	// Get and Set
-	UINT32 GetClientWidth() const { return m_Window->GetClientWidth(); }
-	UINT32 GetClientHeight() const { return m_Window->GetClientHeight(); }
+	ComPtr<ID3D12Device2>		  GetDevice() { return m_d3d12Device; }
 	std::shared_ptr<CommandQueue> GetCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT) const;
-	UINT GetCurrentBackbufferIndex() const { return m_Window->GetCurrentBackBufferIndex(); }
-	ComPtr<ID3D12Resource> GetBackbuffer(UINT BackBufferIndex);
-	D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentBackbufferRTV();
-	double GetUpdateTotalTime() { return m_UpdateClock.GetTotalSeconds(); }
-	double GetRenderTotalTime() { return m_RenderClock.GetTotalSeconds(); }
-	std::shared_ptr<Window> GetWindow() { return m_Window; }
-	UINT GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE type) const;
-
-	// Support checks
+	UINT						  GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE type) const;
+	// --
+	uint64_t&					  GetFrameCount()	   { return m_FrameCount; }
+	
+	// SUPPORT checks
 	DXGI_SAMPLE_DESC GetMultisampleQualityLevels(DXGI_FORMAT format, UINT numSamples, D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE) const;
 
+public: // WINDOW
+	void SetFullscreen(bool fullscreen)		 { m_Window->SetFullscreen(fullscreen); }
+	void ToggleFullscreen()					 { m_Window->ToggleFullscreen(); }
+	void ToggleVSync()						 { m_Window->ToggleVSync(); }
+
+	std::shared_ptr<Window> GetWindow()		 { return m_Window; }
+
+	UINT32 GetClientWidth() const			 { return m_Window->GetClientWidth(); }
+	UINT32 GetClientHeight() const			 { return m_Window->GetClientHeight(); }
+	UINT   GetCurrentBackbufferIndex() const { return m_Window->GetCurrentBackBufferIndex(); }
+
 private:
-	// Singleton - private to prevent instantiation
+	// SINGLETON - private to prevent instantiation
 	Application(HINSTANCE hInstance);
 	~Application();
 
@@ -124,13 +107,6 @@ private:
 	std::shared_ptr<CommandQueue>		 m_ComputeCommandQueue	= nullptr;
 	std::shared_ptr<CommandQueue>		 m_CopyCommandQueue		= nullptr;
 										 
-	// Heap with RTVs					 
-	ComPtr<ID3D12DescriptorHeap>		 m_RTVDescriptorHeap;
-	UINT								 m_RTVDescriptorSize;
-										 
 	// Frametimes						 
-	HighResolutionClock					 m_UpdateClock;
-	HighResolutionClock					 m_RenderClock;
-										 
 	uint64_t							 m_FrameCount			= 0;
 };

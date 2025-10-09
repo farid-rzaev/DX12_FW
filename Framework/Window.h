@@ -31,9 +31,12 @@
 #include <wrl.h>
 using Microsoft::WRL::ComPtr;
 
+// Materials
+#include <Framework/Material/Texture.h>
+#include <Framework/Material/RenderTarget.h>
+
 // Window class name. Used for registering / creating the window.
 constexpr wchar_t WINDOW_CLASS_NAME[] = L"DX12RenderWindowClass";
-//const UINT8 NumFramesInFlight = 3;
 
 constexpr UINT8 NUM_FRAMES_IN_FLIGHT = 3;
 
@@ -42,39 +45,37 @@ class Window
 {
 public:
 	Window(UINT32 width, UINT32 height, bool vSync);
+	void InitAndCreate(HINSTANCE hInst, const wchar_t* windowTitle);
+	void Show() { ::ShowWindow(g_hWnd, SW_SHOW); }
 	virtual ~Window();
 	   
-	// Before creating an instance of an OS window, the window class 
-	// corresponding to that window must be registered. 
-	// The window class will be automatically unregistered 
-	// when the application terminates.
-	void RegisterWindowClass(HINSTANCE hInst);
-	HWND CreateWindow(HINSTANCE hInst, const wchar_t* windowTitle);
-	void CreateSwapChain(ComPtr<ID3D12CommandQueue> commandQueue);
-	
-	void ResizeBackBuffers(UINT32 width, UINT32 height);
-	ComPtr<ID3D12Resource> UpdateBackBufferCache(UINT8 index);
-	UINT8 Present();
+	void Resize(UINT32 width, UINT32 height);
+	UINT Present(const Texture& texture = Texture());
 
-	void Show() { ::ShowWindow(g_hWnd, SW_SHOW); }
+public:   // SET / GET
 	void SetFullscreen(bool fullscreen);
 	void ToggleFullscreen() { SetFullscreen(!g_Fullscreen); }
 	void ToggleVSync() { m_VSync = !m_VSync; }
 
-public:
 	HWND GetHWND() { return g_hWnd; }
-	// Poiter injections
-	void SetUserPtr(void* userPtr);
-	void SetCustomWndProc(WNDPROC wndProc);
 	UINT32 GetClientWidth() const { return m_ClientWidth; }
 	UINT32 GetClientHeight() const { return m_ClientHeight; }
 	void SetClientWidth(UINT32 width) { m_ClientWidth = width; }
 	void SetClientHeight(UINT32 height) { m_ClientHeight = height; }
-	
-	UINT GetCurrentBackBufferIndex() const { return m_SwapChain->GetCurrentBackBufferIndex(); }
-	ComPtr<ID3D12Resource> GetBackBuffer(UINT index) { return m_BackBuffers[index]; }
 
-protected:
+	UINT GetCurrentBackBufferIndex() const { return m_CurrentBackBufferIndex; }
+	const RenderTarget& GetRenderTarget() const;
+
+public:    // POINTER INJECTION
+	void SetUserPtr(void* userPtr);
+	void SetCustomWndProc(WNDPROC wndProc);
+
+protected: // HELPERS
+	void RegisterWindowClass(HINSTANCE hInst);
+	HWND CreateWindow(HINSTANCE hInst, const wchar_t* windowTitle);
+	void CreateSwapChain();
+	void UpdateRenderTargetViews();
+
 	// Variable refresh rate displays (NVidia's G-Sync and AMD's FreeSync) require 
 	//		tearing to be enabled in the DirectX 12 application to function correctly. 
 	// This feature is also known as "vsync-off".
@@ -82,7 +83,7 @@ protected:
 
 private:
 	// Windows should not be copied.
-	Window(const Window& Window) = delete;
+	Window(const Window& Window)			= delete;
 	Window& operator=(const Window& Window) = delete;
 
 private:
@@ -90,13 +91,22 @@ private:
 	HWND g_hWnd = nullptr;
 	UINT32 m_ClientWidth = 1920;
 	UINT32 m_ClientHeight = 1080;
+	
+	UINT64	 m_FenceValues[NUM_FRAMES_IN_FLIGHT];
+	uint64_t m_FrameValues[NUM_FRAMES_IN_FLIGHT];
+	UINT	 m_CurrentBackBufferIndex;
+
 	// Can be toggled with the Alt+Enter or F11
 	bool g_Fullscreen = false;
 	// Window rectangle (used to toggle fullscreen state).
 	RECT g_WindowRect;
+
 	bool m_TearingSupported = false;
 	bool m_VSync = true;
 
 	ComPtr<IDXGISwapChain4> m_SwapChain;
-	ComPtr<ID3D12Resource> m_BackBuffers[NUM_FRAMES_IN_FLIGHT];
+
+	Texture m_BackBufferTextures[NUM_FRAMES_IN_FLIGHT];
+	// Mutable to allow modification in a const function.
+	mutable RenderTarget m_RenderTarget;
 };

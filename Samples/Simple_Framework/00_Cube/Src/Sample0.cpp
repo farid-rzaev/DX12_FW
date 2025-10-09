@@ -48,43 +48,6 @@ static WORD g_Indicies[36] =
 
 
 // =====================================================================================
-//									STATIC - INIT
-// =====================================================================================
-
-
-#if 0
-static Sample0* gs_pSingelton = nullptr;
-
-void Sample0::Create(HINSTANCE hInstance, const wchar_t* windowTitle, int width, int height, bool vSync)
-{
-	if (!gs_pSingelton)
-	{
-		gs_pSingelton = new Sample0(hInstance);
-		gs_pSingelton->Initialize(windowTitle, width, height, vSync);
-	}
-}
-
-Sample0& Sample0::Get()
-{
-	assert(gs_pSingelton);
-	return *gs_pSingelton;
-}
-
-void Sample0::Destroy()
-{
-	if (gs_pSingelton)
-	{
-		//assert(gs_Windows.empty() && gs_WindowByName.empty() &&
-		//	"All windows should be destroyed before destroying the application instance.");
-
-		delete gs_pSingelton;
-		gs_pSingelton = nullptr;
-	}
-}
-#endif
-
-
-// =====================================================================================
 //										Run 
 // =====================================================================================
 

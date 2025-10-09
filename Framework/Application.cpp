@@ -21,7 +21,7 @@
 static Application*		gs_pSingleton = nullptr;
 
 // =====================================================================================
-//									STATIC - INIT
+//										STATIC 
 // =====================================================================================
 
 
@@ -33,11 +33,6 @@ void Application::Create(HINSTANCE hInstance)
 	}
 }
 
-Application& Application::Get()
-{
-	assert(gs_pSingleton);
-	return *gs_pSingleton;
-}
 
 void Application::Destroy()
 {
@@ -51,8 +46,16 @@ void Application::Destroy()
 	}
 }
 
+
+Application& Application::Get()
+{
+	assert(gs_pSingleton);
+	return *gs_pSingleton;
+}
+
+
 // =====================================================================================
-//										Init 
+//								    Init & Run
 // =====================================================================================
 
 
@@ -71,6 +74,12 @@ Application::Application(HINSTANCE hInstance) :
 	// when resizing the client area of the window instead of scaling the client 
 	// area based on the DPI scaling settings.
 	SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+
+	// Create descriptor allocators
+	for (int i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i)
+	{
+		m_DescriptorAllocators[i] = std::make_unique<DescriptorAllocator>(static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(i));
+	}
 }
 
 
@@ -99,44 +108,10 @@ bool Application::Initialize(const wchar_t* windowTitle, int width, int height, 
 	if (m_DirectCommandQueue)
 	{
 		m_Window = std::make_shared<Window>(width, height, vSync);
+		m_Window->InitAndCreate(m_hInstance, windowTitle);
 		
-		m_Window->RegisterWindowClass(m_hInstance);
-		m_Window->CreateWindow(m_hInstance, windowTitle);
-
-		m_Window->CreateSwapChain(m_DirectCommandQueue->GetD3D12CommandQueue());
+		m_Window->Show();
 	}
-
-#if defined(USE_DESCRIPTOR_ALLOCAOR)
-	// Create descriptor allocators
-	for (int i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i)
-	{
-		m_DescriptorAllocators[i] = std::make_unique<DescriptorAllocator>(static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(i));
-	}
-
-	m_allocationRTV = AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, NUM_FRAMES_IN_FLIGHT);
-
-	UpdateRenderTargetViews();
-#else
-	//  Create RTVs in DescriptorHeap
-	{
-		m_RTVDescriptorHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, NUM_FRAMES_IN_FLIGHT);
-		// The size of a descriptor in a descriptor heap is vendor specific 
-		//   (Intel, NVidia, and AMD may store descriptors differently). 
-		// In order to correctly offset the index into the descriptor heap, 
-		//   the size of a single element in the descriptor heap needs 
-		//   to be queried during initialization - m_RTVDescriptorSize.
-		m_RTVDescriptorSize = m_d3d12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-
-		// Render target views are fill into the descriptor heap
-		UpdateRenderTargetViews(m_d3d12Device, m_RTVDescriptorHeap);
-	}
-#endif
-
-	// Show Window
-	m_Window->Show();
-
-	// Initialize frame counter
-	m_FrameCount = 0;
 
 	return true;
 }
@@ -182,109 +157,6 @@ int Application::Run()
 
 
 // =====================================================================================
-//							  Update & Render & Resize
-// =====================================================================================
-
-
-// For this lesson, the functuion ony display's the frame-rate each second in the debug output 
-//		in Visual Studio.
-void Application::Update()
-{
-	// Timer
-	m_UpdateClock.Tick();
-
-	static uint64_t frameCount = 0;
-	static double totalTime = 0.0;
-
-	totalTime += m_UpdateClock.GetDeltaSeconds();
-	frameCount++;
-
-	// The frame-rate is printed to the debug output only once per second.
-	if (totalTime > 1.0)
-	{
-		wchar_t buffer[500];
-		auto fps = frameCount / totalTime;
-		swprintf(buffer, 500, L"FPS: %f\n", fps);
-		OutputDebugStringW(buffer);
-
-		frameCount = 0;
-		totalTime = 0.0;
-	}
-}
-
-
-void Application::Render()
-{
-	// Timer
-	m_RenderClock.Tick();
-}
-
-
-// A resize event is triggered when the window is created the first time. 
-// It is also triggered when switching to full-screen mode or if the user 
-// resizes the window by dragging the window border frame while in windowed mode.
-// The Resize function will resize the swap chain buffers if the client area of 
-// the window changes.
-void Application::Resize(UINT32 width, UINT32 height)
-{
-	if (m_Window->GetClientWidth() != width || m_Window->GetClientHeight() != height)
-	{
-		// Flush the GPU Command Queue to make sure the swap chain's back buffers
-		// are not being referenced by an in-flight command list.
-		Flush();
-
-		m_Window->ResizeBackBuffers(width, height);
-
-
-#if defined(USE_DESCRIPTOR_ALLOCAOR)
-		// After the swap chain buffers have been resized, the descriptors 
-		// that refer to those buffers needs to be updated. 
-		UpdateRenderTargetViews();
-#else
-		// After the swap chain buffers have been resized, the descriptors 
-		// that refer to those buffers needs to be updated. 
-		UpdateRenderTargetViews(m_d3d12Device, m_RTVDescriptorHeap);
-#endif
-	}
-}
-
-#if defined(USE_DESCRIPTOR_ALLOCAOR)
-// A render target view (RTV) describes a resource that can be attached to a bind slot of the output merger stage
-void Application::UpdateRenderTargetViews()
-{
-	for (int i = 0; i < NUM_FRAMES_IN_FLIGHT; ++i)
-	{
-		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_allocationRTV.GetDescriptorHandle(i);
-	
-		ComPtr<ID3D12Resource> backBuffer = m_Window->UpdateBackBufferCache(i);
-
-		// nullptr - description is used to create a default descriptor for the resource
-		m_d3d12Device->CreateRenderTargetView(backBuffer.Get(), nullptr, rtvHandle);
-	}
-}
-#else
-// A render target view (RTV) describes a resource that can be attached to a bind slot of the output merger stage
-void Application::UpdateRenderTargetViews(ComPtr<ID3D12Device2> device, ComPtr<ID3D12DescriptorHeap> descriptorHeap)
-{
-	// The size of a single descriptor in a descriptor heap is vendor specific and is queried 
-	//		using the ID3D12Device::GetDescriptorHandleIncrementSize()
-	auto rtvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-
-	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(descriptorHeap->GetCPUDescriptorHandleForHeapStart());
-
-	for (int i = 0; i < NUM_FRAMES_IN_FLIGHT; ++i)
-	{
-		ComPtr<ID3D12Resource> backBuffer = m_Window->UpdateBackBufferCache(i);
-		// nullptr - description is used to create a default descriptor for the resource
-		device->CreateRenderTargetView(backBuffer.Get(), nullptr, rtvHandle);
-
-		rtvHandle.Offset(rtvDescriptorSize);
-	}
-}
-#endif
-
-
-// =====================================================================================
 //									   Sync
 // =====================================================================================
 
@@ -314,6 +186,72 @@ void Application::Flush()
 // =====================================================================================
 //								DX12 Helper Funcs
 // =====================================================================================
+//								    Device
+// =====================================================================================
+
+// The DirectX 12 device is used to create resources (such as textures and buffers, command lists,
+//		command queues, fences, heaps, etc...). 
+// The DirectX 12 device is not directly used for issuing draw or dispatch commands. 
+// The DirectX 12 device can be considered a memory context that tracks allocations in GPU memory.
+// Destroying the DirectX 12 device will cause all of the resources allocated by the device to become invalid.
+// If the device is destroyed before all of the resources that were created by the device, then the 
+//		debug layer will issue warnings about those objects that are still being referenced.
+ComPtr<ID3D12Device2> Application::CreateDevice(ComPtr<IDXGIAdapter4> adapter)
+{
+	// D3D_FEATURE_LEVEL  - MinimumFeatureLevel: The minimum D3D_FEATURE_LEVEL 
+	//		required for successful device creation.
+	ComPtr<ID3D12Device2> d3d12Device2;
+	ThrowIfFailed(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&d3d12Device2)));
+	//NAME_D3D12_OBJECT(d3d12Device2);
+
+	// 1) Enable debug messages in debug mode.
+	// 2) ID3D12InfoQueue interface is used to enable break points based on the severity
+	//		of the message and the ability to filter certain messages from being generated.
+	// 3) SetBreakOnSeverity method sets a message severity level to break on (while the 
+	//		application is attached to a debugger) when a message with that severity level 
+	//		passes through the storage filter.
+	// 4) It may not be practical (or feasible) to address all of the possible warnings that can occur.
+	//	  In such a case, some warning messages can be ignored. A D3D12_INFO_QUEUE_FILTER can be specified 
+	//		to ignore certain warning messages that are generated by the debug layer.
+#if defined(_DEBUG)
+	ComPtr<ID3D12InfoQueue> pInfoQueue;
+	if (SUCCEEDED(d3d12Device2.As(&pInfoQueue)))
+	{
+		pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
+		pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
+		pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE);
+
+		// Suppress whole categories of messages
+		//D3D12_MESSAGE_CATEGORY Categories[] = {};
+
+		// Suppress messages based on their severity level
+		D3D12_MESSAGE_SEVERITY Severities[] =
+		{
+			D3D12_MESSAGE_SEVERITY_INFO
+		};
+
+		// Suppress individual messages by their ID
+		D3D12_MESSAGE_ID DenyIds[] = {
+			D3D12_MESSAGE_ID_COPY_DESCRIPTORS_INVALID_RANGES,				// This started happening after updating to an RTX 2080 Ti. I believe this to be an error in the validation layer itself.
+			D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,   // I'm really not sure how to avoid this message.
+			D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,                         // This warning occurs when using capture frame while graphics debugging.
+			D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,                       // This warning occurs when using capture frame while graphics debugging.
+		};
+
+		D3D12_INFO_QUEUE_FILTER NewFilter = {};
+		//NewFilter.DenyList.NumCategories = _countof(Categories);
+		//NewFilter.DenyList.pCategoryList = Categories;
+		NewFilter.DenyList.NumSeverities = _countof(Severities);
+		NewFilter.DenyList.pSeverityList = Severities;
+		NewFilter.DenyList.NumIDs = _countof(DenyIds);
+		NewFilter.DenyList.pIDList = DenyIds;
+
+		ThrowIfFailed(pInfoQueue->PushStorageFilter(&NewFilter));
+	}
+#endif
+
+	return d3d12Device2;
+}
 
 
 void Application::EnableDebugLayer()
@@ -393,69 +331,9 @@ ComPtr<IDXGIAdapter4> Application::GetAdapter(bool useWarp)
 }
 
 
-// The DirectX 12 device is used to create resources (such as textures and buffers, command lists,
-//		command queues, fences, heaps, etc...). 
-// The DirectX 12 device is not directly used for issuing draw or dispatch commands. 
-// The DirectX 12 device can be considered a memory context that tracks allocations in GPU memory.
-// Destroying the DirectX 12 device will cause all of the resources allocated by the device to become invalid.
-// If the device is destroyed before all of the resources that were created by the device, then the 
-//		debug layer will issue warnings about those objects that are still being referenced.
-ComPtr<ID3D12Device2> Application::CreateDevice(ComPtr<IDXGIAdapter4> adapter)
-{
-	// D3D_FEATURE_LEVEL  - MinimumFeatureLevel: The minimum D3D_FEATURE_LEVEL 
-	//		required for successful device creation.
-	ComPtr<ID3D12Device2> d3d12Device2;
-	ThrowIfFailed(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&d3d12Device2)));
-	//NAME_D3D12_OBJECT(d3d12Device2);
-
-	// 1) Enable debug messages in debug mode.
-	// 2) ID3D12InfoQueue interface is used to enable break points based on the severity
-	//		of the message and the ability to filter certain messages from being generated.
-	// 3) SetBreakOnSeverity method sets a message severity level to break on (while the 
-	//		application is attached to a debugger) when a message with that severity level 
-	//		passes through the storage filter.
-	// 4) It may not be practical (or feasible) to address all of the possible warnings that can occur.
-	//	  In such a case, some warning messages can be ignored. A D3D12_INFO_QUEUE_FILTER can be specified 
-	//		to ignore certain warning messages that are generated by the debug layer.
-#if defined(_DEBUG)
-	ComPtr<ID3D12InfoQueue> pInfoQueue;
-	if (SUCCEEDED(d3d12Device2.As(&pInfoQueue)))
-	{
-		pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
-		pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
-		pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE);
-
-		// Suppress whole categories of messages
-		//D3D12_MESSAGE_CATEGORY Categories[] = {};
-
-		// Suppress messages based on their severity level
-		D3D12_MESSAGE_SEVERITY Severities[] =
-		{
-			D3D12_MESSAGE_SEVERITY_INFO
-		};
-
-		// Suppress individual messages by their ID
-		D3D12_MESSAGE_ID DenyIds[] = {
-			D3D12_MESSAGE_ID_COPY_DESCRIPTORS_INVALID_RANGES,				// This started happening after updating to an RTX 2080 Ti. I believe this to be an error in the validation layer itself.
-			D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,   // I'm really not sure how to avoid this message.
-			D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,                         // This warning occurs when using capture frame while graphics debugging.
-			D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,                       // This warning occurs when using capture frame while graphics debugging.
-		};
-
-		D3D12_INFO_QUEUE_FILTER NewFilter = {};
-		//NewFilter.DenyList.NumCategories = _countof(Categories);
-		//NewFilter.DenyList.pCategoryList = Categories;
-		NewFilter.DenyList.NumSeverities = _countof(Severities);
-		NewFilter.DenyList.pSeverityList = Severities;
-		NewFilter.DenyList.NumIDs = _countof(DenyIds);
-		NewFilter.DenyList.pIDList = DenyIds;
-
-		ThrowIfFailed(pInfoQueue->PushStorageFilter(&NewFilter));
-	}
-#endif
-
-	return d3d12Device2;
-}
+// =====================================================================================
+//								    DESCRIPTORs
+// =====================================================================================
 
 // Allocate a number of CPU visible descriptors.
 DescriptorAllocation Application::AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors)
@@ -493,7 +371,7 @@ ComPtr<ID3D12DescriptorHeap> Application::CreateDescriptorHeap(D3D12_DESCRIPTOR_
 
 
 // =====================================================================================
-//									Get and Set
+//									GET and SET
 // =====================================================================================
 
 
@@ -519,34 +397,13 @@ std::shared_ptr<CommandQueue> Application::GetCommandQueue(D3D12_COMMAND_LIST_TY
 }
 
 
-ComPtr<ID3D12Resource> Application::GetBackbuffer(UINT BackBufferIndex)
-{
-	return m_Window->GetBackBuffer(BackBufferIndex);
-}
-
-
-D3D12_CPU_DESCRIPTOR_HANDLE Application::GetCurrentBackbufferRTV()
-{
-#if defined(USE_DESCRIPTOR_ALLOCAOR)
-	UINT bbIndex = GetCurrentBackbufferIndex();
-	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_allocationRTV.GetDescriptorHandle(bbIndex);
-#else
-	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(
-		m_RTVDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
-		GetCurrentBackbufferIndex(), m_RTVDescriptorSize
-	);
-#endif
-	return rtvHandle;
-}
-
-
 UINT Application::GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE type) const
 {
 	return m_d3d12Device->GetDescriptorHandleIncrementSize(type);
 }
 
 // =====================================================================================
-//									Support checks
+//									SUPPORT checks
 // =====================================================================================
 
 

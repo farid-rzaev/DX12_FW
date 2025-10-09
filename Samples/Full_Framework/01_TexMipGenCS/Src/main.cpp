@@ -16,21 +16,17 @@ void ReportLiveObjects()
 
 int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLine, int nCmdShow)
 {
+	const wchar_t* windowTitle = L"Learning DirectX 12";
 	int retCode = 0;
 
-#if 0
-	Sample1::Create(hInstance, windowTitle, 1280, 720, false);
+	Application::Create(hInstance);
 	{
-		Sample1::Get().Run();
+		std::shared_ptr<Sample1> sample = std::make_shared<Sample1>();
+		sample->Initialize(windowTitle, 1280, 720, false);
+
+		sample->Run();
 	}
-	Sample1::Destroy();
-#else
-	Sample1 sample(hInstance);
-	sample.Initialize(L"Learning DirectX 12 - Lesson 3", 1280, 720, false);
-	{
-		retCode = sample.Run();
-	}
-#endif
+	Application::Destroy();
 
 	// ReportLiveObjects
 	atexit(&ReportLiveObjects);

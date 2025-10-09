@@ -8,6 +8,8 @@
 
 #include <string>
 
+#include <filesystem>
+
 // From DXSampleHelper.h 
 // Source: https://github.com/Microsoft/DirectX-Graphics-Samples
 inline void ThrowIfFailed(HRESULT hr, char const* const message = "")
@@ -42,6 +44,38 @@ inline std::wstring GetExePath()
 	return std::wstring(L"");
 }
 
+
+inline std::filesystem::path FindSolutionDir(const std::wstring& startDir, std::wstring key1 = L".git", std::wstring key2 = L"DX12_FW_SLN.sln")
+{
+    std::filesystem::path current = startDir;
+
+    while (!current.empty())
+    {
+        if (std::filesystem::exists(current / key1) || std::filesystem::exists(current / key2))
+        {
+            return current;
+        }
+
+        current = current.parent_path();
+    }
+
+    return {};
+}
+
+
+inline void SetWorkingDirToSolutionDir(const std::filesystem::path& startDir)
+{
+    if (!startDir.empty())
+    {
+        std::filesystem::path solution_root = FindSolutionDir(startDir);
+        ThrowIfFailed(solution_root.empty() == false, "Failed to find a root directory for assets.");
+
+        if (!solution_root.empty())
+        {
+            std::filesystem::current_path(solution_root);
+        }
+    }
+}
 
 // Hashers for view descriptions.
 namespace std

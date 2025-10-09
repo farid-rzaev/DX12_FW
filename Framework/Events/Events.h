@@ -153,6 +153,7 @@ public:
 
 };
 
+#if 0
 class UpdateEventArgs : public EventArgs
 {
 public:
@@ -161,7 +162,8 @@ public:
         : ElapsedTime(fDeltaTime)
         , TotalTime(fTotalTime)
         , FrameNumber(frameNumber)
-    {}
+    {
+    }
 
     double ElapsedTime;
     double TotalTime;
@@ -176,12 +178,15 @@ public:
         : ElapsedTime(fDeltaTime)
         , TotalTime(fTotalTime)
         , FrameNumber(frameNumber)
-    {}
+    {
+    }
 
     double ElapsedTime;
     double TotalTime;
     uint64_t FrameNumber;
 };
+#endif // 0
+
 
 class UserEventArgs : public EventArgs
 {

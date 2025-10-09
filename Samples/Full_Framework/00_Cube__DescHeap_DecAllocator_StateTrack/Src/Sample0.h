@@ -10,13 +10,6 @@ class Sample0 : public Game
 // ------------------------------------------------------------------------------------------
 //									Function members
 // ------------------------------------------------------------------------------------------
-public: // STATIC
-#if 0
-	static void Create(HINSTANCE hInstance, const wchar_t* windowTitle, int width, int height, bool vSync);
-	static void Destroy();
-	static Sample0& Get();
-#endif
-
 public:
 	// Init 
 	Sample0();
@@ -27,9 +20,9 @@ public:
 	virtual int Run() final;
 
 protected:
-	virtual void Update() final;
-	virtual void Render() final;
-	virtual void Resize(UINT32 width, UINT32 height) final;
+	virtual void OnUpdate() final;
+	virtual void OnRender() final;
+	virtual void OnResize(ResizeEventArgs& e) final;
 
 	// Sample
 	bool LoadContent();

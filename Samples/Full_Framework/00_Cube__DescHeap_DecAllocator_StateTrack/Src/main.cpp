@@ -17,10 +17,9 @@ void ReportLiveObjects()
 
 int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLine, int nCmdShow)
 {
-	const wchar_t* windowTitle = L"Learning DirectX 12";
+	const wchar_t* windowTitle = L"Sample 0 - Cube. Using DescriptorAllocator and StateTracker.";
 	int retCode = 0;
 
-#if 1
 	Application::Create(hInstance);
 	{
 		std::shared_ptr<Sample0> sample = std::make_shared<Sample0>();
@@ -29,13 +28,6 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
 		sample->Run();
 	}
 	Application::Destroy();
-#else
-	std::shared_ptr<Sample0> sample = std::make_shared<Sample0>(hInstance);
-	sample->Initialize(windowTitle, 1280, 720, false);
-	{
-		retCode = sample->Run();
-	}
-#endif
 
 	// ReportLiveObjects
 	atexit(&ReportLiveObjects);
