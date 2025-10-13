@@ -91,6 +91,9 @@
     <ClCompile Include="Framework\3RD_Party\Timer\HighResolutionClock.cpp">
       <Filter>Src\3RD_Party\Timer</Filter>
     </ClCompile>
+    <ClCompile Include="Framework\GUI.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Framework\Application.h">
@@ -209,6 +212,9 @@
     </ClInclude>
     <ClInclude Include="Framework\3RD_Party\Helpers.h">
       <Filter>Src\3RD_Party</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\GUI.h">
+      <Filter>Src</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

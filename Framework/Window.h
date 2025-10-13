@@ -35,6 +35,8 @@ using Microsoft::WRL::ComPtr;
 #include <Framework/Material/Texture.h>
 #include <Framework/Material/RenderTarget.h>
 
+#include <Framework/GUI.h>
+
 // Window class name. Used for registering / creating the window.
 constexpr wchar_t WINDOW_CLASS_NAME[] = L"DX12RenderWindowClass";
 
@@ -49,6 +51,7 @@ public:
 	void Show() { ::ShowWindow(g_hWnd, SW_SHOW); }
 	virtual ~Window();
 	   
+	void Update();
 	void Resize(UINT32 width, UINT32 height);
 	UINT Present(const Texture& texture = Texture());
 
@@ -57,7 +60,7 @@ public:   // SET / GET
 	void ToggleFullscreen() { SetFullscreen(!g_Fullscreen); }
 	void ToggleVSync() { m_VSync = !m_VSync; }
 
-	HWND GetHWND() { return g_hWnd; }
+	HWND GetWindowHandle() { return g_hWnd; }
 	UINT32 GetClientWidth() const { return m_ClientWidth; }
 	UINT32 GetClientHeight() const { return m_ClientHeight; }
 	void SetClientWidth(UINT32 width) { m_ClientWidth = width; }
@@ -109,4 +112,6 @@ private:
 	Texture m_BackBufferTextures[NUM_FRAMES_IN_FLIGHT];
 	// Mutable to allow modification in a const function.
 	mutable RenderTarget m_RenderTarget;
+
+	GUI m_GUI;
 };

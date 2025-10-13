@@ -5,6 +5,12 @@
 #include <DirectXMath.h>
 
 // =====================================================================================
+//									   Extern 
+// =====================================================================================
+
+extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+// =====================================================================================
 //										Init 
 // =====================================================================================
 
@@ -67,6 +73,8 @@ int Game::Run()
 
 void Game::OnUpdate()
 {
+    Application::Get().GetWindow()->Update();
+
     m_UpdateClock.Tick();
 }
 
@@ -166,12 +174,10 @@ MouseButtonEventArgs::MouseButton DecodeMouseButton(UINT messageID)
 // The window procedure handles any window messages sent to the application. 
 LRESULT CALLBACK Game::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-#if 0
     if (ImGui_ImplWin32_WndProcHandler(hwnd, message, wParam, lParam))
     {
         return true;
     }
-#endif // 0
 
     // Retrive from window injected Game the injected pointer
     Game* game = (Game*)GetWindowLongPtr(hwnd, GWLP_USERDATA);

@@ -124,14 +124,13 @@ Sample1::~Sample1()
 
 bool Sample1::Initialize(const wchar_t* windowTitle, int width, int height, bool vSync)
 {
-    m_Width = width; m_Height = height;
-
     if (!Game::Initialize(windowTitle, width, height, vSync)) return false;
 
-    m_Viewport = CD3DX12_VIEWPORT(0.0f, 0.0f, (float)width, (float)height);
+    ResizeEventArgs resizeEventArgs(width, height);
+    OnResize(resizeEventArgs);
+
     return true;
 }
-
 
 bool Sample1::LoadContent()
 {
@@ -145,7 +144,6 @@ bool Sample1::LoadContent()
     ThrowIfFailed(exe_path_str.empty() == false, "Can't find the .exe path!");
 
     SetWorkingDirToSolutionDir(exe_path_str);
-
 
     // Create a Cube mesh
     m_CubeMesh = Mesh::CreateCube( *commandList );
@@ -603,7 +601,7 @@ void Sample1::OnRender()
 
     commandQueue->ExecuteCommandList( commandList );
 
-    static bool showDemoWindow = false;
+    static bool showDemoWindow = true;
     if (showDemoWindow)
     {
         ImGui::ShowDemoWindow(&showDemoWindow);

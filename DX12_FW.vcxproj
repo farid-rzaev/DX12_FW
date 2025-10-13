@@ -106,6 +106,7 @@
     <ClCompile Include="Framework\DescriptorAllocatorPage.cpp" />
     <ClCompile Include="Framework\DynamicDescriptorHeap.cpp" />
     <ClCompile Include="Framework\Game.cpp" />
+    <ClCompile Include="Framework\GUI.cpp" />
     <ClCompile Include="Framework\Material\Buffer.cpp" />
     <ClCompile Include="Framework\Material\ByteAddressBuffer.cpp" />
     <ClCompile Include="Framework\Material\ConstantBuffer.cpp" />
@@ -146,6 +147,7 @@
     <ClInclude Include="Framework\Events\Events.h" />
     <ClInclude Include="Framework\Events\KeyCodes.h" />
     <ClInclude Include="Framework\Game.h" />
+    <ClInclude Include="Framework\GUI.h" />
     <ClInclude Include="Framework\Material\Buffer.h" />
     <ClInclude Include="Framework\Material\ByteAddressBuffer.h" />
     <ClInclude Include="Framework\Material\ConstantBuffer.h" />

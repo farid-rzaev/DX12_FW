@@ -38,11 +38,15 @@ void Window::InitAndCreate(HINSTANCE hInst, const wchar_t* windowTitle)
 	CreateSwapChain();
 
 	UpdateRenderTargetViews();
+
+	m_GUI.Initialize();
 }
 
 
 Window::~Window() 
 {
+	m_GUI.Destroy();
+
 	if (g_hWnd)
 	{
 		DestroyWindow(g_hWnd);
@@ -55,6 +59,10 @@ Window::~Window()
 //										MAIN 
 // =====================================================================================
 
+void Window::Update()
+{
+	m_GUI.NewFrame();
+}
 
 // A resize event is triggered when the window is created the first time. 
 // It is also triggered when switching to full-screen mode or if the user 
@@ -114,6 +122,8 @@ UINT Window::Present(const Texture& texture)
 
 	RenderTarget renderTarget;
 	renderTarget.AttachTexture(AttachmentPoint::Color0, backBuffer);
+
+	m_GUI.Render(commandList, renderTarget);
 
 	commandList->TransitionBarrier(backBuffer, D3D12_RESOURCE_STATE_PRESENT);
 	commandQueue->ExecuteCommandList(commandList);
@@ -297,8 +307,7 @@ void Window::CreateSwapChain()
 		nullptr,
 		&swapChain1));
 
-	// Disable the Alt+Enter fullscreen toggle feature. Switching to fullscreen
-	// will be handled manually.
+	// Disable the Alt+Enter fullscreen toggle feature. Switching to fullscreen will be handled manually.
 	ThrowIfFailed(dxgiFactory4->MakeWindowAssociation(g_hWnd, DXGI_MWA_NO_ALT_ENTER));
 
 	ThrowIfFailed(swapChain1.As(&m_SwapChain));
