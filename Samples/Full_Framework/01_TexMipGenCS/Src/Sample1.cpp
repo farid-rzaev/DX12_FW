@@ -615,7 +615,7 @@ static bool g_AllowFullscreenToggle = true;
 
 void Sample1::OnKeyPressed( KeyEventArgs& e )
 {
-    Game::OnKeyPressed( e );
+    Game::OnKeyPressed(e);
 
     Application* pApp = &Application::Get();
 
@@ -681,7 +681,7 @@ void Sample1::OnKeyPressed( KeyEventArgs& e )
 
 void Sample1::OnKeyReleased( KeyEventArgs& e )
 {
-    Game::OnKeyReleased( e );
+    Game::OnKeyReleased(e);
 
     switch ( e.Key )
     {
@@ -730,11 +730,11 @@ void Sample1::OnMouseMoved( MouseMotionEventArgs& e )
     {
         if ( e.LeftButton )
         {
-            m_Pitch -= e.RelY * mouseSpeed;
+            m_Pitch += e.RelY * mouseSpeed;
 
             m_Pitch = clamp( m_Pitch, -90.0f, 90.0f );
 
-            m_Yaw -= e.RelX * mouseSpeed;
+            m_Yaw += e.RelX * mouseSpeed;
         }
     }
 }
@@ -742,6 +742,8 @@ void Sample1::OnMouseMoved( MouseMotionEventArgs& e )
 
 void Sample1::OnMouseWheel( MouseWheelEventArgs& e )
 {
+    Game::OnMouseWheel(e);
+
     if ( !ImGui::GetIO().WantCaptureMouse )
     {
         auto fov = m_Camera.get_FoV();

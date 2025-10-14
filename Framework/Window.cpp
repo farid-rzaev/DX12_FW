@@ -45,8 +45,6 @@ void Window::InitAndCreate(HINSTANCE hInst, const wchar_t* windowTitle)
 
 Window::~Window() 
 {
-	m_GUI.Destroy();
-
 	if (g_hWnd)
 	{
 		DestroyWindow(g_hWnd);

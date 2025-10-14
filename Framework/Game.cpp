@@ -103,15 +103,20 @@ void Game::OnKeyReleased(KeyEventArgs& e)
 }
 
 
-void Game::OnMouseMoved(class MouseMotionEventArgs& e)
+void Game::OnMouseMoved(MouseMotionEventArgs& e)
 {
-	// By default, do nothing.
+    e.RelX = e.X - m_PreviousMouseX;
+    e.RelY = e.Y - m_PreviousMouseY;
+
+    m_PreviousMouseX = e.X;
+    m_PreviousMouseY = e.Y;
 }
 
 
 void Game::OnMouseButtonPressed(MouseButtonEventArgs& e)
 {
-	// By default, do nothing.
+    m_PreviousMouseX = e.X;
+    m_PreviousMouseY = e.Y;
 }
 
 

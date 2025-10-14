@@ -68,4 +68,7 @@ private:
 
 	HighResolutionClock m_UpdateClock;
 	HighResolutionClock m_RenderClock;
+
+	int m_PreviousMouseX;
+	int m_PreviousMouseY;
 };
