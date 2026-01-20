@@ -16,7 +16,7 @@ void ReportLiveObjects()
 
 int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLine, int nCmdShow)
 {
-	const wchar_t* windowTitle = L"Learning DirectX 12";
+	const wchar_t* windowTitle = L"Sample 1 - Texture wraper is used |AND| Texture MIPs are generated.";
 	int retCode = 0;
 
 	Application::Create(hInstance);

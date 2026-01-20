@@ -601,7 +601,7 @@ void Sample1::OnRender()
 
     commandQueue->ExecuteCommandList( commandList );
 
-    static bool showDemoWindow = true;
+    static bool showDemoWindow = false;
     if (showDemoWindow)
     {
         ImGui::ShowDemoWindow(&showDemoWindow);
