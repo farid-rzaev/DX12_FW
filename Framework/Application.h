@@ -63,15 +63,20 @@ public: // DX12 HELPERs
 	DXGI_SAMPLE_DESC GetMultisampleQualityLevels(DXGI_FORMAT format, UINT numSamples, D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE) const;
 
 public: // WINDOW
-	void SetFullscreen(bool fullscreen)		 { m_Window->SetFullscreen(fullscreen); }
-	void ToggleFullscreen()					 { m_Window->ToggleFullscreen(); }
-	void ToggleVSync()						 { m_Window->ToggleVSync(); }
+	bool IsFullscreen()							{ return m_Window->IsFullscreen(); }
+	void ToggleFullscreen()						{ m_Window->ToggleFullscreen(); }
+	void SetFullscreen(bool fullscreen)			{ m_Window->SetFullscreen(fullscreen); }
 
-	std::shared_ptr<Window> GetWindow()		 { return m_Window; }
+	bool IsVSync() const						{ return m_Window->IsVSync(); }
+	void ToggleVSync()							{ m_Window->ToggleVSync(); }
+	void SetVSync(bool vSync)					{ m_Window->SetVSync(vSync); }
 
-	UINT32 GetClientWidth() const			 { return m_Window->GetClientWidth(); }
-	UINT32 GetClientHeight() const			 { return m_Window->GetClientHeight(); }
-	UINT   GetCurrentBackbufferIndex() const { return m_Window->GetCurrentBackBufferIndex(); }
+	std::shared_ptr<Window> GetWindow()			{ return m_Window; }
+
+	UINT32 GetClientWidth() const				{ return m_Window->GetClientWidth(); }
+	UINT32 GetClientHeight() const				{ return m_Window->GetClientHeight(); }
+	UINT   GetCurrentBackbufferIndex() const	{ return m_Window->GetCurrentBackBufferIndex(); }
+	const RenderTarget& GetRenderTarget() const	{ return m_Window->GetRenderTarget(); }
 
 private:
 	// SINGLETON - private to prevent instantiation

@@ -56,14 +56,18 @@ public:
 	UINT Present(const Texture& texture = Texture());
 
 public:   // SET / GET
+	bool IsFullscreen() const			{ return g_Fullscreen; }
+	void ToggleFullscreen()				{ SetFullscreen(!g_Fullscreen); }
 	void SetFullscreen(bool fullscreen);
-	void ToggleFullscreen() { SetFullscreen(!g_Fullscreen); }
-	void ToggleVSync() { m_VSync = !m_VSync; }
 
-	HWND GetWindowHandle() { return g_hWnd; }
-	UINT32 GetClientWidth() const { return m_ClientWidth; }
-	UINT32 GetClientHeight() const { return m_ClientHeight; }
-	void SetClientWidth(UINT32 width) { m_ClientWidth = width; }
+	bool IsVSync() const				{ return m_VSync; }
+	void ToggleVSync()					{ m_VSync = !m_VSync; }
+	void SetVSync(bool vSync)			{ m_VSync = vSync; }
+
+	HWND GetWindowHandle()				{ return g_hWnd; }
+	UINT32 GetClientWidth() const		{ return m_ClientWidth; }
+	UINT32 GetClientHeight() const		{ return m_ClientHeight; }
+	void SetClientWidth(UINT32 width)	{ m_ClientWidth = width; }
 	void SetClientHeight(UINT32 height) { m_ClientHeight = height; }
 
 	UINT GetCurrentBackBufferIndex() const { return m_CurrentBackBufferIndex; }
@@ -91,9 +95,9 @@ private:
 
 private:
 	// Window handle
-	HWND g_hWnd = nullptr;
-	UINT32 m_ClientWidth = 1920;
-	UINT32 m_ClientHeight = 1080;
+	HWND     g_hWnd = nullptr;
+	UINT32   m_ClientWidth = 1920;
+	UINT32   m_ClientHeight = 1080;
 	
 	UINT64	 m_FenceValues[NUM_FRAMES_IN_FLIGHT];
 	uint64_t m_FrameValues[NUM_FRAMES_IN_FLIGHT];
