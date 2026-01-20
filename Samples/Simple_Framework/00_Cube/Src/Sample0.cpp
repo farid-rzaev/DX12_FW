@@ -3,6 +3,9 @@
 #include "FrameworkSimple/Helpers.h"
 
 #include <d3dcompiler.h>
+#include <cstdint>
+#include <memory>
+#include <cstring>
 
 
 // =====================================================================================
@@ -107,6 +110,19 @@ void Sample0::UpdateBufferResource(
 
 	CD3DX12_HEAP_PROPERTIES defaultHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
 	CD3DX12_RESOURCE_DESC	descBuffer = CD3DX12_RESOURCE_DESC::Buffer(bufferSize, flags);
+
+	// Even though the sate of the resource has to be set to D3D12_RESOURCE_STATE_COPY_DEST, we can't do it here as:
+	//		1. COPY command lists do NOT support the full resource state/barrier model;
+	//		2. COPY command lists can only work with resources in D3D12_RESOURCE_STATE_COMMON (which maps to D3D12_BARRIER_LAYOUT_COMMON);
+	//		3. When you call ResourceBarrier() on a COPY command list to transition to COPY_DEST, D3D12 creates a "legacy" barrier layout
+	//				(D3D12_BARRIER_LAYOUT_LEGACY_COPY_DEST) which is incompatible with COPY command lists.
+	// --
+	// The right solution is to create the resource in D3D12_RESOURCE_STATE_COMMON state.
+	// Resources in D3D12_RESOURCE_STATE_COMMON are implicitly promoted to COPY_DEST or COPY_SOURCE during copy operations on COPY queues. So:
+	//		1. After CreateCommittedResource(...D3D12_RESOURCE_STATE_COMMON...) => UpdateSubresources will work correctly. The resource will implicitly be promoted to COPY_DEST during the copy;
+	//		2. After the copy, resource returns to COMMON state automatically.
+	// --
+	// This Only Works on COPY Queues! On DIRECT or COMPUTE queues, you must use explicit barriers.
 
 	// Create a committed resource for the GPU resource in a default heap.
 	ThrowIfFailed(device->CreateCommittedResource(

@@ -77,6 +77,7 @@ bool GUI::Initialize()
     subresourceData.SlicePitch = slicePitch;
 
     commandList->CopyTextureSubresource( *m_FontTexture, 0, 1, &subresourceData );
+
     commandList->GenerateMips( *m_FontTexture );
 
     commandQueue->ExecuteCommandList( commandList );

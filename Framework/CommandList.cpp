@@ -722,9 +722,26 @@ void CommandList::CopyTextureSubresource( Texture& texture, uint32_t firstSubres
 
     if ( destinationResource )
     {
-        // Resource must be in the copy-destination state.
-        TransitionBarrier( texture, D3D12_RESOURCE_STATE_COPY_DEST );
-        FlushResourceBarriers();
+        // Only transition NON COPY command list. COPY command lists rely on implicit promotion from COMMON to COPY_DEST
+        if (m_d3d12CommandListType != D3D12_COMMAND_LIST_TYPE_COPY)
+        {
+            // Even though the sate of the destinationResource has to be set to D3D12_RESOURCE_STATE_COPY_DEST, we can't do it for COPY command lists: 
+	        //		1. COPY command lists do NOT support the full resource state/barrier model;
+	        //		2. COPY command lists can only work with resources in D3D12_RESOURCE_STATE_COMMON (which maps to D3D12_BARRIER_LAYOUT_COMMON);
+	        //		3. When you call ResourceBarrier() on a COPY command list to transition to COPY_DEST, D3D12 creates a "legacy" barrier layout 
+	        //				(D3D12_BARRIER_LAYOUT_LEGACY_COPY_DEST) which is incompatible with COPY command lists.
+	        // --
+	        // The right solution is to create the resource in D3D12_RESOURCE_STATE_COMMON state.
+	        // Resources in D3D12_RESOURCE_STATE_COMMON are implicitly promoted from COMMON to COPY_DEST or COPY_SOURCE during copy operations on COPY queues. So:
+	        //		1. After CreateCommittedResource(...D3D12_RESOURCE_STATE_COMMON...) => UpdateSubresources will work correctly. The resource will implicitly be promoted to COPY_DEST during the copy;
+	        //		2. After the copy, resource returns to COMMON state automatically.
+	        // --
+            // This Only Works on COPY Queues! On DIRECT or COMPUTE queues, you must use explicit barriers
+
+            // Resource must be in the copy-destination state.
+            TransitionBarrier(texture, D3D12_RESOURCE_STATE_COPY_DEST);
+            FlushResourceBarriers();
+        }
 
         UINT64 requiredSize = GetRequiredIntermediateSize( destinationResource.Get(), firstSubresource, numSubresources );
 
