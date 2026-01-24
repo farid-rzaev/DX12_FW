@@ -140,24 +140,31 @@ uint64_t CommandQueue::ExecuteCommandLists(const std::vector<std::shared_ptr<Com
 {
 	ResourceStateTracker::Lock();
 
-	// Command lists that need to put back on the command list queue.
-	std::vector<std::shared_ptr<CommandList> > toBeQueued;
-	toBeQueued.reserve(commandLists.size() * 2);        // 2x since each command list will have a pending command list.
+	// (I) Main D3D12 command lists to be executed.
+	std::vector<ID3D12CommandList*> d3d12CommandLists;
+	d3d12CommandLists.reserve(commandLists.size() * 2); // 2x size as each command list have a pendingBarriers command list (with barriers).
 
-	// Generate mips command lists:
-	// - storing them separatemy as they will be executed in a different (COMPUTE) queue
+	// (I.1) A copy of Main command lists above but wrapped with CommandList:
+	//		1. Used to queue CLs into m_InFlightCommandLists;
+	//		2. Execute won't be called on them;
+	//		3. It's needed to keep track of CommandList in flught:
+	//				a) to be able to RESET them when execution is finished;
+	//				b) put put them back to m_AvailableCommandLists.
+	std::vector<std::shared_ptr<CommandList> > toBeQueued;
+	toBeQueued.reserve(commandLists.size() * 2);        //  2x size as each command list have a pendingBarriers command list (with barriers).
+
+	// (II) Secondary COMPUTE command lists. 
+	//		1. Specifically for GenerateMips operations.
+	//		2. Storing them separatemy as they will be executed in a different (COMPUTE) queue
 	std::vector<std::shared_ptr<CommandList> > generateMipsCommandLists;
 	generateMipsCommandLists.reserve(commandLists.size());
-
-	// Command lists that need to be executed.
-	std::vector<ID3D12CommandList*> d3d12CommandLists;
-	d3d12CommandLists.reserve(commandLists.size() * 2); // 2x since each command list will have a pending command list.
 
 	for (auto commandList : commandLists)
 	{
 		auto pendingBarriersCommandList = GetCommandList();
 		bool hasPendingBarriers = commandList->Close(*pendingBarriersCommandList);
 		pendingBarriersCommandList->Close();
+
 		// If there are no pending barriers on the pending command list, there is no reason to 
 		// execute an empty command list on the command queue.
 		if (hasPendingBarriers)
@@ -169,10 +176,9 @@ uint64_t CommandQueue::ExecuteCommandLists(const std::vector<std::shared_ptr<Com
 		toBeQueued.push_back(pendingBarriersCommandList);
 		toBeQueued.push_back(commandList);
 
-		auto generateMipsCommandList = commandList->GetGenerateMipsCommandList();
-		if (generateMipsCommandList)
+		if (auto genMipsCmdList = commandList->GetGenerateMipsCommandList())
 		{
-			generateMipsCommandLists.push_back(generateMipsCommandList);
+			generateMipsCommandLists.push_back(genMipsCmdList);
 		}
 	}
 
