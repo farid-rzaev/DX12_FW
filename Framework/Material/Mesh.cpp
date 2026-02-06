@@ -31,6 +31,15 @@ void Mesh::Draw(CommandList& commandList)
     commandList.DrawIndexed(m_IndexCount);
 }
 
+std::unique_ptr<Mesh> Mesh::CreateFromData(CommandList& commandList, VertexCollection& vertices, IndexCollection& indices, bool rhcoords)
+{
+    std::unique_ptr<Mesh> mesh(new Mesh());
+
+    mesh->Initialize(commandList, vertices, indices, rhcoords);
+
+    return mesh;
+}
+
 std::unique_ptr<Mesh> Mesh::CreateSphere(CommandList& commandList, float diameter, size_t tessellation, bool rhcoords)
 {
     VertexCollection vertices;

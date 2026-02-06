@@ -48,6 +48,8 @@ public:
 
     void Draw(CommandList& commandList);
 
+    static std::unique_ptr<Mesh> CreateFromData(CommandList& commandList, VertexCollection& vertices, IndexCollection& indices, bool rhcoords = false);
+
     static std::unique_ptr<Mesh> CreateCube(CommandList& commandList, float size = 1, bool rhcoords = false);
     static std::unique_ptr<Mesh> CreateSphere(CommandList& commandList, float diameter = 1, size_t tessellation = 16, bool rhcoords = false);
     static std::unique_ptr<Mesh> CreateCone(CommandList& commandList, float diameter = 1, float height = 1, size_t tessellation = 32, bool rhcoords = false);
