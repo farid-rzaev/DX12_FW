@@ -2,6 +2,7 @@
 
 #include "Camera.h"
 #include "Light.h"
+#include "AssimpLoader.h"
 
 #include <Framework/Material/IndexBuffer.h>
 #include <Framework/Material/VertexBuffer.h>
@@ -49,11 +50,8 @@ protected:
 
 private:
     // Some geometry to render.
-    std::unique_ptr<Mesh> m_CubeMesh;
     std::unique_ptr<Mesh> m_SphereMesh;
     std::unique_ptr<Mesh> m_ConeMesh;
-    std::unique_ptr<Mesh> m_TorusMesh;
-    std::unique_ptr<Mesh> m_PlaneMesh;
 
     std::unique_ptr<Mesh> m_SkyboxMesh;
 
@@ -115,4 +113,6 @@ private:
     // Define some lights.
     std::vector<PointLight> m_PointLights;
     std::vector<SpotLight> m_SpotLights;
+
+    std::vector<LoadedMeshPart> m_LoadedMeshParts;
 };

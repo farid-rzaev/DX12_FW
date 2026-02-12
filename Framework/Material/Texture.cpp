@@ -34,12 +34,14 @@ Texture::Texture(Microsoft::WRL::ComPtr<ID3D12Resource> resource,
 
 Texture::Texture(const Texture& copy)
     : Resource(copy)
+	, m_TextureUsage(copy.m_TextureUsage)
 {
     CreateViews();
 }
 
 Texture::Texture(Texture&& copy)
-    : Resource(copy)
+    : Resource(std::move(copy))
+	, m_TextureUsage(copy.m_TextureUsage)
 {
     CreateViews();
 }
@@ -47,6 +49,7 @@ Texture::Texture(Texture&& copy)
 Texture& Texture::operator=(const Texture& other)
 {
     Resource::operator=(other);
+    m_TextureUsage = other.m_TextureUsage;
 
     CreateViews();
 
@@ -54,7 +57,8 @@ Texture& Texture::operator=(const Texture& other)
 }
 Texture& Texture::operator=(Texture&& other)
 {
-    Resource::operator=(other);
+    Resource::operator=(std::move(other));
+    m_TextureUsage = other.m_TextureUsage;
 
     CreateViews();
 

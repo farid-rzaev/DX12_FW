@@ -198,7 +198,7 @@ bool Sample3::Initialize(const wchar_t* windowTitle, int width, int height, bool
 
     // --
 
-    XMVECTOR cameraPos = XMVectorSet(0, 5, -20, 1);
+    XMVECTOR cameraPos = XMVectorSet(10, 10, -40, 1);
     XMVECTOR cameraTarget = XMVectorSet(0, 5, 0, 1);
     XMVECTOR cameraUp = XMVectorSet(0, 1, 0, 0);
 
@@ -221,22 +221,21 @@ bool Sample3::LoadContent()
     // --
     SetWorkingDirToSolutionDir(exe_path_str);
 
-    // Create a Cube mesh
-    m_CubeMesh = Mesh::CreateCube(*commandList);
-    m_SphereMesh = Mesh::CreateSphere(*commandList);
-    m_ConeMesh = Mesh::CreateCone(*commandList);
-    m_TorusMesh = Mesh::CreateTorus(*commandList);
-    m_PlaneMesh = Mesh::CreatePlane(*commandList);
-    // Create an inverted (reverse winding order) cube so the insides are not clipped.
-    m_SkyboxMesh = Mesh::CreateCube(*commandList, 1.0f, true);
-
     // Load some textures
     commandList->LoadTextureFromFile(m_DefaultTexture, L"Assets/Textures/DefaultWhite.bmp");
     commandList->LoadTextureFromFile(m_DirectXTexture, L"Assets/Textures/Directx9.png");
     commandList->LoadTextureFromFile(m_EarthTexture, L"Assets/Textures/earth.dds");
     commandList->LoadTextureFromFile(m_MonaLisaTexture, L"Assets/Textures/Mona_Lisa.jpg");
     commandList->LoadTextureFromFile(m_GraceCathedralTexture, L"Assets/Textures/grace-new.hdr");
-//    commandList->LoadTextureFromFile(m_GraceCathedralTexture, L"Assets/Textures/UV_Test_Pattern.png");
+
+    // Create Meshes
+    m_SphereMesh = Mesh::CreateSphere(*commandList);
+    m_ConeMesh = Mesh::CreateCone(*commandList);
+
+    // Create an inverted (reverse winding order) cube so the insides are not clipped.
+    m_SkyboxMesh = Mesh::CreateCube(*commandList, 1.0f, true);
+
+    m_LoadedMeshParts = AssimpLoader::Load(*commandList, L"Assets/Models/FBX/Sponza/Sponza.fbx", m_DefaultTexture);
 
     // Create a cubemap for the HDR panorama.
     auto cubemapDesc = m_GraceCathedralTexture.GetD3D12ResourceDesc();
@@ -890,107 +889,22 @@ void Sample3::OnRender()
 
     m_SphereMesh->Draw(*commandList);
 
-    // Draw a cube
-    translationMatrix = XMMatrixTranslation(4.0f, 4.0f, 4.0f);
-    rotationMatrix = XMMatrixRotationY(XMConvertToRadians(45.0f));
-    scaleMatrix = XMMatrixScaling(4.0f, 8.0f, 4.0f);
-    worldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
+	// FBX model with multiple mesh parts and materials.
+
+    float scale = 1/10.0f;
+    scaleMatrix = XMMatrixScaling(scale, scale, scale);
+    translationMatrix = XMMatrixTranslation(30.0f, 3.0f, 0.0f);
+    worldMatrix = scaleMatrix * translationMatrix;
 
     ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
 
-    commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MatricesCB, matrices);
-    commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MaterialCB, Material::White);
-    commandList->SetShaderResourceView(RootParameters::Textures, 0, m_MonaLisaTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-
-    m_CubeMesh->Draw(*commandList);
-
-    // Draw a torus
-    translationMatrix = XMMatrixTranslation(4.0f, 0.6f, -4.0f);
-    rotationMatrix = XMMatrixRotationY(XMConvertToRadians(45.0f));
-    scaleMatrix = XMMatrixScaling(4.0f, 4.0f, 4.0f);
-    worldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
-
-    ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
-
-    commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MatricesCB, matrices);
-    commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MaterialCB, Material::Ruby);
-    commandList->SetShaderResourceView(RootParameters::Textures, 0, m_DefaultTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-
-    m_TorusMesh->Draw(*commandList);
-
-    // Floor plane.
-    float scalePlane = 20.0f;
-    float translateOffset = scalePlane / 2.0f;
-
-    translationMatrix = XMMatrixTranslation(0.0f, 0.0f, 0.0f);
-    rotationMatrix = XMMatrixIdentity();
-    scaleMatrix = XMMatrixScaling(scalePlane, 1.0f, scalePlane);
-    worldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
-
-    ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
-
-    commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MatricesCB, matrices);
-    commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MaterialCB, Material::White);
-    commandList->SetShaderResourceView(RootParameters::Textures, 0, m_DirectXTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-
-    m_PlaneMesh->Draw(*commandList);
-
-    // Back wall
-    translationMatrix = XMMatrixTranslation(0, translateOffset, translateOffset);
-    rotationMatrix = XMMatrixRotationX(XMConvertToRadians(-90));
-    worldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
-
-    ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
-
-    commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MatricesCB, matrices);
-
-    m_PlaneMesh->Draw(*commandList);
-
-    // Ceiling plane
-    translationMatrix = XMMatrixTranslation(0, translateOffset * 2.0f, 0);
-    rotationMatrix = XMMatrixRotationX(XMConvertToRadians(180));
-    worldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
-
-    ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
-
-    commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MatricesCB, matrices);
-
-    m_PlaneMesh->Draw(*commandList);
-
-    // Front wall
-    translationMatrix = XMMatrixTranslation(0, translateOffset, -translateOffset);
-    rotationMatrix = XMMatrixRotationX(XMConvertToRadians(90));
-    worldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
-
-    ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
-
-    commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MatricesCB, matrices);
-
-    m_PlaneMesh->Draw(*commandList);
-
-    // Left wall
-    translationMatrix = XMMatrixTranslation(-translateOffset, translateOffset, 0);
-    rotationMatrix = XMMatrixRotationX(XMConvertToRadians(-90)) * XMMatrixRotationY(XMConvertToRadians(-90));
-    worldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
-
-    ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
-
-    commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MatricesCB, matrices);
-    commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MaterialCB, Material::Red);
-    commandList->SetShaderResourceView(RootParameters::Textures, 0, m_DefaultTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-
-    m_PlaneMesh->Draw(*commandList);
-
-    // Right wall
-    translationMatrix = XMMatrixTranslation(translateOffset, translateOffset, 0);
-    rotationMatrix = XMMatrixRotationX(XMConvertToRadians(-90)) * XMMatrixRotationY(XMConvertToRadians(90));
-    worldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
-
-    ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
-
-    commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MatricesCB, matrices);
-    commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MaterialCB, Material::Blue);
-    m_PlaneMesh->Draw(*commandList);
+    for (const auto& part : m_LoadedMeshParts)
+    {
+        commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MatricesCB, matrices);
+        commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MaterialCB, part.material);
+        commandList->SetShaderResourceView(RootParameters::Textures, 0, part.diffuseTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        part.mesh->Draw(*commandList);
+    }
 
     // Draw shapes to visualize the position of the lights in the scene.
     Material lightMaterial;

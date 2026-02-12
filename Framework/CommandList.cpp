@@ -403,6 +403,8 @@ void CommandList::GenerateMips( Texture& texture )
         throw std::exception( "GenerateMips is only supported for non-multi-sampled 2D Textures." );
     }
 
+    auto uavFormat = resourceDesc.Format;
+
     ComPtr<ID3D12Resource> uavResource = resource;
     // Create an alias of the original resource.
     // This is done to perform a GPU copy of resources with different formats.
@@ -493,10 +495,12 @@ void CommandList::GenerateMips( Texture& texture )
 
         // Add an aliasing barrier for the UAV compatible resource.
         AliasingBarrier(aliasResource, uavResource);
+
+        uavFormat = uavDesc.Format;
     }
 
     // Generate mips with the UAV compatible resource.
-    GenerateMips_UAV(Texture(uavResource, texture.GetTextureUsage()), resourceDesc.Format );
+    GenerateMips_UAV(Texture(uavResource, texture.GetTextureUsage()), uavFormat);
 
     if (aliasResource)
     {
