@@ -1,3 +1,7 @@
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+
 #include "AssimpLoader.h"
 
 #include <Framework/3RD_Party/Helpers.h>
@@ -9,6 +13,7 @@
 #include <DirectXMath.h>
 #include <filesystem>
 #include <Windows.h>
+#include <limits>
 
 using namespace DirectX;
 
@@ -102,6 +107,33 @@ std::vector<LoadedMeshPart> AssimpLoader::Load(
             vertices.push_back(VertexPositionNormalTexture(pos, normal, uv));
         }
 
+        // Compute bounding box for frustum culling
+        DirectX::BoundingBox bounds;
+        if (!vertices.empty())
+        {
+            XMVECTOR vMin = XMVectorReplicate(std::numeric_limits<float>::max());
+            XMVECTOR vMax = XMVectorReplicate(-std::numeric_limits<float>::max());
+            for (const auto& v : vertices)
+            {
+                XMVECTOR p = XMLoadFloat3(&v.position);
+                vMin = XMVectorMin(vMin, p);
+                vMax = XMVectorMax(vMax, p);
+            }
+            XMStoreFloat3(&bounds.Center, (vMin + vMax) * 0.5f);
+            XMStoreFloat3(&bounds.Extents, (vMax - vMin) * 0.5f);
+        }
+        else
+        {
+            bounds.Center = XMFLOAT3(0, 0, 0);
+            bounds.Extents = XMFLOAT3(0, 0, 0);
+        }
+
+        // Add small padding to avoid false culling at frustum edges
+        const float padding = 0.01f;
+        bounds.Extents.x = std::max(bounds.Extents.x, padding);
+        bounds.Extents.y = std::max(bounds.Extents.y, padding);
+        bounds.Extents.z = std::max(bounds.Extents.z, padding);
+
         // Indices
         for (unsigned int f = 0; f < aiMesh->mNumFaces; ++f)
         {
@@ -123,6 +155,7 @@ std::vector<LoadedMeshPart> AssimpLoader::Load(
         LoadedMeshPart part;
         part.mesh = std::move(mesh);
         part.material = Material::White;
+		part.boundingBox = bounds;
 
         // Diffuse texture
         bool hasDiffuse = false;

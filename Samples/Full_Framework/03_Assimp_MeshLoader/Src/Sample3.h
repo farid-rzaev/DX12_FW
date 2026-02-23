@@ -57,8 +57,6 @@ private:
 
     Texture m_DefaultTexture;
     Texture m_DirectXTexture;
-    Texture m_EarthTexture;
-    Texture m_MonaLisaTexture;
     Texture m_GraceCathedralTexture;
     Texture m_GraceCathedralCubemap;
 

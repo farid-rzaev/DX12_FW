@@ -224,8 +224,6 @@ bool Sample3::LoadContent()
     // Load some textures
     commandList->LoadTextureFromFile(m_DefaultTexture, L"Assets/Textures/DefaultWhite.bmp");
     commandList->LoadTextureFromFile(m_DirectXTexture, L"Assets/Textures/Directx9.png");
-    commandList->LoadTextureFromFile(m_EarthTexture, L"Assets/Textures/earth.dds");
-    commandList->LoadTextureFromFile(m_MonaLisaTexture, L"Assets/Textures/Mona_Lisa.jpg");
     commandList->LoadTextureFromFile(m_GraceCathedralTexture, L"Assets/Textures/grace-new.hdr");
 
     // Create Meshes
@@ -236,6 +234,13 @@ bool Sample3::LoadContent()
     m_SkyboxMesh = Mesh::CreateCube(*commandList, 1.0f, true);
 
     m_LoadedMeshParts = AssimpLoader::Load(*commandList, L"Assets/Models/FBX/Sponza/Sponza.fbx", m_DefaultTexture);
+    //m_LoadedMeshParts = AssimpLoader::Load(*commandList, L"Assets/Models/FBX/sponza_2/sponza.sdkmesh", m_DefaultTexture);
+    
+	// [OPT_2] Sort the loaded mesh parts by their diffuse texture to minimize texture binding changes when rendering.
+    std::sort(m_LoadedMeshParts.begin(), m_LoadedMeshParts.end(),
+        [](const LoadedMeshPart& a, const LoadedMeshPart& b) {
+            return &a.diffuseTexture < &b.diffuseTexture;
+        });
 
     // Create a cubemap for the HDR panorama.
     auto cubemapDesc = m_GraceCathedralTexture.GetD3D12ResourceDesc();
@@ -480,7 +485,7 @@ void Sample3::OnResize(ResizeEventArgs& e)
 
         float fov = m_Camera.get_FoV();
         float aspectRatio = m_Width / (float)m_Height;
-        m_Camera.set_Projection(fov, aspectRatio, 0.1f, 100.0f);
+        m_Camera.set_Projection(fov, aspectRatio, 0.1f, 200.0f);
 
         RescaleHDRRenderTarget(m_RenderScale);
     }
@@ -823,7 +828,7 @@ void Sample3::OnRender()
     auto commandQueue = app.GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
     auto commandList = commandQueue->GetCommandList();
 
-    // Clear the render targets.
+    // 1. Clear the render targets.
     {
         FLOAT clearColor[] = { 0.4f, 0.6f, 0.9f, 1.0f };
 
@@ -835,7 +840,7 @@ void Sample3::OnRender()
     commandList->SetViewport(m_HDRRenderTarget.GetViewport());
     commandList->SetScissorRect(m_ScissorRect);
 
-    // Render the skybox.
+    // 2. Render the skybox.
     {
         // The view matrix should only consider the camera's rotation, but not the translation.
         auto viewMatrix = XMMatrixTranspose(XMMatrixRotationQuaternion(m_Camera.get_Rotation()));
@@ -859,20 +864,20 @@ void Sample3::OnRender()
         m_SkyboxMesh->Draw(*commandList);
     }
 
-
+    // 3. Draw FBX model with multiple mesh parts and materials.
     commandList->SetPipelineState(m_HDRPipelineState);
     commandList->SetGraphicsRootSignature(m_HDRRootSignature);
 
-    // Upload lights
-    LightProperties lightProps;
-    lightProps.NumPointLights = static_cast<uint32_t>(m_PointLights.size());
-    lightProps.NumSpotLights = static_cast<uint32_t>(m_SpotLights.size());
+	// -- Upload lights properties to CB and SB --
+    LightProperties lightProperties;
+    lightProperties.NumPointLights = static_cast<uint32_t>(m_PointLights.size());
+    lightProperties.NumSpotLights = static_cast<uint32_t>(m_SpotLights.size());
 
-    commandList->SetGraphics32BitConstants(RootParameters::LightPropertiesCB, lightProps);
+    commandList->SetGraphics32BitConstants(RootParameters::LightPropertiesCB, lightProperties);
     commandList->SetGraphicsDynamicStructuredBuffer(RootParameters::PointLights, m_PointLights);
     commandList->SetGraphicsDynamicStructuredBuffer(RootParameters::SpotLights, m_SpotLights);
-
-    // Draw the earth sphere
+    // --
+    
     XMMATRIX translationMatrix = XMMatrixTranslation(-4.0f, 2.0f, -4.0f);
     XMMATRIX rotationMatrix = XMMatrixIdentity();
     XMMATRIX scaleMatrix = XMMatrixScaling(4.0f, 4.0f, 4.0f);
@@ -881,15 +886,6 @@ void Sample3::OnRender()
     XMMATRIX viewProjectionMatrix = viewMatrix * m_Camera.get_ProjectionMatrix();
 
     Mat matrices;
-    ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
-
-    commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MatricesCB, matrices);
-    commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MaterialCB, Material::White);
-    commandList->SetShaderResourceView(RootParameters::Textures, 0, m_EarthTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-
-    m_SphereMesh->Draw(*commandList);
-
-	// FBX model with multiple mesh parts and materials.
 
     float scale = 1/10.0f;
     scaleMatrix = XMMatrixScaling(scale, scale, scale);
@@ -897,16 +893,51 @@ void Sample3::OnRender()
     worldMatrix = scaleMatrix * translationMatrix;
 
     ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
+    // --
+    commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MatricesCB, matrices);
 
-    for (const auto& part : m_LoadedMeshParts)
+    // Returns the frustum in view (camera) space
+    // --
+    // The projection matrix transforms from view space -> clip/projection space.
+    // So when you create a frustum from the projection matrix, the resulting planes represent the 
+    // view volume boundaries in the coordinate system where the camera is at the origin — which is view space.
+    DirectX::BoundingFrustum cameraFrustum;
+    DirectX::BoundingFrustum::CreateFromMatrix(cameraFrustum, m_Camera.get_ProjectionMatrix());
+
+	// Transform the Frustum from View to World space
+    XMMATRIX inverseView = XMMatrixInverse(nullptr, viewMatrix);
+    cameraFrustum.Transform(cameraFrustum, inverseView);
+
+    Texture* currentTexture = nullptr;
+    Material* currentMaterial = nullptr;
+    for (auto& part : m_LoadedMeshParts)
     {
-        commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MatricesCB, matrices);
-        commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MaterialCB, part.material);
-        commandList->SetShaderResourceView(RootParameters::Textures, 0, part.diffuseTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		// Transform the mesh part's bounding box to World space
+        DirectX::BoundingBox worldBounds;
+        part.boundingBox.Transform(worldBounds, worldMatrix);
+
+        // [OPT_1] Frustum culling in World space - cameraFrustum vs AABB of mesh part
+        if (!worldBounds.Intersects(cameraFrustum))
+            continue;
+
+        if (&part.material != currentMaterial)
+        {
+            commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MaterialCB, part.material);
+		    currentMaterial = &part.material;
+        }
+
+        // [OPT_2] Only change texture if different
+        if (&part.diffuseTexture != currentTexture)
+        {
+            commandList->SetShaderResourceView(RootParameters::Textures, 0, part.diffuseTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+            currentTexture = &part.diffuseTexture;
+        }
+
         part.mesh->Draw(*commandList);
     }
 
-    // Draw shapes to visualize the position of the lights in the scene.
+    // 4. Draw shapes to visualize the position of the POINT lights in the scene.
+    
     Material lightMaterial;
     // No specular
     lightMaterial.Specular = { 0, 0, 0, 1 };
@@ -923,6 +954,8 @@ void Sample3::OnRender()
         m_SphereMesh->Draw(*commandList);
     }
 
+    // 5. Draw cones to visualize the position of the SPOT lights in the scene.
+    
     for (const auto& l : m_SpotLights)
     {
         lightMaterial.Emissive = l.Color;
@@ -942,7 +975,8 @@ void Sample3::OnRender()
         m_ConeMesh->Draw(*commandList);
     }
 
-    // Perform HDR -> SDR tonemapping directly to the Window's render target.
+    // 6. FSQ Posteffect: perform HDR -> SDR tonemapping directly to the Window's render target.
+
     commandList->SetRenderTarget(app.GetRenderTarget());
     commandList->SetViewport(app.GetRenderTarget().GetViewport());
     commandList->SetPipelineState(m_SDRPipelineState);
@@ -955,10 +989,10 @@ void Sample3::OnRender()
 
     commandQueue->ExecuteCommandList(commandList);
 
-    // Render GUI.
+    // 7. Render GUI.
     OnGUI();
 
-    // Present
+    // 8. Present
     app.Present();
 }
 

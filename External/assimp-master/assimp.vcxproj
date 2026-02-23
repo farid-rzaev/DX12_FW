@@ -85,16 +85,16 @@
     <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</GenerateManifest>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LibraryPath>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\zlibstatic\;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\zlibstatic\;$(LibraryPath);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">
-    <LibraryPath>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\zlibstatic\</LibraryPath>
+    <LibraryPath>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\zlibstatic\;;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LibraryPath>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\zlibstatic\</LibraryPath>
+    <LibraryPath>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\zlibstatic\;$(LibraryPath);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
-    <LibraryPath>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\zlibstatic\</LibraryPath>
+    <LibraryPath>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\zlibstatic\;;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -192,9 +192,9 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
-      <ImportLibrary>C:/Users/farid/Downloads/assimp-master/lib/Debug/assimp-vc143-mtd.lib</ImportLibrary>
+      <ImportLibrary>$(OutDir)$(TargetName).lib</ImportLibrary>
       <OptimizeReferences>true</OptimizeReferences>
-      <ProgramDataBaseFile>C:/Users/farid/Desktop/DX12_FW/External/assimp-master/bin/Debug/assimp-vc143-mt.pdb</ProgramDataBaseFile>
+      <ProgramDataBaseFile>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\$(ProjectName)\assimp-vc143-mt.pdb</ProgramDataBaseFile>
       <SubSystem>Console</SubSystem>
     </Link>
     <ProjectReference>
@@ -246,7 +246,7 @@
       <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
-      <ImportLibrary>C:/Users/farid/Downloads/assimp-master/lib/Debug/assimp-vc143-mtd.lib</ImportLibrary>
+      <ImportLibrary>$(OutDir)$(TargetName).lib</ImportLibrary>
       <ProgramDataBaseFile>C:/Users/farid/Desktop/DX12_FW/External/assimp-master/bin/Debug/assimp-vc143-mt.pdb</ProgramDataBaseFile>
       <SubSystem>Console</SubSystem>
     </Link>
@@ -298,7 +298,7 @@
       <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
-      <ImportLibrary>C:/Users/farid/Downloads/assimp-master/lib/Debug/assimp-vc143-mtd.lib</ImportLibrary>
+      <ImportLibrary>$(OutDir)$(TargetName).lib</ImportLibrary>
       <ProgramDataBaseFile>C:/Users/farid/Desktop/DX12_FW/External/assimp-master/bin/Debug/assimp-vc143-mt.pdb</ProgramDataBaseFile>
       <SubSystem>Console</SubSystem>
     </Link>

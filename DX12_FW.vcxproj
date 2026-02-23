@@ -51,8 +51,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>$(SolutionDir)_Output\$(Platform)\$(Configuration)\$(ProjectName)\Bin\</OutDir>
-    <IntDir>$(SolutionDir)_Output\$(Platform)\$(Configuration)\$(ProjectName)\Temp\</IntDir>
+    <OutDir>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
+    <IntDir>$(SolutionDir)_Output\Temp\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -61,7 +61,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir);$(OutDir)Shaders;$(SolutionDir)External\DirectXTex\DirectXTex</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir);$(OutDir)Shaders;$(SolutionDir)External\DirectXTex\DirectXTex;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -81,7 +81,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir);$(OutDir)Shaders</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir);$(OutDir)Shaders;$(SolutionDir)External\DirectXTex\DirectXTex;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>

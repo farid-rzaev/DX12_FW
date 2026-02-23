@@ -36,7 +36,7 @@
 // Helpers
 #include <Framework/3RD_Party/Helpers.h>
 #include <DirectXMath.h>
-#include <DirectXTex.h>
+#include <External/DirectXTex/DirectXTex/DirectXTex.h>
 #include <filesystem>
 
 std::map<std::wstring, ID3D12Resource* > CommandList::ms_TextureCache;

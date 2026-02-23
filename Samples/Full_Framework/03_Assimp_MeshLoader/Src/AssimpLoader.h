@@ -1,9 +1,12 @@
 #pragma once
 
+#include "Material.h"
+
 #include <Framework/Material/Mesh.h>
 #include <Framework/Material/Texture.h>
 #include <Framework/CommandList.h>
-#include "Material.h"
+
+#include <DirectXCollision.h>
 
 #include <memory>
 #include <vector>
@@ -14,6 +17,7 @@ struct LoadedMeshPart
     std::unique_ptr<Mesh> mesh;
     Texture diffuseTexture;   // Loaded or copied from default
     Material material;
+    DirectX::BoundingBox boundingBox;
 };
 
 class AssimpLoader
