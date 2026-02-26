@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Framework/3RD_Party/Defines.h>
 #include "../CommandList.h"
 #include "VertexBuffer.h"
 #include "IndexBuffer.h"
@@ -13,7 +14,7 @@
 #include <vector>
 
  // Vertex struct holding position, normal vector, and texture mapping information.
-struct VertexPositionNormalTexture
+struct DX12_FW_API VertexPositionNormalTexture
 {
     VertexPositionNormalTexture()
     { }
@@ -42,7 +43,7 @@ struct VertexPositionNormalTexture
 using VertexCollection = std::vector<VertexPositionNormalTexture>;
 using IndexCollection = std::vector<uint16_t>;
 
-class Mesh
+class DX12_FW_API Mesh
 {
 public:
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Framework/3RD_Party/Defines.h>
+
 #include <Framework/Material/TextureUsage.h>
 
 #include <d3d12.h>
@@ -28,7 +30,7 @@ class Texture;
 class UploadBuffer;
 class VertexBuffer;
 
-class CommandList
+class DX12_FW_API CommandList
 {
 public:
     CommandList(D3D12_COMMAND_LIST_TYPE type);

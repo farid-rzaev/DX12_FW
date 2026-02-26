@@ -3,16 +3,17 @@
 #include "Resource.h"
 #include "TextureUsage.h"
 
-#include <Framework/DescriptorAllocation.h>
-
+#include <Framework/3RD_Party/Defines.h>
 #include <Framework/3RD_Party/D3D/d3dx12.h>
+
+#include <Framework/DescriptorAllocation.h>
 
 #include <mutex>
 #include <unordered_map>
 
 class Application;
 
-class Texture : public Resource
+class DX12_FW_API Texture : public Resource
 {
 public:
     explicit Texture(TextureUsage                           textureUsage    = TextureUsage::Albedo, 

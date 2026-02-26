@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Framework/3RD_Party/Defines.h>
+
 // Framework
 #include "Window.h"
 #include "CommandQueue.h"
@@ -25,7 +27,7 @@ class DescriptorAllocator;
 using Microsoft::WRL::ComPtr;
 
 
-class Application
+class DX12_FW_API Application
 {
 // ------------------------------------------------------------------------------------------
 //									Function members

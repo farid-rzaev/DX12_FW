@@ -1,12 +1,13 @@
 #pragma once
 
+#include <Framework/3RD_Party/Defines.h>
 #include <d3d12.h>
 #include <wrl.h>
 
 #include <string>
 #include <memory>
 
-class Resource
+class DX12_FW_API Resource
 {
 public:
     explicit Resource(const std::wstring& name = L"");

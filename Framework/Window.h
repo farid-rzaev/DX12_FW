@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Framework/3RD_Party/Defines.h>
+
 // Minimize the num of
 // headers from Windows.h
 #define WIN32_LEAN_AND_MEAN
@@ -43,7 +45,7 @@ constexpr wchar_t WINDOW_CLASS_NAME[] = L"DX12RenderWindowClass";
 constexpr UINT8 NUM_FRAMES_IN_FLIGHT = 3;
 
 
-class Window 
+class DX12_FW_API Window 
 {
 public:
 	Window(UINT32 width, UINT32 height, bool vSync);

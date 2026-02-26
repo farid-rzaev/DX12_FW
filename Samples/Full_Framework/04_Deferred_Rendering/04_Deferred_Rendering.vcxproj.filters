@@ -18,14 +18,9 @@
     <ClCompile Include="Src\main.cpp">
       <Filter>Src</Filter>
     </ClCompile>
-    <ClCompile Include="Src\Sample3.cpp">
+    <ClCompile Include="Src\Sample4.cpp">
       <Filter>Src</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="Src\Sample3.h">
-      <Filter>Src</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\HDR_PS.hlsl">
@@ -46,5 +41,10 @@
     <FxCompile Include="Shaders\Skybox_VS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Src\Sample4.h">
+      <Filter>Src</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

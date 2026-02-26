@@ -16,11 +16,11 @@
 
 #include <DirectXMath.h>
 
-class Sample3 : public Game
+class Sample4 : public Game
 {
 public:
-    Sample3();
-    virtual ~Sample3();
+    Sample4();
+    virtual ~Sample4();
 
     virtual bool Initialize(const wchar_t* windowTitle, int width, int height, bool vSync = false)  override;
 

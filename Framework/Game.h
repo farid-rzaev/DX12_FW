@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Framework/3RD_Party/Defines.h>
 #include <Framework/Application.h>
 #include <Framework/Events/Events.h>
 
@@ -10,7 +11,7 @@
 
 class Application;
 
-class Game
+class DX12_FW_API Game
 {
 public:
 	// Create DX demo

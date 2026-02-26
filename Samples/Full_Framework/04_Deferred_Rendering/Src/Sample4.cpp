@@ -1,4 +1,4 @@
-#include "Sample3.h"
+#include "Sample4.h"
 
 #include <Framework/Application.h>
 #include <Framework/CommandQueue.h>
@@ -26,7 +26,7 @@ using namespace DirectX;
 
 #if defined(max)
 #undef max
-#endif>
+#endif
 
 
 // =====================================================================================
@@ -158,7 +158,7 @@ XMMATRIX XM_CALLCONV LookAtMatrix(FXMVECTOR Position, FXMVECTOR Direction, FXMVE
 // =====================================================================================
 
 
-Sample3::Sample3()
+Sample4::Sample4()
     : Game()
     , m_ScissorRect(CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX))
     , m_Forward(0)
@@ -184,12 +184,12 @@ Sample3::Sample3()
     }
 }
 
-Sample3::~Sample3()
+Sample4::~Sample4()
 {
     _aligned_free(m_pAlignedCameraData);
 }
 
-bool Sample3::Initialize(const wchar_t* windowTitle, int width, int height, bool vSync)
+bool Sample4::Initialize(const wchar_t* windowTitle, int width, int height, bool vSync)
 {
     if (!Game::Initialize(windowTitle, width, height, vSync)) return false;
 
@@ -208,7 +208,7 @@ bool Sample3::Initialize(const wchar_t* windowTitle, int width, int height, bool
     return true;
 }
 
-bool Sample3::LoadContent()
+bool Sample4::LoadContent()
 {
     auto& app = Application::Get();
     auto  device        = app.GetDevice();
@@ -463,7 +463,7 @@ bool Sample3::LoadContent()
     return true;
 }
 
-void Sample3::RescaleHDRRenderTarget(float scale)
+void Sample4::RescaleHDRRenderTarget(float scale)
 {
     uint32_t width = static_cast<uint32_t>(m_Width * scale);
     uint32_t height = static_cast<uint32_t>(m_Height * scale);
@@ -474,7 +474,7 @@ void Sample3::RescaleHDRRenderTarget(float scale)
     m_HDRRenderTarget.Resize(width, height);
 }
 
-void Sample3::OnResize(ResizeEventArgs& e)
+void Sample4::OnResize(ResizeEventArgs& e)
 {
     Game::OnResize(e);
 
@@ -491,13 +491,13 @@ void Sample3::OnResize(ResizeEventArgs& e)
     }
 }
 
-void Sample3::UnloadContent()
+void Sample4::UnloadContent()
 {
 }
 
 static double g_FPS = 0.0;
 
-void Sample3::OnUpdate()
+void Sample4::OnUpdate()
 {
     static uint64_t frameCount = 0;
     static double totalTime = 0.0;
@@ -665,7 +665,7 @@ float ACESFilmicTonemappingPlot(void*, int index)
         ACESFilmicTonemapping(g_TonemapParameters.LinearWhite, g_TonemapParameters.A, g_TonemapParameters.B, g_TonemapParameters.C, g_TonemapParameters.D, g_TonemapParameters.E, g_TonemapParameters.F);
 }
 
-void Sample3::OnGUI()
+void Sample4::OnGUI()
 {
     static bool showDemoWindow = false;
     static bool showOptions = true;
@@ -820,7 +820,7 @@ void XM_CALLCONV ComputeMatrices(FXMMATRIX model, CXMMATRIX view, CXMMATRIX view
     mat.ModelViewProjectionMatrix = model * viewProjection;
 }
 
-void Sample3::OnRender()
+void Sample4::OnRender()
 {
     Game::OnRender();
 
@@ -998,7 +998,7 @@ void Sample3::OnRender()
 
 static bool g_AllowFullscreenToggle = true;
 
-void Sample3::OnKeyPressed(KeyEventArgs& e)
+void Sample4::OnKeyPressed(KeyEventArgs& e)
 {
     Game::OnKeyPressed(e);
 
@@ -1065,7 +1065,7 @@ void Sample3::OnKeyPressed(KeyEventArgs& e)
     }
 }
 
-void Sample3::OnKeyReleased(KeyEventArgs& e)
+void Sample4::OnKeyReleased(KeyEventArgs& e)
 {
     Game::OnKeyReleased(e);
 
@@ -1109,7 +1109,7 @@ void Sample3::OnKeyReleased(KeyEventArgs& e)
     }
 }
 
-void Sample3::OnMouseMoved(MouseMotionEventArgs& e)
+void Sample4::OnMouseMoved(MouseMotionEventArgs& e)
 {
     Game::OnMouseMoved(e);
 
@@ -1128,7 +1128,7 @@ void Sample3::OnMouseMoved(MouseMotionEventArgs& e)
 }
 
 
-void Sample3::OnMouseWheel(MouseWheelEventArgs& e)
+void Sample4::OnMouseWheel(MouseWheelEventArgs& e)
 {
     Game::OnMouseWheel(e);
 

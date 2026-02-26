@@ -94,6 +94,15 @@
     <ClCompile Include="Framework\GUI.cpp">
       <Filter>Src</Filter>
     </ClCompile>
+    <ClCompile Include="Framework\Material\Material.cpp">
+      <Filter>Src\Material</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Gameplay\AssimpLoader.cpp">
+      <Filter>Src\Gameplay</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Gameplay\Camera.cpp">
+      <Filter>Src\Gameplay</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Framework\Application.h">
@@ -216,6 +225,18 @@
     <ClInclude Include="Framework\GUI.h">
       <Filter>Src</Filter>
     </ClInclude>
+    <ClInclude Include="Framework\Material\Material.h">
+      <Filter>Src\Material</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Gameplay\AssimpLoader.h">
+      <Filter>Src\Gameplay</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Gameplay\Camera.h">
+      <Filter>Src\Gameplay</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Gameplay\Light.h">
+      <Filter>Src\Gameplay</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Src">
@@ -247,6 +268,9 @@
     </Filter>
     <Filter Include="Src\3RD_Party\Timer">
       <UniqueIdentifier>{fcfe6cf2-ca52-456f-9bde-be84c475c843}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Src\Gameplay">
+      <UniqueIdentifier>{75a00d82-e2fe-45fc-b630-c09c022b546c}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

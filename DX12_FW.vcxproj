@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -20,13 +20,13 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -46,13 +46,17 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
+    <OutDir>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)_Output\Temp\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    <IncludePath>$(OutDir)Shaders;$(SolutionDir);$(SolutionDir)External\DirectXTex\DirectXTex;$(SolutionDir)External\assimp-master\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
+    <OutDir>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)_Output\Temp\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    <IncludePath>$(OutDir)Shaders;$(SolutionDir);$(SolutionDir)External\DirectXTex\DirectXTex;$(SolutionDir)External\assimp-master\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -60,17 +64,17 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir);$(OutDir)Shaders;$(SolutionDir)External\DirectXTex\DirectXTex;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_DEBUG;_WINDOWS;DX12_FW_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>
+      </AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>D3DCompiler.lib;d3d12.lib;dxgi.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>assimp-vc143-mt.lib;zlibstatic.lib;DirectXTex.lib;D3DCompiler.lib;d3d12.lib;dxgi.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>
+      </AdditionalLibraryDirectories>
     </Link>
-    <Lib>
-      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -80,15 +84,16 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir);$(OutDir)Shaders;$(SolutionDir)External\DirectXTex\DirectXTex;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>NDEBUG;_WINDOWS;DX12_FW_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>D3DCompiler.lib;d3d12.lib;dxgi.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>assimp-vc143-mt.lib;zlibstatic.lib;DirectXTex.lib;D3DCompiler.lib;d3d12.lib;dxgi.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -106,11 +111,14 @@
     <ClCompile Include="Framework\DescriptorAllocatorPage.cpp" />
     <ClCompile Include="Framework\DynamicDescriptorHeap.cpp" />
     <ClCompile Include="Framework\Game.cpp" />
+    <ClCompile Include="Framework\Gameplay\AssimpLoader.cpp" />
+    <ClCompile Include="Framework\Gameplay\Camera.cpp" />
     <ClCompile Include="Framework\GUI.cpp" />
     <ClCompile Include="Framework\Material\Buffer.cpp" />
     <ClCompile Include="Framework\Material\ByteAddressBuffer.cpp" />
     <ClCompile Include="Framework\Material\ConstantBuffer.cpp" />
     <ClCompile Include="Framework\Material\IndexBuffer.cpp" />
+    <ClCompile Include="Framework\Material\Material.cpp" />
     <ClCompile Include="Framework\Material\Mesh.cpp" />
     <ClCompile Include="Framework\Material\RenderTarget.cpp" />
     <ClCompile Include="Framework\Material\Resource.cpp" />
@@ -147,11 +155,15 @@
     <ClInclude Include="Framework\Events\Events.h" />
     <ClInclude Include="Framework\Events\KeyCodes.h" />
     <ClInclude Include="Framework\Game.h" />
+    <ClInclude Include="Framework\Gameplay\AssimpLoader.h" />
+    <ClInclude Include="Framework\Gameplay\Camera.h" />
+    <ClInclude Include="Framework\Gameplay\Light.h" />
     <ClInclude Include="Framework\GUI.h" />
     <ClInclude Include="Framework\Material\Buffer.h" />
     <ClInclude Include="Framework\Material\ByteAddressBuffer.h" />
     <ClInclude Include="Framework\Material\ConstantBuffer.h" />
     <ClInclude Include="Framework\Material\IndexBuffer.h" />
+    <ClInclude Include="Framework\Material\Material.h" />
     <ClInclude Include="Framework\Material\Mesh.h" />
     <ClInclude Include="Framework\Material\RenderTarget.h" />
     <ClInclude Include="Framework\Material\Resource.h" />
@@ -207,6 +219,17 @@
       <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)Shaders\%(Filename).h</HeaderFileOutput>
       <VariableName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">g_PanoToCubemap_CS</VariableName>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="External\assimp-master\assimp.vcxproj">
+      <Project>{131ab021-0c89-3675-8258-2966b306a2e5}</Project>
+    </ProjectReference>
+    <ProjectReference Include="External\assimp-master\contrib\zlib\zlibstatic.vcxproj">
+      <Project>{3336c8c7-9d3c-30fe-b25d-f3d05f56a19f}</Project>
+    </ProjectReference>
+    <ProjectReference Include="External\DirectXTex\DirectXTex.vcxproj">
+      <Project>{3a1cba4f-2831-4128-9cb2-8108661f3d00}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

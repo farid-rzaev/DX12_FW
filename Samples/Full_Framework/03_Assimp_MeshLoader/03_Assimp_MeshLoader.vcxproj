@@ -71,16 +71,16 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
+    <OutDir>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)_Output\Temp\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
-    <IncludePath>$(SolutionDir);$(SolutionDir)External;$(SolutionDir)External\assimp-master\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\DX12_FW\;$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\DirectXTex\;$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\assimp\;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir);$(SolutionDir)External;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
+    <OutDir>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)_Output\Temp\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
-    <IncludePath>$(SolutionDir);$(SolutionDir)External;$(SolutionDir)External\assimp-master\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\DX12_FW\;$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\DirectXTex\;$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\assimp\;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir);$(SolutionDir)External;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -119,12 +119,11 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>assimp-vc143-mt.lib;DX12_FW.lib;DirectXTex.lib;d3d12.lib;dxgi.lib;dxguid.lib;D3DCompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>DX12_FW.lib;d3d12.lib;dxgi.lib;dxguid.lib;D3DCompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /Y "$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\assimp\assimp*.dll" "$(OutDir)"
-
-xcopy /Y "$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\assimp\assimp*.pdb" "$(OutDir)"</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -140,27 +139,18 @@ xcopy /Y "$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\assimp\assimp*.
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>assimp-vc143-mt.lib;DX12_FW.lib;DirectXTex.lib;d3d12.lib;dxgi.lib;dxguid.lib;D3DCompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>DX12_FW.lib;d3d12.lib;dxgi.lib;dxguid.lib;D3DCompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /Y "$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\assimp\assimp*.dll" "$(OutDir)"
-
-xcopy /Y "$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\assimp\assimp*.pdb" "$(OutDir)"</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Src\AssimpLoader.cpp" />
-    <ClCompile Include="Src\Camera.cpp" />
-    <ClCompile Include="Src\Light.cpp" />
     <ClCompile Include="Src\main.cpp" />
-    <ClCompile Include="Src\Material.cpp" />
     <ClCompile Include="Src\Sample3.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Src\AssimpLoader.h" />
-    <ClInclude Include="Src\Camera.h" />
-    <ClInclude Include="Src\Light.h" />
-    <ClInclude Include="Src\Material.h" />
     <ClInclude Include="Src\Sample3.h" />
   </ItemGroup>
   <ItemGroup>
@@ -204,12 +194,6 @@ xcopy /Y "$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\assimp\assimp*.
   <ItemGroup>
     <ProjectReference Include="..\..\..\DX12_FW.vcxproj">
       <Project>{63670e49-1270-41c0-98e9-e8092e27bc6d}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\External\assimp-master\assimp.vcxproj">
-      <Project>{131ab021-0c89-3675-8258-2966b306a2e5}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\External\DirectXTex\DirectXTex.vcxproj">
-      <Project>{3a1cba4f-2831-4128-9cb2-8108661f3d00}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -33,6 +33,8 @@
 
 #include <DirectXMath.h>
 
+#include <Framework/3RD_Party/Defines.h>
+
 // When performing transformations on the camera, 
 // it is sometimes useful to express which space this 
 // transformation should be applied.
@@ -42,7 +44,7 @@ enum class Space
     World,
 };
 
-class Camera
+class DX12_FW_API Camera
 {
 public:
 

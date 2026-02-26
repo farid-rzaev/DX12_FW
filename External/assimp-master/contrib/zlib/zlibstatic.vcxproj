@@ -59,19 +59,19 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)_Output\Temp\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">zlibstatic</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.lib</TargetExt>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)_Output\Temp\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">zlibstatic</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.lib</TargetExt>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">$(SolutionDir)_Output\Temp\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">zlibstatic</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">.lib</TargetExt>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">$(SolutionDir)_Output\Temp\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">zlibstatic</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">.lib</TargetExt>
@@ -99,6 +99,7 @@
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;ASSIMP_BUILD_NO_M3D_IMPORTER;ASSIMP_BUILD_NO_M3D_EXPORTER;ASSIMP_BUILD_NO_VRML_IMPORTER;WIN32_LEAN_AND_MEAN;UNICODE;_UNICODE;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;NO_FSEEKO;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;CMAKE_INTDIR="Debug"</PreprocessorDefinitions>
       <ObjectFileName>$(IntDir)</ObjectFileName>
       <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;ASSIMP_BUILD_NO_M3D_IMPORTER;ASSIMP_BUILD_NO_M3D_EXPORTER;ASSIMP_BUILD_NO_VRML_IMPORTER;WIN32_LEAN_AND_MEAN;UNICODE;_UNICODE;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;NO_FSEEKO;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;CMAKE_INTDIR=\"Debug\"</PreprocessorDefinitions>
@@ -140,6 +141,7 @@
       <DebugInformationFormat>
       </DebugInformationFormat>
       <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;ASSIMP_BUILD_NO_M3D_IMPORTER;ASSIMP_BUILD_NO_M3D_EXPORTER;ASSIMP_BUILD_NO_VRML_IMPORTER;WIN32_LEAN_AND_MEAN;UNICODE;_UNICODE;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;NO_FSEEKO;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;CMAKE_INTDIR=\"Release\"</PreprocessorDefinitions>
@@ -181,6 +183,7 @@
       <DebugInformationFormat>
       </DebugInformationFormat>
       <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;ASSIMP_BUILD_NO_M3D_IMPORTER;ASSIMP_BUILD_NO_M3D_EXPORTER;ASSIMP_BUILD_NO_VRML_IMPORTER;WIN32_LEAN_AND_MEAN;UNICODE;_UNICODE;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;NO_FSEEKO;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;CMAKE_INTDIR=\"MinSizeRel\"</PreprocessorDefinitions>
@@ -221,6 +224,7 @@
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;ASSIMP_BUILD_NO_M3D_IMPORTER;ASSIMP_BUILD_NO_M3D_EXPORTER;ASSIMP_BUILD_NO_VRML_IMPORTER;WIN32_LEAN_AND_MEAN;UNICODE;_UNICODE;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;NO_FSEEKO;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;CMAKE_INTDIR="RelWithDebInfo"</PreprocessorDefinitions>
       <ObjectFileName>$(IntDir)</ObjectFileName>
       <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;ASSIMP_BUILD_NO_M3D_IMPORTER;ASSIMP_BUILD_NO_M3D_EXPORTER;ASSIMP_BUILD_NO_VRML_IMPORTER;WIN32_LEAN_AND_MEAN;UNICODE;_UNICODE;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;NO_FSEEKO;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;CMAKE_INTDIR=\"RelWithDebInfo\"</PreprocessorDefinitions>

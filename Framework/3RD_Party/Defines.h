@@ -2,6 +2,12 @@
  * Macro defines.
  */
 
+#ifdef DX12_FW_EXPORTS
+#define DX12_FW_API __declspec(dllexport)
+#else
+#define DX12_FW_API __declspec(dllimport)
+#endif
+
 #define _KB(x) (x * 1024)
 #define _MB(x) (x * 1024 * 1024)
 

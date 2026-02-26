@@ -8,6 +8,8 @@
 
 #include "Texture.h"
 
+#include <Framework/3RD_Party/Defines.h>
+
 class Application;
 
 // Don't use scoped enums to avoid the explicit cast required to use these as array indices.
@@ -25,7 +27,7 @@ enum AttachmentPoint
     NumAttachmentPoints
 };
 
-class RenderTarget
+class DX12_FW_API RenderTarget
 {
 public:
     // Create an empty render target.

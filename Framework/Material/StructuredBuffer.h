@@ -4,9 +4,11 @@
 
 #include "ByteAddressBuffer.h"
 
+#include <Framework/3RD_Party/Defines.h>
+
 class Application;
 
-class StructuredBuffer : public Buffer
+class DX12_FW_API StructuredBuffer : public Buffer
 {
 public:
     StructuredBuffer(const std::wstring& name = L"");

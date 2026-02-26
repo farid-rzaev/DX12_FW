@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <PreferredToolArchitecture>x64</PreferredToolArchitecture>
@@ -31,22 +31,22 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
     <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
     <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
     <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
     <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
@@ -59,46 +59,50 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)_Output\Temp\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">assimp-vc143-mt</TargetName>
-    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.dll</TargetExt>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.lib</TargetExt>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</LinkIncremental>
     <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</GenerateManifest>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)_Output\Temp\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">assimp-vc143-mt</TargetName>
-    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.dll</TargetExt>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.lib</TargetExt>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
     <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</GenerateManifest>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">$(SolutionDir)_Output\Temp\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">assimp-vc143-mt</TargetName>
-    <TargetExt Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">.dll</TargetExt>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">.lib</TargetExt>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkIncremental>
     <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">true</GenerateManifest>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">$(SolutionDir)_Output\Temp\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">assimp-vc143-mt</TargetName>
-    <TargetExt Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">.dll</TargetExt>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">.lib</TargetExt>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</LinkIncremental>
     <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</GenerateManifest>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LibraryPath>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\zlibstatic\;$(LibraryPath);$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\;$(LibraryPath)</LibraryPath>
+    <ExternalIncludePath>$(ProjectDir)include;$(ProjectDir);$(ProjectDir)code;$(ProjectDir).;$(ProjectDir)contrib\zlib;$(ProjectDir)contrib\pugixml\src;$(ProjectDir)contrib\utf8cpp\source;$(ProjectDir)contrib\rapidjson\include;$(ProjectDir)contrib;$(ProjectDir)contrib\unzip;$(ProjectDir)contrib\openddlparser\include;$(ProjectDir)code\..\include;$(ProjectDir)code\..;$(ExternalIncludePath)</ExternalIncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">
-    <LibraryPath>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\zlibstatic\;;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\;$(LibraryPath)</LibraryPath>
+    <ExternalIncludePath>$(ProjectDir)include;$(ProjectDir);$(ProjectDir)code;$(ProjectDir).;$(ProjectDir)contrib\zlib;$(ProjectDir)contrib\pugixml\src;$(ProjectDir)contrib\utf8cpp\source;$(ProjectDir)contrib\rapidjson\include;$(ProjectDir)contrib;$(ProjectDir)contrib\unzip;$(ProjectDir)contrib\openddlparser\include;$(ProjectDir)code\..\include;$(ProjectDir)code\..;$(ExternalIncludePath)</ExternalIncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LibraryPath>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\zlibstatic\;$(LibraryPath);$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\;$(LibraryPath)</LibraryPath>
+    <ExternalIncludePath>$(ProjectDir)include;$(ProjectDir);$(ProjectDir)code;$(ProjectDir).;$(ProjectDir)contrib\zlib;$(ProjectDir)contrib\pugixml\src;$(ProjectDir)contrib\utf8cpp\source;$(ProjectDir)contrib\rapidjson\include;$(ProjectDir)contrib;$(ProjectDir)contrib\unzip;$(ProjectDir)contrib\openddlparser\include;$(ProjectDir)code\..\include;$(ProjectDir)code\..;$(ExternalIncludePath)</ExternalIncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
-    <LibraryPath>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\zlibstatic\;;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\;$(LibraryPath)</LibraryPath>
+    <ExternalIncludePath>$(ProjectDir)include;$(ProjectDir);$(ProjectDir)code;$(ProjectDir).;$(ProjectDir)contrib\zlib;$(ProjectDir)contrib\pugixml\src;$(ProjectDir)contrib\utf8cpp\source;$(ProjectDir)contrib\rapidjson\include;$(ProjectDir)contrib;$(ProjectDir)contrib\unzip;$(ProjectDir)contrib\openddlparser\include;$(ProjectDir)code\..\include;$(ProjectDir)code\..;$(ExternalIncludePath)</ExternalIncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir);$(ProjectDir)code;$(ProjectDir).;$(ProjectDir)contrib\zlib;$(ProjectDir)contrib\pugixml\src;$(ProjectDir)contrib\utf8cpp\source;$(ProjectDir)contrib\rapidjson\include;$(ProjectDir)contrib;$(ProjectDir)contrib\unzip;$(ProjectDir)contrib\openddlparser\include;$(ProjectDir)code\..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>%(AdditionalOptions) /bigobj /source-charset:utf-8</AdditionalOptions>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -118,12 +122,12 @@
       <TreatWarningAsError>true</TreatWarningAsError>
       <UseFullPaths>false</UseFullPaths>
       <WarningLevel>Level4</WarningLevel>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;_DEBUG;ASSIMP_BUILD_DLL_EXPORT;ASSIMP_BUILD_NO_M3D_IMPORTER;ASSIMP_BUILD_NO_M3D_EXPORTER;ASSIMP_BUILD_NO_VRML_IMPORTER;WIN32_LEAN_AND_MEAN;UNICODE;_UNICODE;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;ASSIMP_BUILD_NO_C4D_IMPORTER;ASSIMP_BUILD_NO_USD_IMPORTER;MINIZ_USE_UNALIGNED_LOADS_AND_STORES=0;ASSIMP_IMPORTER_GLTF_USE_OPEN3DGC=1;RAPIDJSON_HAS_STDSTRING=1;RAPIDJSON_NOMEMBERITERATORCLASS;OPENDDLPARSER_BUILD;CMAKE_INTDIR="Debug";assimp_EXPORTS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;_DEBUG;ASSIMP_BUILD_NO_M3D_IMPORTER;ASSIMP_BUILD_NO_M3D_EXPORTER;ASSIMP_BUILD_NO_VRML_IMPORTER;WIN32_LEAN_AND_MEAN;UNICODE;_UNICODE;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;ASSIMP_BUILD_NO_C4D_IMPORTER;ASSIMP_BUILD_NO_USD_IMPORTER;MINIZ_USE_UNALIGNED_LOADS_AND_STORES=0;ASSIMP_IMPORTER_GLTF_USE_OPEN3DGC=1;RAPIDJSON_HAS_STDSTRING=1;RAPIDJSON_NOMEMBERITERATORCLASS;OPENDDLPARSER_BUILD;CMAKE_INTDIR="Debug"</PreprocessorDefinitions>
       <ObjectFileName>$(IntDir)</ObjectFileName>
       <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
     </ClCompile>
     <ResourceCompile>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;ASSIMP_BUILD_DLL_EXPORT;ASSIMP_BUILD_NO_M3D_IMPORTER;ASSIMP_BUILD_NO_M3D_EXPORTER;ASSIMP_BUILD_NO_VRML_IMPORTER;WIN32_LEAN_AND_MEAN;UNICODE;_UNICODE;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;ASSIMP_BUILD_NO_C4D_IMPORTER;ASSIMP_BUILD_NO_USD_IMPORTER;MINIZ_USE_UNALIGNED_LOADS_AND_STORES=0;ASSIMP_IMPORTER_GLTF_USE_OPEN3DGC=1;RAPIDJSON_HAS_STDSTRING=1;RAPIDJSON_NOMEMBERITERATORCLASS;OPENDDLPARSER_BUILD;CMAKE_INTDIR=\"Debug\";assimp_EXPORTS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;ASSIMP_BUILD_NO_M3D_IMPORTER;ASSIMP_BUILD_NO_M3D_EXPORTER;ASSIMP_BUILD_NO_VRML_IMPORTER;WIN32_LEAN_AND_MEAN;UNICODE;_UNICODE;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;ASSIMP_BUILD_NO_C4D_IMPORTER;ASSIMP_BUILD_NO_USD_IMPORTER;MINIZ_USE_UNALIGNED_LOADS_AND_STORES=0;ASSIMP_IMPORTER_GLTF_USE_OPEN3DGC=1;RAPIDJSON_HAS_STDSTRING=1;RAPIDJSON_NOMEMBERITERATORCLASS;OPENDDLPARSER_BUILD;CMAKE_INTDIR=\"Debug\"</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>C:\Users\farid\Desktop\DX12_FW\External\assimp-master\include;C:\Users\farid\Desktop\DX12_FW\External\assimp-master;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\.;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\contrib\zlib;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib\pugixml\src;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib\utf8cpp\source;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib\rapidjson\include;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib\unzip;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib\openddlparser\include;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\include;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
@@ -149,7 +153,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\Users\farid\Desktop\DX12_FW\External\assimp-master\include;C:\Users\farid\Desktop\DX12_FW\External\assimp-master;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\.;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\contrib\zlib;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib\pugixml\src;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib\utf8cpp\source;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib\rapidjson\include;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib\unzip;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib\openddlparser\include;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\include;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>%(AdditionalOptions) /bigobj /source-charset:utf-8</AdditionalOptions>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
@@ -169,12 +173,12 @@
       <TreatWarningAsError>true</TreatWarningAsError>
       <UseFullPaths>false</UseFullPaths>
       <WarningLevel>Level4</WarningLevel>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;ASSIMP_BUILD_DLL_EXPORT;ASSIMP_BUILD_NO_M3D_IMPORTER;ASSIMP_BUILD_NO_M3D_EXPORTER;ASSIMP_BUILD_NO_VRML_IMPORTER;WIN32_LEAN_AND_MEAN;UNICODE;_UNICODE;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;ASSIMP_BUILD_NO_C4D_IMPORTER;ASSIMP_BUILD_NO_USD_IMPORTER;MINIZ_USE_UNALIGNED_LOADS_AND_STORES=0;ASSIMP_IMPORTER_GLTF_USE_OPEN3DGC=1;RAPIDJSON_HAS_STDSTRING=1;RAPIDJSON_NOMEMBERITERATORCLASS;OPENDDLPARSER_BUILD;CMAKE_INTDIR="Release";assimp_EXPORTS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;ASSIMP_BUILD_NO_M3D_IMPORTER;ASSIMP_BUILD_NO_M3D_EXPORTER;ASSIMP_BUILD_NO_VRML_IMPORTER;WIN32_LEAN_AND_MEAN;UNICODE;_UNICODE;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;ASSIMP_BUILD_NO_C4D_IMPORTER;ASSIMP_BUILD_NO_USD_IMPORTER;MINIZ_USE_UNALIGNED_LOADS_AND_STORES=0;ASSIMP_IMPORTER_GLTF_USE_OPEN3DGC=1;RAPIDJSON_HAS_STDSTRING=1;RAPIDJSON_NOMEMBERITERATORCLASS;OPENDDLPARSER_BUILD;CMAKE_INTDIR="Release"</PreprocessorDefinitions>
       <ObjectFileName>$(IntDir)</ObjectFileName>
       <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
     </ClCompile>
     <ResourceCompile>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;ASSIMP_BUILD_DLL_EXPORT;ASSIMP_BUILD_NO_M3D_IMPORTER;ASSIMP_BUILD_NO_M3D_EXPORTER;ASSIMP_BUILD_NO_VRML_IMPORTER;WIN32_LEAN_AND_MEAN;UNICODE;_UNICODE;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;ASSIMP_BUILD_NO_C4D_IMPORTER;ASSIMP_BUILD_NO_USD_IMPORTER;MINIZ_USE_UNALIGNED_LOADS_AND_STORES=0;ASSIMP_IMPORTER_GLTF_USE_OPEN3DGC=1;RAPIDJSON_HAS_STDSTRING=1;RAPIDJSON_NOMEMBERITERATORCLASS;OPENDDLPARSER_BUILD;CMAKE_INTDIR=\"Release\";assimp_EXPORTS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;ASSIMP_BUILD_NO_M3D_IMPORTER;ASSIMP_BUILD_NO_M3D_EXPORTER;ASSIMP_BUILD_NO_VRML_IMPORTER;WIN32_LEAN_AND_MEAN;UNICODE;_UNICODE;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;ASSIMP_BUILD_NO_C4D_IMPORTER;ASSIMP_BUILD_NO_USD_IMPORTER;MINIZ_USE_UNALIGNED_LOADS_AND_STORES=0;ASSIMP_IMPORTER_GLTF_USE_OPEN3DGC=1;RAPIDJSON_HAS_STDSTRING=1;RAPIDJSON_NOMEMBERITERATORCLASS;OPENDDLPARSER_BUILD;CMAKE_INTDIR=\"Release\"</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>C:\Users\farid\Desktop\DX12_FW\External\assimp-master\include;C:\Users\farid\Desktop\DX12_FW\External\assimp-master;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\.;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\contrib\zlib;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib\pugixml\src;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib\utf8cpp\source;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib\rapidjson\include;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib\unzip;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib\openddlparser\include;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\include;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
@@ -203,7 +207,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\Users\farid\Desktop\DX12_FW\External\assimp-master\include;C:\Users\farid\Desktop\DX12_FW\External\assimp-master;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\.;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\contrib\zlib;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib\pugixml\src;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib\utf8cpp\source;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib\rapidjson\include;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib\unzip;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib\openddlparser\include;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\include;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>%(AdditionalOptions) /bigobj /source-charset:utf-8</AdditionalOptions>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
@@ -222,14 +226,14 @@
       <TreatWarningAsError>true</TreatWarningAsError>
       <UseFullPaths>false</UseFullPaths>
       <WarningLevel>Level4</WarningLevel>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;ASSIMP_BUILD_DLL_EXPORT;ASSIMP_BUILD_NO_M3D_IMPORTER;ASSIMP_BUILD_NO_M3D_EXPORTER;ASSIMP_BUILD_NO_VRML_IMPORTER;WIN32_LEAN_AND_MEAN;UNICODE;_UNICODE;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;ASSIMP_BUILD_NO_C4D_IMPORTER;ASSIMP_BUILD_NO_USD_IMPORTER;MINIZ_USE_UNALIGNED_LOADS_AND_STORES=0;ASSIMP_IMPORTER_GLTF_USE_OPEN3DGC=1;RAPIDJSON_HAS_STDSTRING=1;RAPIDJSON_NOMEMBERITERATORCLASS;OPENDDLPARSER_BUILD;CMAKE_INTDIR="MinSizeRel";assimp_EXPORTS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;ASSIMP_BUILD_NO_M3D_IMPORTER;ASSIMP_BUILD_NO_M3D_EXPORTER;ASSIMP_BUILD_NO_VRML_IMPORTER;WIN32_LEAN_AND_MEAN;UNICODE;_UNICODE;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;ASSIMP_BUILD_NO_C4D_IMPORTER;ASSIMP_BUILD_NO_USD_IMPORTER;MINIZ_USE_UNALIGNED_LOADS_AND_STORES=0;ASSIMP_IMPORTER_GLTF_USE_OPEN3DGC=1;RAPIDJSON_HAS_STDSTRING=1;RAPIDJSON_NOMEMBERITERATORCLASS;OPENDDLPARSER_BUILD;CMAKE_INTDIR="MinSizeRel"</PreprocessorDefinitions>
       <ObjectFileName>$(IntDir)</ObjectFileName>
       <DebugInformationFormat>
       </DebugInformationFormat>
       <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
     </ClCompile>
     <ResourceCompile>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;ASSIMP_BUILD_DLL_EXPORT;ASSIMP_BUILD_NO_M3D_IMPORTER;ASSIMP_BUILD_NO_M3D_EXPORTER;ASSIMP_BUILD_NO_VRML_IMPORTER;WIN32_LEAN_AND_MEAN;UNICODE;_UNICODE;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;ASSIMP_BUILD_NO_C4D_IMPORTER;ASSIMP_BUILD_NO_USD_IMPORTER;MINIZ_USE_UNALIGNED_LOADS_AND_STORES=0;ASSIMP_IMPORTER_GLTF_USE_OPEN3DGC=1;RAPIDJSON_HAS_STDSTRING=1;RAPIDJSON_NOMEMBERITERATORCLASS;OPENDDLPARSER_BUILD;CMAKE_INTDIR=\"MinSizeRel\";assimp_EXPORTS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;ASSIMP_BUILD_NO_M3D_IMPORTER;ASSIMP_BUILD_NO_M3D_EXPORTER;ASSIMP_BUILD_NO_VRML_IMPORTER;WIN32_LEAN_AND_MEAN;UNICODE;_UNICODE;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;ASSIMP_BUILD_NO_C4D_IMPORTER;ASSIMP_BUILD_NO_USD_IMPORTER;MINIZ_USE_UNALIGNED_LOADS_AND_STORES=0;ASSIMP_IMPORTER_GLTF_USE_OPEN3DGC=1;RAPIDJSON_HAS_STDSTRING=1;RAPIDJSON_NOMEMBERITERATORCLASS;OPENDDLPARSER_BUILD;CMAKE_INTDIR=\"MinSizeRel\"</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>C:\Users\farid\Desktop\DX12_FW\External\assimp-master\include;C:\Users\farid\Desktop\DX12_FW\External\assimp-master;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\.;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\contrib\zlib;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib\pugixml\src;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib\utf8cpp\source;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib\rapidjson\include;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib\unzip;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib\openddlparser\include;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\include;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
@@ -256,7 +260,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\Users\farid\Desktop\DX12_FW\External\assimp-master\include;C:\Users\farid\Desktop\DX12_FW\External\assimp-master;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\.;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\contrib\zlib;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib\pugixml\src;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib\utf8cpp\source;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib\rapidjson\include;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib\unzip;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib\openddlparser\include;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\include;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>%(AdditionalOptions) /bigobj /source-charset:utf-8</AdditionalOptions>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
@@ -276,12 +280,12 @@
       <TreatWarningAsError>true</TreatWarningAsError>
       <UseFullPaths>false</UseFullPaths>
       <WarningLevel>Level4</WarningLevel>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;ASSIMP_BUILD_DLL_EXPORT;ASSIMP_BUILD_NO_M3D_IMPORTER;ASSIMP_BUILD_NO_M3D_EXPORTER;ASSIMP_BUILD_NO_VRML_IMPORTER;WIN32_LEAN_AND_MEAN;UNICODE;_UNICODE;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;ASSIMP_BUILD_NO_C4D_IMPORTER;ASSIMP_BUILD_NO_USD_IMPORTER;MINIZ_USE_UNALIGNED_LOADS_AND_STORES=0;ASSIMP_IMPORTER_GLTF_USE_OPEN3DGC=1;RAPIDJSON_HAS_STDSTRING=1;RAPIDJSON_NOMEMBERITERATORCLASS;OPENDDLPARSER_BUILD;CMAKE_INTDIR="RelWithDebInfo";assimp_EXPORTS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;ASSIMP_BUILD_NO_M3D_IMPORTER;ASSIMP_BUILD_NO_M3D_EXPORTER;ASSIMP_BUILD_NO_VRML_IMPORTER;WIN32_LEAN_AND_MEAN;UNICODE;_UNICODE;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;ASSIMP_BUILD_NO_C4D_IMPORTER;ASSIMP_BUILD_NO_USD_IMPORTER;MINIZ_USE_UNALIGNED_LOADS_AND_STORES=0;ASSIMP_IMPORTER_GLTF_USE_OPEN3DGC=1;RAPIDJSON_HAS_STDSTRING=1;RAPIDJSON_NOMEMBERITERATORCLASS;OPENDDLPARSER_BUILD;CMAKE_INTDIR="RelWithDebInfo"</PreprocessorDefinitions>
       <ObjectFileName>$(IntDir)</ObjectFileName>
       <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
     </ClCompile>
     <ResourceCompile>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;ASSIMP_BUILD_DLL_EXPORT;ASSIMP_BUILD_NO_M3D_IMPORTER;ASSIMP_BUILD_NO_M3D_EXPORTER;ASSIMP_BUILD_NO_VRML_IMPORTER;WIN32_LEAN_AND_MEAN;UNICODE;_UNICODE;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;ASSIMP_BUILD_NO_C4D_IMPORTER;ASSIMP_BUILD_NO_USD_IMPORTER;MINIZ_USE_UNALIGNED_LOADS_AND_STORES=0;ASSIMP_IMPORTER_GLTF_USE_OPEN3DGC=1;RAPIDJSON_HAS_STDSTRING=1;RAPIDJSON_NOMEMBERITERATORCLASS;OPENDDLPARSER_BUILD;CMAKE_INTDIR=\"RelWithDebInfo\";assimp_EXPORTS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;ASSIMP_BUILD_NO_M3D_IMPORTER;ASSIMP_BUILD_NO_M3D_EXPORTER;ASSIMP_BUILD_NO_VRML_IMPORTER;WIN32_LEAN_AND_MEAN;UNICODE;_UNICODE;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;ASSIMP_BUILD_NO_C4D_IMPORTER;ASSIMP_BUILD_NO_USD_IMPORTER;MINIZ_USE_UNALIGNED_LOADS_AND_STORES=0;ASSIMP_IMPORTER_GLTF_USE_OPEN3DGC=1;RAPIDJSON_HAS_STDSTRING=1;RAPIDJSON_NOMEMBERITERATORCLASS;OPENDDLPARSER_BUILD;CMAKE_INTDIR=\"RelWithDebInfo\"</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>C:\Users\farid\Desktop\DX12_FW\External\assimp-master\include;C:\Users\farid\Desktop\DX12_FW\External\assimp-master;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\.;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\contrib\zlib;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib\pugixml\src;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib\utf8cpp\source;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib\rapidjson\include;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib\unzip;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\contrib\openddlparser\include;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..\include;C:\Users\farid\Desktop\DX12_FW\External\assimp-master\code\..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>

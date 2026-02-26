@@ -8,7 +8,7 @@
 #include <memory>
 #include <deque>
 
-class UploadBuffer
+class DX12_FW_API UploadBuffer
 {
 public:
     // Use to upload data to the GPU

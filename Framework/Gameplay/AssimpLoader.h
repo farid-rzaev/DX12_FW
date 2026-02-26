@@ -1,9 +1,10 @@
 #pragma once
 
-#include "Material.h"
-
+#include <Framework/3RD_Party/Defines.h>
 #include <Framework/Material/Mesh.h>
 #include <Framework/Material/Texture.h>
+#include "Framework/Material/Material.h"
+
 #include <Framework/CommandList.h>
 
 #include <DirectXCollision.h>
@@ -20,7 +21,7 @@ struct LoadedMeshPart
     DirectX::BoundingBox boundingBox;
 };
 
-class AssimpLoader
+class DX12_FW_API AssimpLoader
 {
 public:
     // Loads an FBX/model file and returns mesh parts.

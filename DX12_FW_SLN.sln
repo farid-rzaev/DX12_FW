@@ -30,6 +30,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "zlibstatic", "External\assi
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "03_Assimp_MeshLoader", "Samples\Full_Framework\03_Assimp_MeshLoader\03_Assimp_MeshLoader.vcxproj", "{EEBC6E28-BF82-410F-BE78-912259C68347}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "04_Deferred_Rendering", "Samples\Full_Framework\04_Deferred_Rendering\04_Deferred_Rendering.vcxproj", "{C5FCE7D8-BDB6-476F-912E-D956F71697C8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -110,6 +112,14 @@ Global
 		{EEBC6E28-BF82-410F-BE78-912259C68347}.Release|x64.Build.0 = Release|x64
 		{EEBC6E28-BF82-410F-BE78-912259C68347}.Release|x86.ActiveCfg = Release|Win32
 		{EEBC6E28-BF82-410F-BE78-912259C68347}.Release|x86.Build.0 = Release|Win32
+		{C5FCE7D8-BDB6-476F-912E-D956F71697C8}.Debug|x64.ActiveCfg = Debug|x64
+		{C5FCE7D8-BDB6-476F-912E-D956F71697C8}.Debug|x64.Build.0 = Debug|x64
+		{C5FCE7D8-BDB6-476F-912E-D956F71697C8}.Debug|x86.ActiveCfg = Debug|Win32
+		{C5FCE7D8-BDB6-476F-912E-D956F71697C8}.Debug|x86.Build.0 = Debug|Win32
+		{C5FCE7D8-BDB6-476F-912E-D956F71697C8}.Release|x64.ActiveCfg = Release|x64
+		{C5FCE7D8-BDB6-476F-912E-D956F71697C8}.Release|x64.Build.0 = Release|x64
+		{C5FCE7D8-BDB6-476F-912E-D956F71697C8}.Release|x86.ActiveCfg = Release|Win32
+		{C5FCE7D8-BDB6-476F-912E-D956F71697C8}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -126,6 +136,7 @@ Global
 		{02EA681E-C7D8-13C7-8484-4AC65E1B71E8} = {BFCAE7D7-BD2F-43C5-91E0-B293116146BF}
 		{3336C8C7-9D3C-30FE-B25D-F3D05F56A19F} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{EEBC6E28-BF82-410F-BE78-912259C68347} = {B89BA7C3-47EE-48A8-898E-375D0BBB4F29}
+		{C5FCE7D8-BDB6-476F-912E-D956F71697C8} = {B89BA7C3-47EE-48A8-898E-375D0BBB4F29}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {ACDB5BE7-3E35-45A9-8E7A-A65CDACEBA86}

@@ -1,8 +1,10 @@
 #pragma once
 
+#include <Framework/3RD_Party/Defines.h> 
+
 #include "Buffer.h"
 
-class VertexBuffer : public Buffer
+class DX12_FW_API VertexBuffer : public Buffer
 {
 public:
     VertexBuffer(const std::wstring& name = L"");

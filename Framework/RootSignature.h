@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Framework/3RD_Party/Defines.h>
+
 #include <Framework/3RD_Party/D3D/d3dx12.h>
 
 #include <wrl.h>
@@ -10,33 +12,33 @@ class RootSignature
 {
 public:
     // TODO: Add (deep) copy/move constructors and assignment operators!
-    RootSignature();
-    RootSignature(
+    DX12_FW_API RootSignature();
+    DX12_FW_API RootSignature(
         const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc, 
         D3D_ROOT_SIGNATURE_VERSION rootSignatureVersion
     );
 
-    virtual ~RootSignature();
+    virtual DX12_FW_API ~RootSignature();
 
-    void Destroy();
+    DX12_FW_API void Destroy();
 
-    Microsoft::WRL::ComPtr<ID3D12RootSignature> GetRootSignature() const
+    DX12_FW_API Microsoft::WRL::ComPtr<ID3D12RootSignature> GetRootSignature() const
     {
         return m_RootSignature;
     }
 
-    void SetRootSignatureDesc(
+    DX12_FW_API void SetRootSignatureDesc(
         const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc,
         D3D_ROOT_SIGNATURE_VERSION rootSignatureVersion
     );
 
-    const D3D12_ROOT_SIGNATURE_DESC1& GetRootSignatureDesc() const
+    DX12_FW_API const D3D12_ROOT_SIGNATURE_DESC1& GetRootSignatureDesc() const
     {
         return m_RootSignatureDesc;
     }
 
-    uint32_t GetDescriptorTableBitMask(D3D12_DESCRIPTOR_HEAP_TYPE descriptorHeapType) const;
-    uint32_t GetNumDescriptors(uint32_t rootIndex) const;
+    DX12_FW_API uint32_t GetDescriptorTableBitMask(D3D12_DESCRIPTOR_HEAP_TYPE descriptorHeapType) const;
+    DX12_FW_API uint32_t GetNumDescriptors(uint32_t rootIndex) const;
 
 protected:
 

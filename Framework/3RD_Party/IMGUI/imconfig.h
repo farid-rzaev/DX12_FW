@@ -13,6 +13,10 @@
 
 #pragma once
 
+#include <Framework/3RD_Party/Defines.h>
+
+#define IMGUI_API DX12_FW_API
+
 //---- Define assertion handler. Defaults to calling assert().
 //#define IM_ASSERT(_EXPR)  MyAssert(_EXPR)
 //#define IM_ASSERT(_EXPR)  ((void)(_EXPR))     // Disable asserts

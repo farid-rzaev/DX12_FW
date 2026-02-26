@@ -1,17 +1,18 @@
 #pragma once
 
+#include <Framework/3RD_Party/Defines.h>
+#include <Framework/3RD_Party/Threading/ThreadSafeQueue.h>
+
 #include <d3d12.h>
 #include <wrl.h>	// ComPtr
 
 #include <memory>	// shared_ptr
 #include <queue>
 
-#include <Framework/3RD_Party/Threading/ThreadSafeQueue.h>
-
 class Application;
 class CommandList;
 
-class CommandQueue
+class DX12_FW_API CommandQueue
 {
 public:
 	CommandQueue(D3D12_COMMAND_LIST_TYPE type);
