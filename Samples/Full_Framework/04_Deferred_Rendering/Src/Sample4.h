@@ -67,9 +67,6 @@ private: /* DEFERRED RENDERING */
     static const int NUM_GBUFFER_RTS = 3;
     RenderTarget m_GBufferRT;  // Will hold multiple color attachments
 
-    // Deferred lighting intermediate buffer (before tone mapping)
-    RenderTarget m_DeferredLightingRT;
-
     // Root signatures for deferred path
     RootSignature m_GBufferRootSignature;
     RootSignature m_DeferredLightingRootSignature;

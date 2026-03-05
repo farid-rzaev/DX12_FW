@@ -220,7 +220,7 @@ bool Sample4::Initialize(const wchar_t* windowTitle, int width, int height, bool
     XMVECTOR cameraUp = XMVectorSet(0, 1, 0, 0);
 
     m_Camera.set_LookAt(cameraPos, cameraTarget, cameraUp);
-    m_Camera.set_Projection(45.0f, width / (float)height, 0.1f, 100.0f);
+    m_Camera.set_Projection(45.0f, width / (float)height, 0.1f, 200.0f);
 
     return true;
 }
@@ -275,7 +275,8 @@ bool Sample4::LoadContent()
     DXGI_FORMAT depthBufferFormat = DXGI_FORMAT_D32_FLOAT;
 
     // Create an off-screen render target with a single color buffer and a depth buffer.
-    auto colorDesc = CD3DX12_RESOURCE_DESC::Tex2D(HDRFormat, m_Width, m_Height);
+    // Array size of 1, and 1 mip level since this is an off-screen render target that won't be sampled from.
+	auto colorDesc = CD3DX12_RESOURCE_DESC::Tex2D(HDRFormat, m_Width, m_Height, 1, 1);  
     colorDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
 
     D3D12_CLEAR_VALUE colorClearValue;
@@ -285,12 +286,10 @@ bool Sample4::LoadContent()
     colorClearValue.Color[2] = 0.9f;
     colorClearValue.Color[3] = 1.0f;
 
-    Texture HDRTexture = Texture(colorDesc, &colorClearValue,
-        TextureUsage::RenderTarget,
-        L"HDR Texture");
+    Texture HDRTexture = Texture(colorDesc, &colorClearValue, TextureUsage::RenderTarget, L"HDR Texture");
 
     // Create a depth buffer for the HDR render target.
-    auto depthDesc = CD3DX12_RESOURCE_DESC::Tex2D(depthBufferFormat, m_Width, m_Height);
+    auto depthDesc = CD3DX12_RESOURCE_DESC::Tex2D(depthBufferFormat, m_Width, m_Height, 1, 1);
     depthDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 
     D3D12_CLEAR_VALUE depthClearValue;
@@ -313,7 +312,8 @@ bool Sample4::LoadContent()
             DXGI_FORMAT_R32G32B32A32_FLOAT      // Position (view space)
         };
 
-        auto colorDesc = CD3DX12_RESOURCE_DESC::Tex2D(gbufferFormats[0], m_Width, m_Height);
+        // Just one mip is enough.
+        auto colorDesc = CD3DX12_RESOURCE_DESC::Tex2D(gbufferFormats[0], m_Width, m_Height, 1, 1);
         colorDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
         // --
         colorClearValue.Format = gbufferFormats[0];
@@ -328,19 +328,11 @@ bool Sample4::LoadContent()
         colorClearValue.Format = gbufferFormats[2];
         Texture gbufferRT2 = Texture(colorDesc, &colorClearValue, TextureUsage::RenderTarget, L"GBuffer RT2");
 
-
         // Create G-Buffer with multiple render targets
         m_GBufferRT.AttachTexture(AttachmentPoint::Color0, gbufferRT0);
         m_GBufferRT.AttachTexture(AttachmentPoint::Color1, gbufferRT1);
         m_GBufferRT.AttachTexture(AttachmentPoint::Color2, gbufferRT2);
         m_GBufferRT.AttachTexture(AttachmentPoint::DepthStencil, depthTexture);
-
-		colorDesc.Format = HDRFormat;
-        colorClearValue.Format = HDRFormat;
-        Texture deferredLightingRT = Texture(colorDesc, &colorClearValue, TextureUsage::RenderTarget, L"DeferredLighting RT");
-
-        // Create deferred lighting output buffer (HDR, before tone mapping)
-        m_DeferredLightingRT.AttachTexture(AttachmentPoint::Color0, deferredLightingRT);
     }
 
 
@@ -618,6 +610,7 @@ bool Sample4::LoadContent()
             CD3DX12_PIPELINE_STATE_STREAM_VS VS;
             CD3DX12_PIPELINE_STATE_STREAM_PS PS;
             CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL1 DepthStencil;
+            CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL_FORMAT DSVFormat;
             CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS RTVFormats;
         } deferredPipelineStateStream;
 
@@ -631,10 +624,13 @@ bool Sample4::LoadContent()
         deferredPipelineStateStream.PS = CD3DX12_SHADER_BYTECODE(ps.Get());
 
         CD3DX12_DEPTH_STENCIL_DESC1 depthStencilDesc(D3D12_DEFAULT);
-        depthStencilDesc.DepthEnable = FALSE;                                                    // No depth test for full-screen quad
+        depthStencilDesc.DepthEnable = FALSE;
+        depthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+        depthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
         // --
         deferredPipelineStateStream.DepthStencil = depthStencilDesc;
-        deferredPipelineStateStream.RTVFormats   = m_HDRRenderTarget.GetRenderTargetFormats();   // HDR output
+        deferredPipelineStateStream.DSVFormat  = m_HDRRenderTarget.GetDepthStencilFormat();    // HDR output
+        deferredPipelineStateStream.RTVFormats = m_HDRRenderTarget.GetRenderTargetFormats();   // HDR output
 
         D3D12_PIPELINE_STATE_STREAM_DESC deferredPipelineStateStreamDesc = {
             sizeof(DeferredPipelineStateStream), &deferredPipelineStateStream
@@ -1229,7 +1225,6 @@ void Sample4::RenderDeferred(std::shared_ptr<CommandList> commandList, DirectX::
     commandList->ClearTexture(m_GBufferRT.GetTexture(AttachmentPoint::Color0), clearColor);
     commandList->ClearTexture(m_GBufferRT.GetTexture(AttachmentPoint::Color1), clearColor);
     commandList->ClearTexture(m_GBufferRT.GetTexture(AttachmentPoint::Color2), clearColor);
-    commandList->ClearDepthStencilTexture(m_GBufferRT.GetTexture(AttachmentPoint::DepthStencil), D3D12_CLEAR_FLAG_DEPTH);
 
     // Set G-Buffer PSO
     commandList->SetPipelineState(m_GBufferPSO);
@@ -1295,7 +1290,7 @@ void Sample4::RenderDeferred(std::shared_ptr<CommandList> commandList, DirectX::
     // === PASS 2: Deferred Lighting ===
 
     // Set deferred lighting output as render target
-    commandList->SetRenderTarget(m_DeferredLightingRT);
+    commandList->SetRenderTarget(m_HDRRenderTarget);
     commandList->SetPipelineState(m_DeferredLightingPSO);
     commandList->SetGraphicsRootSignature(m_DeferredLightingRootSignature);
 
@@ -1316,9 +1311,6 @@ void Sample4::RenderDeferred(std::shared_ptr<CommandList> commandList, DirectX::
     // Draw full-screen triangle
     commandList->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     commandList->Draw(3); // Full-screen triangle
-
-    // === PASS 3: COPY (deferred lighting result to HDR rt for tone mapping ===
-    commandList->CopyResource(m_HDRRenderTarget.GetTexture(AttachmentPoint::Color0), m_DeferredLightingRT.GetTexture(AttachmentPoint::Color0));
 }
 
 static bool g_AllowFullscreenToggle = true;

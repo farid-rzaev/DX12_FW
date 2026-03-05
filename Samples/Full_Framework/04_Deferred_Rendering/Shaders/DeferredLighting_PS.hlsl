@@ -96,6 +96,12 @@ float4 main(float2 texCoord : TEXCOORD) : SV_Target
 {
     // Sample G-Buffer
     float4 albedo       = GBufferAlbedo.Sample(PointSampler, texCoord);
+    
+    if (all(albedo == 0))
+    {
+        discard;
+    }
+    
     float4 normalPacked = GBufferNormal.Sample(PointSampler, texCoord);
     float4 positionVS   = GBufferPosition.Sample(PointSampler, texCoord);
     
