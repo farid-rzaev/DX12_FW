@@ -29,6 +29,11 @@ const Texture& RenderTarget::GetTexture(AttachmentPoint attachmentPoint) const
     return m_Textures[attachmentPoint];
 }
 
+Texture& RenderTarget::GetTexture(AttachmentPoint attachmentPoint)
+{
+    return m_Textures[attachmentPoint];
+}
+
 // Resize all of the textures associated with the render target.
 void RenderTarget::Resize(DirectX::XMUINT2 size)
 {

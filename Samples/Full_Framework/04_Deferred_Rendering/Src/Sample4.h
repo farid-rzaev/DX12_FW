@@ -16,6 +16,13 @@
 
 #include <DirectXMath.h>
 
+enum class RenderingMode
+{
+    Forward = 0,
+    Deferred,
+    Count
+};
+
 class Sample4 : public Game
 {
 public:
@@ -30,6 +37,9 @@ public:
 protected:
     virtual void OnUpdate() override;
     virtual void OnRender() override;
+
+    void RenderForward(std::shared_ptr<CommandList> commandList, DirectX::CXMMATRIX viewMatrix, DirectX::CXMMATRIX viewProjectionMatrix);
+    void RenderDeferred(std::shared_ptr<CommandList> commandList, DirectX::CXMMATRIX viewMatrix, DirectX::CXMMATRIX viewProjectionMatrix);
 
     // Invoked by the registered window when a key is pressed while the window has focus.
     virtual void OnKeyPressed(KeyEventArgs& e) override;
@@ -46,8 +56,27 @@ protected:
     void RescaleHDRRenderTarget(float scale);
     virtual void OnResize(ResizeEventArgs& e) override; 
 
-
     void OnGUI();
+
+private: /* DEFERRED RENDERING */
+
+    // Rendering mode switch
+    RenderingMode m_RenderingMode = RenderingMode::Forward;
+
+    // 3 GBuff RTs: Albedo, Normal, Position
+    static const int NUM_GBUFFER_RTS = 3;
+    RenderTarget m_GBufferRT;  // Will hold multiple color attachments
+
+    // Deferred lighting intermediate buffer (before tone mapping)
+    RenderTarget m_DeferredLightingRT;
+
+    // Root signatures for deferred path
+    RootSignature m_GBufferRootSignature;
+    RootSignature m_DeferredLightingRootSignature;
+
+    // Pipeline state objects for deferred
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> m_GBufferPSO;
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> m_DeferredLightingPSO;
 
 private:
     // Some geometry to render.

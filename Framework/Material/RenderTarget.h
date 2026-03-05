@@ -42,6 +42,7 @@ public:
     // The texture will be copied into the texture array.
     void AttachTexture(AttachmentPoint attachmentPoint, const Texture& texture);
     const Texture& GetTexture(AttachmentPoint attachmentPoint) const;
+    Texture& GetTexture(AttachmentPoint attachmentPoint);
 
     // Resize all of the textures associated with the render target.
     void Resize(DirectX::XMUINT2 size);
