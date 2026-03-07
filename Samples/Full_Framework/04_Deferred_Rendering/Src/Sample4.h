@@ -53,7 +53,7 @@ protected:
     // Invoked when the mouse wheel is scrolled while the registered window has focus.
     virtual void OnMouseWheel(MouseWheelEventArgs& e) override;
 
-    void RescaleHDRRenderTarget(float scale);
+    void RescaleRenderTargets(float scale);
     virtual void OnResize(ResizeEventArgs& e) override; 
 
     void OnGUI();

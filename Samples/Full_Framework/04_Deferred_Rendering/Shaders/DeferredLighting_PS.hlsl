@@ -31,16 +31,6 @@ struct LightProperties
     uint NumSpotLights;
 };
 
-struct Material
-{
-    float4 Emissive;
-    float4 Ambient;
-    float4 Diffuse;
-    float4 Specular;
-    float SpecularPower;
-    float3 Padding;
-};
-
 // --------------------------------------------------------------------------------
 //                                    FUNCs
 // --------------------------------------------------------------------------------
@@ -74,8 +64,7 @@ float DoSpotCone(float3 spotDir, float3 L, float spotAngle)
 //                                    RESOURCEs
 // --------------------------------------------------------------------------------
 
-ConstantBuffer<Material> MaterialCB                 : register(b0, space1);
-ConstantBuffer<LightProperties> LightPropertiesCB   : register(b1);
+ConstantBuffer<LightProperties> LightPropertiesCB   : register(b0);
 
 StructuredBuffer<PointLight> PointLights            : register(t0);
 StructuredBuffer<SpotLight> SpotLights              : register(t1);
@@ -96,13 +85,15 @@ float4 main(float2 texCoord : TEXCOORD) : SV_Target
 {
     // Sample G-Buffer
     float4 albedo       = GBufferAlbedo.Sample(PointSampler, texCoord);
+    float4 normalPacked = GBufferNormal.Sample(PointSampler, texCoord);
     
-    if (all(albedo == 0))
+    // As Sponza model could have perfectly black texels (e.g., shadow areas, pure black materials), just checking for zero albedo is not enough.
+    // So checking for normal as well.
+    if (all(albedo == 0) && all(normalPacked == 0))
     {
         discard;
     }
     
-    float4 normalPacked = GBufferNormal.Sample(PointSampler, texCoord);
     float4 positionVS   = GBufferPosition.Sample(PointSampler, texCoord);
     
     // Unpack normal from [0,1] to [-1,1]
@@ -150,7 +141,7 @@ float4 main(float2 texCoord : TEXCOORD) : SV_Target
     }
     
     // Final color: ambient + diffuse + specular
-    float3 ambient = MaterialCB.Ambient.rgb * 0.1; // Simple ambient
+    float3 ambient = albedo.rgb * 0.1; // Simple ambient as fraction of albedo
     float3 finalColor = (ambient + diffuseAccum + specularAccum) * albedo.rgb;
     
     return float4(finalColor, 1.0);

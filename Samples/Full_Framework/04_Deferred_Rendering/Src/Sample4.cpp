@@ -121,8 +121,7 @@ enum GbufferRootParams
 
 enum DeferredRootParams
 {
-    MaterialCB_Deferred,             // b0, space1                                                   <- vs
-    LightPropertiesCB_Deferred,      // b1                                                           <- ps
+    LightPropertiesCB_Deferred,      // b0                                                           <- ps
     PointLights_Deferred,            // t0                                                           <- ps
     SpotLights_Deferred,             // t1                                                           <- ps
     Textures_Deferred,               // t2-t4: G-Buffer textures                                     <- ps
@@ -296,9 +295,7 @@ bool Sample4::LoadContent()
     depthClearValue.Format = depthDesc.Format;
     depthClearValue.DepthStencil = { 1.0f, 0 };
 
-    Texture depthTexture = Texture(depthDesc, &depthClearValue,
-        TextureUsage::Depth,
-        L"Depth Render Target");
+    Texture depthTexture = Texture(depthDesc, &depthClearValue, TextureUsage::Depth, L"Depth Render Target");
 
     // Attach the HDR texture to the HDR render target.
     m_HDRRenderTarget.AttachTexture(AttachmentPoint::Color0, HDRTexture);
@@ -317,6 +314,10 @@ bool Sample4::LoadContent()
         colorDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
         // --
         colorClearValue.Format = gbufferFormats[0];
+        colorClearValue.Color[0] = 0.0f;
+        colorClearValue.Color[1] = 0.0f;
+        colorClearValue.Color[2] = 0.0f;
+        colorClearValue.Color[3] = 0.0f;
         // --
         Texture gbufferRT0 = Texture(colorDesc, &colorClearValue, TextureUsage::RenderTarget, L"GBuffer RT0");
     
@@ -533,11 +534,14 @@ bool Sample4::LoadContent()
 
         // === G-Buffer PSO ===
 
-        // G-Buffer shaders
-        ComPtr<ID3DBlob> vs;
-        ComPtr<ID3DBlob> ps;
+        ComPtr<ID3DBlob> vs, ps;
         ThrowIfFailed(D3DReadFileToBlob((solution_dir_str + L"\\GBuffer_VS.cso").c_str(), &vs));
         ThrowIfFailed(D3DReadFileToBlob((solution_dir_str + L"\\GBuffer_PS.cso").c_str(), &ps));
+
+        CD3DX12_DEPTH_STENCIL_DESC1 depthStencilDesc(D3D12_DEFAULT);
+        depthStencilDesc.DepthEnable = TRUE;
+        depthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+        depthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
 
         struct PipelineStateStream
         {
@@ -546,6 +550,7 @@ bool Sample4::LoadContent()
             CD3DX12_PIPELINE_STATE_STREAM_PRIMITIVE_TOPOLOGY PrimitiveTopologyType;
             CD3DX12_PIPELINE_STATE_STREAM_VS VS;
             CD3DX12_PIPELINE_STATE_STREAM_PS PS;
+            CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL1 DepthStencil;
             CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL_FORMAT DSVFormat;
             CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS RTVFormats;
         } gbufferPipelineStateStream;
@@ -555,6 +560,7 @@ bool Sample4::LoadContent()
         gbufferPipelineStateStream.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
         gbufferPipelineStateStream.VS = CD3DX12_SHADER_BYTECODE(vs.Get());
         gbufferPipelineStateStream.PS = CD3DX12_SHADER_BYTECODE(ps.Get());
+        gbufferPipelineStateStream.DepthStencil = depthStencilDesc;
         gbufferPipelineStateStream.DSVFormat  = m_GBufferRT.GetDepthStencilFormat();
         gbufferPipelineStateStream.RTVFormats = m_GBufferRT.GetRenderTargetFormats();
 
@@ -571,8 +577,7 @@ bool Sample4::LoadContent()
         CD3DX12_DESCRIPTOR_RANGE1 descriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 2);
         // --
         CD3DX12_ROOT_PARAMETER1 rootParameters[DeferredRootParams::NumRootParameters_Deferred];
-        rootParameters[DeferredRootParams::MaterialCB_Deferred].InitAsConstantBufferView(0, 1, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);   // b0, PIXEL  shader uses SPACE1
-        rootParameters[DeferredRootParams::LightPropertiesCB_Deferred].InitAsConstants(sizeof(LightProperties) / 4, 1, 0, D3D12_SHADER_VISIBILITY_PIXEL);         // b1
+        rootParameters[DeferredRootParams::LightPropertiesCB_Deferred].InitAsConstants(sizeof(LightProperties) / 4, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL);         // b0
         rootParameters[DeferredRootParams::PointLights_Deferred].InitAsShaderResourceView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);  // t0
         rootParameters[DeferredRootParams::SpotLights_Deferred].InitAsShaderResourceView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);   // t1
         rootParameters[DeferredRootParams::Textures_Deferred].InitAsDescriptorTable(1, &descriptorRange, D3D12_SHADER_VISIBILITY_PIXEL);                          // t2,t3,t4 - DESCRIPTOR HEAP see descriptorRange
@@ -644,7 +649,7 @@ bool Sample4::LoadContent()
     return true;
 }
 
-void Sample4::RescaleHDRRenderTarget(float scale)
+void Sample4::RescaleRenderTargets(float scale)
 {
     uint32_t width = static_cast<uint32_t>(m_Width * scale);
     uint32_t height = static_cast<uint32_t>(m_Height * scale);
@@ -653,6 +658,7 @@ void Sample4::RescaleHDRRenderTarget(float scale)
     height = clamp<uint32_t>(height, 1, D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION);
 
     m_HDRRenderTarget.Resize(width, height);
+    m_GBufferRT.Resize(width, height);
 }
 
 void Sample4::OnResize(ResizeEventArgs& e)
@@ -668,7 +674,7 @@ void Sample4::OnResize(ResizeEventArgs& e)
         float aspectRatio = m_Width / (float)m_Height;
         m_Camera.set_Projection(fov, aspectRatio, 0.1f, 200.0f);
 
-        RescaleHDRRenderTarget(m_RenderScale);
+        RescaleRenderTargets(m_RenderScale);
     }
 }
 
@@ -911,7 +917,7 @@ void Sample4::OnGUI()
             if (renderScale != m_RenderScale)
             {
                 m_RenderScale = renderScale;
-                RescaleHDRRenderTarget(m_RenderScale);
+                RescaleRenderTargets(m_RenderScale);
             }
         }
         
@@ -1128,7 +1134,7 @@ void Sample4::RenderForward(std::shared_ptr<CommandList> commandList, DirectX::C
         // --
         // The projection matrix transforms from view space -> clip/projection space.
         // So when you create a frustum from the projection matrix, the resulting planes represent the 
-        // view volume boundaries in the coordinate system where the camera is at the origin — which is view space.
+        // view volume boundaries in the coordinate system where the camera is at the origin ï¿½ which is view space.
         DirectX::BoundingFrustum cameraFrustum;
         DirectX::BoundingFrustum::CreateFromMatrix(cameraFrustum, m_Camera.get_ProjectionMatrix());
 
@@ -1225,6 +1231,7 @@ void Sample4::RenderDeferred(std::shared_ptr<CommandList> commandList, DirectX::
     commandList->ClearTexture(m_GBufferRT.GetTexture(AttachmentPoint::Color0), clearColor);
     commandList->ClearTexture(m_GBufferRT.GetTexture(AttachmentPoint::Color1), clearColor);
     commandList->ClearTexture(m_GBufferRT.GetTexture(AttachmentPoint::Color2), clearColor);
+    commandList->ClearDepthStencilTexture(m_GBufferRT.GetTexture(AttachmentPoint::DepthStencil), D3D12_CLEAR_FLAG_DEPTH);
 
     // Set G-Buffer PSO
     commandList->SetPipelineState(m_GBufferPSO);
@@ -1250,7 +1257,7 @@ void Sample4::RenderDeferred(std::shared_ptr<CommandList> commandList, DirectX::
         // --
         // The projection matrix transforms from view space -> clip/projection space.
         // So when you create a frustum from the projection matrix, the resulting planes represent the 
-        // view volume boundaries in the coordinate system where the camera is at the origin — which is view space.
+        // view volume boundaries in the coordinate system where the camera is at the origin ï¿½ which is view space.
         DirectX::BoundingFrustum cameraFrustum;
         DirectX::BoundingFrustum::CreateFromMatrix(cameraFrustum, m_Camera.get_ProjectionMatrix());
 
