@@ -828,8 +828,8 @@ void Sample2::OnRender()
     {
         FLOAT clearColor[] = { 0.4f, 0.6f, 0.9f, 1.0f };
 
-        commandList->ClearTexture(m_HDRRenderTarget.GetTexture(AttachmentPoint::Color0), clearColor);
-        commandList->ClearDepthStencilTexture(m_HDRRenderTarget.GetTexture(AttachmentPoint::DepthStencil), D3D12_CLEAR_FLAG_DEPTH);
+        commandList->ClearTexture(*m_HDRRenderTarget.GetTexture(AttachmentPoint::Color0), clearColor);
+        commandList->ClearDepthStencilTexture(*m_HDRRenderTarget.GetTexture(AttachmentPoint::DepthStencil), D3D12_CLEAR_FLAG_DEPTH);
     }
 
     commandList->SetRenderTarget(m_HDRRenderTarget);
@@ -1035,7 +1035,7 @@ void Sample2::OnRender()
     commandList->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     commandList->SetGraphicsRootSignature(m_SDRRootSignature);
     commandList->SetGraphics32BitConstants(0, g_TonemapParameters);
-    commandList->SetShaderResourceView(1, 0, m_HDRRenderTarget.GetTexture(Color0), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    commandList->SetShaderResourceView(1, 0, *m_HDRRenderTarget.GetTexture(Color0), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
     commandList->Draw(3);
 

@@ -175,9 +175,9 @@ void Sample0::OnRender()
 	auto d3dCommandList = commandList->GetGraphicsCommandList();
 
 	m_CurrentBackBufferIndex = Application::Get().GetCurrentBackbufferIndex();
-	auto backBuffer = Application::Get().GetWindow()->GetRenderTarget().GetTexture(AttachmentPoint::Color0).GetD3D12Resource();
+	auto backBuffer = Application::Get().GetWindow()->GetRenderTarget().GetTexture(AttachmentPoint::Color0)->GetD3D12Resource();
 
-	auto rtv = Application::Get().GetWindow()->GetRenderTarget().GetTexture(AttachmentPoint::Color0).GetRenderTargetView();
+	auto rtv = Application::Get().GetWindow()->GetRenderTarget().GetTexture(AttachmentPoint::Color0)->GetRenderTargetView();
 	auto dsv = m_DSVHeap->GetCPUDescriptorHandleForHeapStart();
 
 	// Clear RT

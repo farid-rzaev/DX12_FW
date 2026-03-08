@@ -73,9 +73,14 @@ void Texture::Resize(uint32_t width, uint32_t height, uint32_t depthOrArraySize 
     // Resource can't be resized if it was never created in the first place.
     if (m_d3d12Resource)
     {
-        ResourceStateTracker::RemoveGlobalResourceState(m_d3d12Resource.Get());
-
         CD3DX12_RESOURCE_DESC resDesc(m_d3d12Resource->GetDesc());
+        if (resDesc.Width == width && resDesc.Height == height && resDesc.DepthOrArraySize == depthOrArraySize)
+        {
+            CreateViews();
+            return;
+        }
+
+        ResourceStateTracker::RemoveGlobalResourceState(m_d3d12Resource.Get());
 
         resDesc.Width = std::max( width, 1u );
         resDesc.Height = std::max( height, 1u );

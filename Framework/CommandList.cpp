@@ -982,26 +982,26 @@ void CommandList::SetRenderTarget(const RenderTarget& renderTarget )
     // Bind color targets (max of 8 render targets can be bound to the rendering pipeline.
     for ( int i = 0; i < 8; ++i )
     {
-        auto& texture = textures[i];
+        std::shared_ptr<Texture> pTexture = textures[i];
 
-        if ( texture.IsValid() )
+        if (pTexture && pTexture->IsValid() )
         {
-            TransitionBarrier( texture, D3D12_RESOURCE_STATE_RENDER_TARGET );
-            renderTargetDescriptors.push_back( texture.GetRenderTargetView() );
+            TransitionBarrier( *pTexture, D3D12_RESOURCE_STATE_RENDER_TARGET );
+            renderTargetDescriptors.push_back(pTexture->GetRenderTargetView() );
 
-            TrackResource( texture );
+            TrackResource( *pTexture );
         }
     }
 
-    const auto& depthTexture = renderTarget.GetTexture( AttachmentPoint::DepthStencil );
+    const Texture* pDepthTexture = renderTarget.TryGetTexture( AttachmentPoint::DepthStencil );
 
     CD3DX12_CPU_DESCRIPTOR_HANDLE depthStencilDescriptor(D3D12_DEFAULT);
-    if (depthTexture.GetD3D12Resource())
+    if (pDepthTexture && pDepthTexture->GetD3D12Resource())
     {
-        TransitionBarrier(depthTexture, D3D12_RESOURCE_STATE_DEPTH_WRITE);
-        depthStencilDescriptor = depthTexture.GetDepthStencilView();
+        TransitionBarrier(*pDepthTexture, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+        depthStencilDescriptor = pDepthTexture->GetDepthStencilView();
 
-        TrackResource(depthTexture);
+        TrackResource(*pDepthTexture);
     }
 
     D3D12_CPU_DESCRIPTOR_HANDLE* pDSV = depthStencilDescriptor.ptr != 0 ? &depthStencilDescriptor : nullptr;

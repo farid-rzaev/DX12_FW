@@ -423,8 +423,8 @@ void Sample1::OnRender()
     {
         FLOAT clearColor[] = { 0.4f, 0.6f, 0.9f, 1.0f };
 
-        commandList->ClearTexture( m_RenderTarget.GetTexture(AttachmentPoint::Color0), clearColor );
-        commandList->ClearDepthStencilTexture( m_RenderTarget.GetTexture(AttachmentPoint::DepthStencil), D3D12_CLEAR_FLAG_DEPTH );
+        commandList->ClearTexture( *m_RenderTarget.GetTexture(AttachmentPoint::Color0), clearColor );
+        commandList->ClearDepthStencilTexture( *m_RenderTarget.GetTexture(AttachmentPoint::DepthStencil), D3D12_CLEAR_FLAG_DEPTH );
     }
 
     commandList->SetPipelineState(m_PipelineState);
@@ -608,7 +608,7 @@ void Sample1::OnRender()
     }
 
     // Present
-    app.Present( m_RenderTarget.GetTexture(AttachmentPoint::Color0) );
+    app.Present( *m_RenderTarget.GetTexture(AttachmentPoint::Color0) );
 }
 
 static bool g_AllowFullscreenToggle = true;

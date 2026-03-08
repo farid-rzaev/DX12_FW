@@ -213,7 +213,6 @@ bool Sample4::Initialize(const wchar_t* windowTitle, int width, int height, bool
     ResizeEventArgs resizeEventArgs(width, height);
     OnResize(resizeEventArgs);
 
-
     XMVECTOR cameraPos = XMVectorSet(10, 10, -20, 1);
     XMVECTOR cameraTarget = XMVectorSet(0, 5, 0, 1);
     XMVECTOR cameraUp = XMVectorSet(0, 1, 0, 0);
@@ -295,11 +294,11 @@ bool Sample4::LoadContent()
     depthClearValue.Format = depthDesc.Format;
     depthClearValue.DepthStencil = { 1.0f, 0 };
 
-    Texture depthTexture = Texture(depthDesc, &depthClearValue, TextureUsage::Depth, L"Depth Render Target");
+    std::shared_ptr<Texture> sharedDepthTexture = std::make_shared<Texture>(depthDesc, &depthClearValue, TextureUsage::Depth, L"Depth Render Target");
 
     // Attach the HDR texture to the HDR render target.
     m_HDRRenderTarget.AttachTexture(AttachmentPoint::Color0, HDRTexture);
-    m_HDRRenderTarget.AttachTexture(AttachmentPoint::DepthStencil, depthTexture);
+    m_HDRRenderTarget.AttachTextureShared(AttachmentPoint::DepthStencil, sharedDepthTexture);
 
     // Create G-Buffer render target with multiple color attachments
     {
@@ -333,7 +332,7 @@ bool Sample4::LoadContent()
         m_GBufferRT.AttachTexture(AttachmentPoint::Color0, gbufferRT0);
         m_GBufferRT.AttachTexture(AttachmentPoint::Color1, gbufferRT1);
         m_GBufferRT.AttachTexture(AttachmentPoint::Color2, gbufferRT2);
-        m_GBufferRT.AttachTexture(AttachmentPoint::DepthStencil, depthTexture);
+        m_GBufferRT.AttachTextureShared(AttachmentPoint::DepthStencil, sharedDepthTexture);
     }
 
 
@@ -588,11 +587,8 @@ bool Sample4::LoadContent()
         pointSampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
         pointSampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
         pointSampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-        pointSampler.ShaderRegister = 0;
+        pointSampler.ShaderRegister = 0;                                                                                                                           // s0
         pointSampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-        // --
-        CD3DX12_STATIC_SAMPLER_DESC linearRepeatSampler(0, D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR);                                                  // s0
-
 
         // Allow input layout and deny unnecessary access to certain pipeline stages.
         D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
@@ -1031,8 +1027,8 @@ void Sample4::OnRender()
     {
         FLOAT clearColor[] = { 0.4f, 0.6f, 0.9f, 1.0f };
 
-        commandList->ClearTexture(m_HDRRenderTarget.GetTexture(AttachmentPoint::Color0), clearColor);
-        commandList->ClearDepthStencilTexture(m_HDRRenderTarget.GetTexture(AttachmentPoint::DepthStencil), D3D12_CLEAR_FLAG_DEPTH);
+        commandList->ClearTexture(*m_HDRRenderTarget.GetTexture(AttachmentPoint::Color0), clearColor);
+        commandList->ClearDepthStencilTexture(*m_HDRRenderTarget.GetTexture(AttachmentPoint::DepthStencil), D3D12_CLEAR_FLAG_DEPTH);
     }
 
     commandList->SetRenderTarget(m_HDRRenderTarget);
@@ -1082,11 +1078,12 @@ void Sample4::OnRender()
     {
         commandList->SetRenderTarget(app.GetRenderTarget());
         commandList->SetViewport(app.GetRenderTarget().GetViewport());
+        commandList->SetScissorRect(m_ScissorRect);
         commandList->SetPipelineState(m_SDRPipelineState);
         commandList->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         commandList->SetGraphicsRootSignature(m_SDRRootSignature);
         commandList->SetGraphics32BitConstants(0, g_TonemapParameters);
-        commandList->SetShaderResourceView(1, 0, m_HDRRenderTarget.GetTexture(Color0), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        commandList->SetShaderResourceView(1, 0, *m_HDRRenderTarget.GetTexture(Color0), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
         commandList->Draw(3);
     }
@@ -1215,23 +1212,18 @@ void Sample4::RenderForward(std::shared_ptr<CommandList> commandList, DirectX::C
 
 void Sample4::RenderDeferred(std::shared_ptr<CommandList> commandList, DirectX::CXMMATRIX viewMatrix, DirectX::CXMMATRIX viewProjectionMatrix)
 {
-    // =======================================================================================================================
-	//                  TODO - render skybox directly to Deferred Lighting RT before this pass
-    //                         We don't actually need a separate HDR RT, we can directly render into Deferred Lighting RT
-    // =======================================================================================================================
-
-
     // === PASS 1: G-Buffer Generation ===
 
     commandList->SetRenderTarget(m_GBufferRT);
     commandList->SetViewport(m_GBufferRT.GetViewport());
+    commandList->SetScissorRect(m_ScissorRect);
 
     // Clear G-Buffer
     FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-    commandList->ClearTexture(m_GBufferRT.GetTexture(AttachmentPoint::Color0), clearColor);
-    commandList->ClearTexture(m_GBufferRT.GetTexture(AttachmentPoint::Color1), clearColor);
-    commandList->ClearTexture(m_GBufferRT.GetTexture(AttachmentPoint::Color2), clearColor);
-    commandList->ClearDepthStencilTexture(m_GBufferRT.GetTexture(AttachmentPoint::DepthStencil), D3D12_CLEAR_FLAG_DEPTH);
+    commandList->ClearTexture(*m_GBufferRT.GetTexture(AttachmentPoint::Color0), clearColor);
+    commandList->ClearTexture(*m_GBufferRT.GetTexture(AttachmentPoint::Color1), clearColor);
+    commandList->ClearTexture(*m_GBufferRT.GetTexture(AttachmentPoint::Color2), clearColor);
+    commandList->ClearDepthStencilTexture(*m_GBufferRT.GetTexture(AttachmentPoint::DepthStencil), D3D12_CLEAR_FLAG_DEPTH);
 
     // Set G-Buffer PSO
     commandList->SetPipelineState(m_GBufferPSO);
@@ -1298,6 +1290,9 @@ void Sample4::RenderDeferred(std::shared_ptr<CommandList> commandList, DirectX::
 
     // Set deferred lighting output as render target
     commandList->SetRenderTarget(m_HDRRenderTarget);
+    commandList->SetViewport(m_HDRRenderTarget.GetViewport());
+    commandList->SetScissorRect(m_ScissorRect);
+
     commandList->SetPipelineState(m_DeferredLightingPSO);
     commandList->SetGraphicsRootSignature(m_DeferredLightingRootSignature);
 
@@ -1311,9 +1306,9 @@ void Sample4::RenderDeferred(std::shared_ptr<CommandList> commandList, DirectX::
     commandList->SetGraphicsDynamicStructuredBuffer(DeferredRootParams::SpotLights_Deferred, m_SpotLights);
 
     // Bind G-Buffer textures
-    commandList->SetShaderResourceView(DeferredRootParams::Textures_Deferred, 0, m_GBufferRT.GetTexture(AttachmentPoint::Color0), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-    commandList->SetShaderResourceView(DeferredRootParams::Textures_Deferred, 1, m_GBufferRT.GetTexture(AttachmentPoint::Color1), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-    commandList->SetShaderResourceView(DeferredRootParams::Textures_Deferred, 2, m_GBufferRT.GetTexture(AttachmentPoint::Color2), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    commandList->SetShaderResourceView(DeferredRootParams::Textures_Deferred, 0, *m_GBufferRT.GetTexture(AttachmentPoint::Color0), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    commandList->SetShaderResourceView(DeferredRootParams::Textures_Deferred, 1, *m_GBufferRT.GetTexture(AttachmentPoint::Color1), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    commandList->SetShaderResourceView(DeferredRootParams::Textures_Deferred, 2, *m_GBufferRT.GetTexture(AttachmentPoint::Color2), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
     // Draw full-screen triangle
     commandList->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
