@@ -7,9 +7,8 @@ struct GBufferPSInput
 
 struct GBufferOutput
 {
-    float4 Albedo   : SV_Target0; // RGB: albedo;                           A: specular power (normalized)
-    float4 Normal   : SV_Target1; // RGB: view-space normal (packed [0,1]), A: unused
-    float4 Position : SV_Target2; // RGB: view-space position,              A: unused
+    float4 Albedo   : SV_Target0; // [RGB]: albedo;                               [A]: specular power (normalized)
+    float4 Normal   : SV_Target1; // [RGB]: view-space normal (packed [0,1]),     [A]: unused
 };
 
 struct Material
@@ -55,9 +54,6 @@ GBufferOutput main(GBufferPSInput IN)
     // Store view-space normal (pack from [-1,1] to [0,1])
     float3 normalVS = normalize(IN.NormalVS);
     output.Normal = float4(normalVS * 0.5 + 0.5, 1.0);
-    
-    // Store view-space position
-    output.Position = float4(IN.PositionVS.xyz, 1.0);
     
     return output;
 }

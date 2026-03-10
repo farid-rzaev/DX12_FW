@@ -64,6 +64,9 @@ public:
     // Get the DSV for the texture.
     virtual D3D12_CPU_DESCRIPTOR_HANDLE GetDepthStencilView() const;
 
+    // Get the DSV format.
+    DXGI_FORMAT GetDSVFormat() const;
+
     bool CheckSRVSupport()
     {
         return CheckFormatSupport(D3D12_FORMAT_SUPPORT1_SHADER_SAMPLE);

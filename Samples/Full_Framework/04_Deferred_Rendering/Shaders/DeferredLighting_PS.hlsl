@@ -25,6 +25,11 @@ struct SpotLight
     float Padding;
 };
 
+struct Mat
+{
+    matrix InverseProjectionMatrix;
+};
+
 struct LightProperties
 {
     uint NumPointLights;
@@ -64,7 +69,8 @@ float DoSpotCone(float3 spotDir, float3 L, float spotAngle)
 //                                    RESOURCEs
 // --------------------------------------------------------------------------------
 
-ConstantBuffer<LightProperties> LightPropertiesCB   : register(b0);
+ConstantBuffer<Mat> MatCB                           : register(b0);
+ConstantBuffer<LightProperties> LightPropertiesCB   : register(b1);
 
 StructuredBuffer<PointLight> PointLights            : register(t0);
 StructuredBuffer<SpotLight> SpotLights              : register(t1);
@@ -72,7 +78,7 @@ StructuredBuffer<SpotLight> SpotLights              : register(t1);
 // G-Buffer textures
 Texture2D GBufferAlbedo                             : register(t2); // RGB: albedo;                           A: specular power (normalized)
 Texture2D GBufferNormal                             : register(t3); // RGB: view-space normal (packed [0,1]), A: unused
-Texture2D GBufferPosition                           : register(t4); // RGB: view-space position,              A: unused
+Texture2D<float> Depth                              : register(t4); // Hardware NDC depth [0,1]
 // --
 SamplerState PointSampler                           : register(s0);
 
@@ -81,7 +87,7 @@ SamplerState PointSampler                           : register(s0);
 //                                    MAIN
 // --------------------------------------------------------------------------------
 
-float4 main(float2 texCoord : TEXCOORD) : SV_Target
+float4 main(float2 texCoord : TEXCOORD /*UV space*/) : SV_Target
 {
     // Sample G-Buffer
     float4 albedo       = GBufferAlbedo.Sample(PointSampler, texCoord);
@@ -94,7 +100,12 @@ float4 main(float2 texCoord : TEXCOORD) : SV_Target
         discard;
     }
     
-    float4 positionVS   = GBufferPosition.Sample(PointSampler, texCoord);
+    float hwDepth = Depth.Sample(PointSampler, texCoord);
+    
+    float2 ndc = texCoord * float2(2.0, -2.0) + float2(-1.0, 1.0);
+    float4 clipPos = float4(ndc, hwDepth, 1.0);
+    float4 viewPos = mul(MatCB.InverseProjectionMatrix, clipPos);
+    float3 positionVS = viewPos.xyz / viewPos.w;
     
     // Unpack normal from [0,1] to [-1,1]
     float3 normalVS = normalize(normalPacked.xyz * 2.0 - 1.0);

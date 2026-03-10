@@ -121,7 +121,8 @@ enum GbufferRootParams
 
 enum DeferredRootParams
 {
-    LightPropertiesCB_Deferred,      // b0                                                           <- ps
+    InvProjCB_Deferred,              // b0                                                           <- ps
+    LightPropertiesCB_Deferred,      // b1                                                           <- ps
     PointLights_Deferred,            // t0                                                           <- ps
     SpotLights_Deferred,             // t1                                                           <- ps
     Textures_Deferred,               // t2-t4: G-Buffer textures                                     <- ps
@@ -270,7 +271,7 @@ bool Sample4::LoadContent()
 
     // Create an HDR intermediate render target.
     DXGI_FORMAT HDRFormat = DXGI_FORMAT_R16G16B16A16_FLOAT;
-    DXGI_FORMAT depthBufferFormat = DXGI_FORMAT_D32_FLOAT;
+    DXGI_FORMAT depthBufferFormat = DXGI_FORMAT_R32_TYPELESS;
 
     // Create an off-screen render target with a single color buffer and a depth buffer.
     // Array size of 1, and 1 mip level since this is an off-screen render target that won't be sampled from.
@@ -291,7 +292,7 @@ bool Sample4::LoadContent()
     depthDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 
     D3D12_CLEAR_VALUE depthClearValue;
-    depthClearValue.Format = depthDesc.Format;
+	depthClearValue.Format = depthDesc.Format;
     depthClearValue.DepthStencil = { 1.0f, 0 };
 
     std::shared_ptr<Texture> sharedDepthTexture = std::make_shared<Texture>(depthDesc, &depthClearValue, TextureUsage::Depth, L"Depth Render Target");
@@ -305,7 +306,6 @@ bool Sample4::LoadContent()
         DXGI_FORMAT gbufferFormats[NUM_GBUFFER_RTS] = {
             DXGI_FORMAT_R8G8B8A8_UNORM,         // Albedo + Specular Power
             DXGI_FORMAT_R16G16B16A16_FLOAT,     // Normal (higher precision)
-            DXGI_FORMAT_R32G32B32A32_FLOAT      // Position (view space)
         };
 
         // Just one mip is enough.
@@ -324,14 +324,9 @@ bool Sample4::LoadContent()
         colorClearValue.Format = gbufferFormats[1];
         Texture gbufferRT1 = Texture(colorDesc, &colorClearValue, TextureUsage::RenderTarget, L"GBuffer RT1");
 
-		colorDesc.Format = gbufferFormats[2];
-        colorClearValue.Format = gbufferFormats[2];
-        Texture gbufferRT2 = Texture(colorDesc, &colorClearValue, TextureUsage::RenderTarget, L"GBuffer RT2");
-
         // Create G-Buffer with multiple render targets
         m_GBufferRT.AttachTexture(AttachmentPoint::Color0, gbufferRT0);
         m_GBufferRT.AttachTexture(AttachmentPoint::Color1, gbufferRT1);
-        m_GBufferRT.AttachTexture(AttachmentPoint::Color2, gbufferRT2);
         m_GBufferRT.AttachTextureShared(AttachmentPoint::DepthStencil, sharedDepthTexture);
     }
 
@@ -576,7 +571,8 @@ bool Sample4::LoadContent()
         CD3DX12_DESCRIPTOR_RANGE1 descriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 2);
         // --
         CD3DX12_ROOT_PARAMETER1 rootParameters[DeferredRootParams::NumRootParameters_Deferred];
-        rootParameters[DeferredRootParams::LightPropertiesCB_Deferred].InitAsConstants(sizeof(LightProperties) / 4, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL);         // b0
+        rootParameters[DeferredRootParams::InvProjCB_Deferred].InitAsConstants(sizeof(DirectX::XMMATRIX)/4, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL);                 // b0
+        rootParameters[DeferredRootParams::LightPropertiesCB_Deferred].InitAsConstants(sizeof(LightProperties) / 4, 1, 0, D3D12_SHADER_VISIBILITY_PIXEL);         // b1
         rootParameters[DeferredRootParams::PointLights_Deferred].InitAsShaderResourceView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);  // t0
         rootParameters[DeferredRootParams::SpotLights_Deferred].InitAsShaderResourceView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);   // t1
         rootParameters[DeferredRootParams::Textures_Deferred].InitAsDescriptorTable(1, &descriptorRange, D3D12_SHADER_VISIBILITY_PIXEL);                          // t2,t3,t4 - DESCRIPTOR HEAP see descriptorRange
@@ -1222,7 +1218,6 @@ void Sample4::RenderDeferred(std::shared_ptr<CommandList> commandList, DirectX::
     FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
     commandList->ClearTexture(*m_GBufferRT.GetTexture(AttachmentPoint::Color0), clearColor);
     commandList->ClearTexture(*m_GBufferRT.GetTexture(AttachmentPoint::Color1), clearColor);
-    commandList->ClearTexture(*m_GBufferRT.GetTexture(AttachmentPoint::Color2), clearColor);
     commandList->ClearDepthStencilTexture(*m_GBufferRT.GetTexture(AttachmentPoint::DepthStencil), D3D12_CLEAR_FLAG_DEPTH);
 
     // Set G-Buffer PSO
@@ -1231,7 +1226,6 @@ void Sample4::RenderDeferred(std::shared_ptr<CommandList> commandList, DirectX::
 
     // Render meshes into G-Buffer (same loop as forward, but no lights needed)
     // RENDER FBX MODEL
-    // -- TODO -- DREMOVE DUPLICATION - NEED TO USE UNIFIED RootParameters to share code
     {
         float scale = 1 / 10.0f;
 
@@ -1288,7 +1282,6 @@ void Sample4::RenderDeferred(std::shared_ptr<CommandList> commandList, DirectX::
 
     // === PASS 2: Deferred Lighting ===
 
-    // Set deferred lighting output as render target
     commandList->SetRenderTarget(m_HDRRenderTarget);
     commandList->SetViewport(m_HDRRenderTarget.GetViewport());
     commandList->SetScissorRect(m_ScissorRect);
@@ -1296,23 +1289,25 @@ void Sample4::RenderDeferred(std::shared_ptr<CommandList> commandList, DirectX::
     commandList->SetPipelineState(m_DeferredLightingPSO);
     commandList->SetGraphicsRootSignature(m_DeferredLightingRootSignature);
 
-    // Bind lights
+    XMMATRIX invProj = m_Camera.get_InverseProjectionMatrix();
+    
     LightProperties lightProperties;
     lightProperties.NumPointLights = static_cast<uint32_t>(m_PointLights.size());
     lightProperties.NumSpotLights = static_cast<uint32_t>(m_SpotLights.size());
 
+    commandList->SetGraphics32BitConstants(DeferredRootParams::InvProjCB_Deferred, invProj);
     commandList->SetGraphics32BitConstants(DeferredRootParams::LightPropertiesCB_Deferred, lightProperties);
     commandList->SetGraphicsDynamicStructuredBuffer(DeferredRootParams::PointLights_Deferred, m_PointLights);
     commandList->SetGraphicsDynamicStructuredBuffer(DeferredRootParams::SpotLights_Deferred, m_SpotLights);
 
-    // Bind G-Buffer textures
+    // G-Buffer textures
     commandList->SetShaderResourceView(DeferredRootParams::Textures_Deferred, 0, *m_GBufferRT.GetTexture(AttachmentPoint::Color0), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
     commandList->SetShaderResourceView(DeferredRootParams::Textures_Deferred, 1, *m_GBufferRT.GetTexture(AttachmentPoint::Color1), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-    commandList->SetShaderResourceView(DeferredRootParams::Textures_Deferred, 2, *m_GBufferRT.GetTexture(AttachmentPoint::Color2), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    commandList->SetShaderResourceView(DeferredRootParams::Textures_Deferred, 2, *m_GBufferRT.GetTexture(AttachmentPoint::DepthStencil), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
     // Draw full-screen triangle
     commandList->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    commandList->Draw(3); // Full-screen triangle
+    commandList->Draw(3);
 }
 
 static bool g_AllowFullscreenToggle = true;
