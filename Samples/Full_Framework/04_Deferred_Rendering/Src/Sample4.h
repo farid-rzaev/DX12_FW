@@ -64,7 +64,7 @@ private: /* DEFERRED RENDERING */
     RenderingMode m_RenderingMode = RenderingMode::Forward;
 
     // 3 GBuff RTs: Albedo, Normal, Position
-    static const int NUM_GBUFFER_RTS = 3;
+    static const int NUM_GBUFFER_RTS = 2;
     RenderTarget m_GBufferRT;  // Will hold multiple color attachments
 
     // Root signatures for deferred path

@@ -14,7 +14,13 @@ Resource::Resource(const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_VA
 {
     if (clearValue)
     {
-        m_d3d12ClearValue = std::make_unique<D3D12_CLEAR_VALUE>(*clearValue);
+        D3D12_CLEAR_VALUE resolvedclearValue = *clearValue;
+        if (resolvedclearValue.Format == DXGI_FORMAT_R32_TYPELESS && (resourceDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL))
+        {
+            resolvedclearValue.Format = DXGI_FORMAT_D32_FLOAT;
+        }
+
+        m_d3d12ClearValue = std::make_unique<D3D12_CLEAR_VALUE>(resolvedclearValue);
     }
     
     auto device = Application::Get().GetDevice();

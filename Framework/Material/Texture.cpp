@@ -159,21 +159,43 @@ D3D12_UNORDERED_ACCESS_VIEW_DESC GetUAVDesc(const D3D12_RESOURCE_DESC& resDesc, 
 
 void Texture::CreateViews()
 {
-    if (m_d3d12Resource)
+    if (!m_d3d12Resource)
     {
-        auto& app   = Application::Get();
-        auto device = app.GetDevice();
+        std::lock_guard<std::mutex> lock(m_ShaderResourceViewsMutex);
+        std::lock_guard<std::mutex> guard(m_UnorderedAccessViewsMutex);
+        m_ShaderResourceViews.clear();
+        m_UnorderedAccessViews.clear();
 
-        CD3DX12_RESOURCE_DESC desc(m_d3d12Resource->GetDesc());
+        return;
+    }
 
-        if ((desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) != 0 && CheckRTVSupport())
+    auto& app   = Application::Get();
+    auto device = app.GetDevice();
+
+    CD3DX12_RESOURCE_DESC desc(m_d3d12Resource->GetDesc());
+
+    if ((desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) != 0 && CheckRTVSupport())
+    {
+        m_RenderTargetView = app.AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+        device->CreateRenderTargetView(m_d3d12Resource.Get(), nullptr, m_RenderTargetView.GetDescriptorHandle());
+    }
+
+    if ((desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL) != 0)
+    {
+        m_DepthStencilView = app.AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+
+        // R32_TYPELESS cannot be used directly as DRV — resolve it to D32_FLOAT.
+        if (desc.Format == DXGI_FORMAT_R32_TYPELESS)
         {
-            m_RenderTargetView = app.AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-            device->CreateRenderTargetView(m_d3d12Resource.Get(), nullptr, m_RenderTargetView.GetDescriptorHandle());
+            D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
+            dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
+            dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+            dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
+            dsvDesc.Texture2D.MipSlice = 0;
+            device->CreateDepthStencilView(m_d3d12Resource.Get(), &dsvDesc, m_DepthStencilView.GetDescriptorHandle());
         }
-        if ((desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL) != 0 && CheckDSVSupport())
+        else
         {
-            m_DepthStencilView = app.AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
             device->CreateDepthStencilView(m_d3d12Resource.Get(), nullptr, m_DepthStencilView.GetDescriptorHandle());
         }
     }
@@ -184,6 +206,22 @@ void Texture::CreateViews()
     // SRVs and UAVs will be created as needed.
     m_ShaderResourceViews.clear();
     m_UnorderedAccessViews.clear();
+
+    // R32_TYPELESS cannot be used directly as SRV — resolve it to R32_FLOAT.
+    // --
+    // For typeless depth resources, eagerly create the default SRV (R32_FLOAT) 
+    // so GetShaderResourceView(nullptr) works without any special-casing at query time.
+    if (desc.Format == DXGI_FORMAT_R32_TYPELESS && (desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL))
+    {
+        D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+        srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+        srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+        srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+        srvDesc.Texture2D.MipLevels = desc.MipLevels;
+
+        // hash=0 is the key used by GetShaderResourceView(nullptr)
+        m_ShaderResourceViews.insert({ 0, CreateShaderResourceView(&srvDesc) });
+    }
 }
 
 DescriptorAllocation Texture::CreateShaderResourceView(const D3D12_SHADER_RESOURCE_VIEW_DESC* srvDesc) const
@@ -259,6 +297,17 @@ D3D12_CPU_DESCRIPTOR_HANDLE Texture::GetRenderTargetView() const
 D3D12_CPU_DESCRIPTOR_HANDLE Texture::GetDepthStencilView() const
 {
     return m_DepthStencilView.GetDescriptorHandle();
+}
+
+DXGI_FORMAT Texture::GetDSVFormat() const
+{
+    auto fmt = GetD3D12ResourceDesc().Format;
+    if (fmt == DXGI_FORMAT_R32_TYPELESS)
+    {
+        return DXGI_FORMAT_D32_FLOAT;
+    }
+
+    return fmt;
 }
 
 bool Texture::IsUAVCompatibleFormat(DXGI_FORMAT format)
