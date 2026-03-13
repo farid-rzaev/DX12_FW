@@ -24,6 +24,7 @@
     <ProjectGuid>{C5FCE7D8-BDB6-476F-912E-D956F71697C8}</ProjectGuid>
     <RootNamespace>My03AssimpMeshLoader</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>04_Deferred_vs_Forward</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
