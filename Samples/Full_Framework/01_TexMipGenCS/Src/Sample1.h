@@ -1,9 +1,10 @@
 #pragma once
 
-#include "Camera.h"
 #include "Light.h"
 
 #include <Framework/Game.h>
+
+#include <Framework/Gameplay/Camera.h>
 
 #include <Framework/Material/VertexBuffer.h>
 #include <Framework/Material/IndexBuffer.h> 

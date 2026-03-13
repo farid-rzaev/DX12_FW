@@ -1,8 +1,5 @@
 #pragma once
 
-#include <Framework/Gameplay/Camera.h>
-#include <Framework/Gameplay/Light.h>
-
 #include <Framework/Material/IndexBuffer.h>
 #include <Framework/Material/VertexBuffer.h>
 #include <Framework/Material/Texture.h>
@@ -10,15 +7,27 @@
 #include <Framework/Material/Mesh.h>
 // --
 #include <Framework/RootSignature.h>
+
+#include <Framework/Gameplay/AssimpLoader.h>
+#include <Framework/Gameplay/Camera.h>
+#include <Framework/Gameplay/Light.h>
+
 #include <Framework/Game.h>
 
 #include <DirectXMath.h>
 
-class Sample2 : public Game
+enum class RenderingMode
+{
+    Forward = 0,
+    Deferred,
+    Count
+};
+
+class Sample5 : public Game
 {
 public:
-    Sample2();
-    virtual ~Sample2();
+    Sample5();
+    virtual ~Sample5();
 
     virtual bool Initialize(const wchar_t* windowTitle, int width, int height, bool vSync = false)  override;
 
@@ -28,6 +37,9 @@ public:
 protected:
     virtual void OnUpdate() override;
     virtual void OnRender() override;
+
+    void RenderForward(std::shared_ptr<CommandList> commandList, DirectX::CXMMATRIX viewMatrix, DirectX::CXMMATRIX viewProjectionMatrix);
+    void RenderDeferred(std::shared_ptr<CommandList> commandList, DirectX::CXMMATRIX viewMatrix, DirectX::CXMMATRIX viewProjectionMatrix);
 
     // Invoked by the registered window when a key is pressed while the window has focus.
     virtual void OnKeyPressed(KeyEventArgs& e) override;
@@ -41,26 +53,37 @@ protected:
     // Invoked when the mouse wheel is scrolled while the registered window has focus.
     virtual void OnMouseWheel(MouseWheelEventArgs& e) override;
 
-    void RescaleHDRRenderTarget(float scale);
+    void RescaleRenderTargets(float scale);
     virtual void OnResize(ResizeEventArgs& e) override; 
-
 
     void OnGUI();
 
+private: /* DEFERRED RENDERING */
+
+    // Rendering mode switch
+    RenderingMode m_RenderingMode = RenderingMode::Forward;
+
+    // 3 GBuff RTs: Albedo, Normal, Position
+    static const int NUM_GBUFFER_RTS = 2;
+    RenderTarget m_GBufferRT;  // Will hold multiple color attachments
+
+    // Root signatures for deferred path
+    RootSignature m_GBufferRootSignature;
+    RootSignature m_DeferredLightingRootSignature;
+
+    // Pipeline state objects for deferred
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> m_GBufferPSO;
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> m_DeferredLightingPSO;
+
 private:
     // Some geometry to render.
-    std::unique_ptr<Mesh> m_CubeMesh;
     std::unique_ptr<Mesh> m_SphereMesh;
     std::unique_ptr<Mesh> m_ConeMesh;
-    std::unique_ptr<Mesh> m_TorusMesh;
-    std::unique_ptr<Mesh> m_PlaneMesh;
 
     std::unique_ptr<Mesh> m_SkyboxMesh;
 
     Texture m_DefaultTexture;
     Texture m_DirectXTexture;
-    Texture m_EarthTexture;
-    Texture m_MonaLisaTexture;
     Texture m_GraceCathedralTexture;
     Texture m_GraceCathedralCubemap;
 
@@ -115,4 +138,6 @@ private:
     // Define some lights.
     std::vector<PointLight> m_PointLights;
     std::vector<SpotLight> m_SpotLights;
+
+    std::vector<LoadedMeshPart> m_LoadedMeshParts;
 };

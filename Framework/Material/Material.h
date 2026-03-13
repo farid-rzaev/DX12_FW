@@ -33,20 +33,26 @@
 
 #include <DirectXMath.h>
 
-struct Material
+#include <Framework/3RD_Party/Defines.h>
+
+struct DX12_FW_API Material
 {
     Material(
         DirectX::XMFLOAT4 emissive = { 0.0f, 0.0f, 0.0f, 1.0f },
         DirectX::XMFLOAT4 ambient = { 0.1f, 0.1f, 0.1f, 1.0f },
         DirectX::XMFLOAT4 diffuse = { 1.0f, 1.0f, 1.0f, 1.0f },
         DirectX::XMFLOAT4 specular = { 1.0f, 1.0f, 1.0f, 1.0f },
-        float specularPower = 128.0f
+        float roughness = 0.5f,
+        float metalness = 0.0f,
+        float emissiveMask = 0.0f
     )
         : Emissive( emissive )
         , Ambient( ambient )
         , Diffuse( diffuse )
         , Specular( specular )
-        , SpecularPower( specularPower ) 
+        , Roughness( roughness )
+        , Metalness( metalness )
+        , EmissiveMask( emissiveMask )
     {}
 
     DirectX::XMFLOAT4 Emissive;
@@ -57,8 +63,10 @@ struct Material
     //----------------------------------- (16 byte boundary)
     DirectX::XMFLOAT4 Specular;
     //----------------------------------- (16 byte boundary)
-    float             SpecularPower;
-    uint32_t          Padding[3];
+    float Roughness;
+    float Metalness;
+    float EmissiveMask;
+    float _Padding;
     //----------------------------------- (16 byte boundary)
     // Total:                              16 * 5 = 80 bytes
     

@@ -4,7 +4,7 @@
 #include <Framework/CommandList.h> 
 #include <Framework/Material/RenderTarget.h> 
 
-#include "Material.h"
+#include <Framework/Material/Material.h>
 
 #include <wrl.h>
 using namespace Microsoft::WRL;

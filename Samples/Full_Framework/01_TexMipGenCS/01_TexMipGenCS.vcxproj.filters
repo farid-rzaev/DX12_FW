@@ -12,15 +12,6 @@
     <ClCompile Include="Src\main.cpp">
       <Filter>Src</Filter>
     </ClCompile>
-    <ClCompile Include="Src\Camera.cpp">
-      <Filter>Src</Filter>
-    </ClCompile>
-    <ClCompile Include="Src\Light.cpp">
-      <Filter>Src</Filter>
-    </ClCompile>
-    <ClCompile Include="Src\Material.cpp">
-      <Filter>Src</Filter>
-    </ClCompile>
     <ClCompile Include="Src\Sample1.cpp">
       <Filter>Src</Filter>
     </ClCompile>
@@ -34,16 +25,10 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Src\Camera.h">
+    <ClInclude Include="Src\Sample1.h">
       <Filter>Src</Filter>
     </ClInclude>
     <ClInclude Include="Src\Light.h">
-      <Filter>Src</Filter>
-    </ClInclude>
-    <ClInclude Include="Src\Material.h">
-      <Filter>Src</Filter>
-    </ClInclude>
-    <ClInclude Include="Src\Sample1.h">
       <Filter>Src</Filter>
     </ClInclude>
   </ItemGroup>

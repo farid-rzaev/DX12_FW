@@ -1,11 +1,11 @@
-#include "Sample2.h"
-
-#include <Framework/Gameplay/Light.h>
-#include <Framework/Material/Material.h>
+#include "Sample5.h"
 
 #include <Framework/Application.h>
 #include <Framework/CommandQueue.h>
 #include <Framework/CommandList.h>
+
+#include <Framework/Gameplay/Light.h>
+#include <Framework/Material/Material.h>
 
 #include <Framework/3RD_Party/Helpers.h>
 
@@ -102,13 +102,31 @@ struct TonemapParameters
 // to use these as root indices in the root signature.
 enum RootParameters
 {
-    MatricesCB,         // ConstantBuffer<Mat> MatCB : register(b0);
-    MaterialCB,         // ConstantBuffer<Material> MaterialCB : register( b0, space1 );
-    LightPropertiesCB,  // ConstantBuffer<LightProperties> LightPropertiesCB : register( b1 );
-    PointLights,        // StructuredBuffer<PointLight> PointLights : register( t0 );
-    SpotLights,         // StructuredBuffer<SpotLight> SpotLights : register( t1 );
-    Textures,           // Texture2D DiffuseTexture : register( t2 );
+    MatricesCB,         // ConstantBuffer<Mat> MatCB : register(b0);                            <- vs
+    MaterialCB,         // ConstantBuffer<Material> MaterialCB : register( b0, space1 );        <- ps
+    LightPropertiesCB,  // ConstantBuffer<LightProperties> LightPropertiesCB : register( b1 );  <- ps
+    PointLights,        // StructuredBuffer<PointLight> PointLights : register( t0 );           <- ps
+    SpotLights,         // StructuredBuffer<SpotLight> SpotLights : register( t1 );             <- ps
+    Textures,           // Texture2D DiffuseTexture : register( t2 );                           <- ps
     NumRootParameters
+};
+
+enum GbufferRootParams
+{
+    MatricesCB_GBuffer,         // ConstantBuffer<Mat> MatCB : register(b0);                            <- vs
+    MaterialCB_GBuffer,         // ConstantBuffer<Material> MaterialCB : register( b0, space1 );        <- ps
+    Textures_GBuffer,           // Texture2D DiffuseTexture : register( t0 );                           <- ps
+    NumRootParameters_Gbuffer
+};
+
+enum DeferredRootParams
+{
+    InvProjCB_Deferred,              // b0                                                           <- ps
+    LightPropertiesCB_Deferred,      // b1                                                           <- ps
+    PointLights_Deferred,            // t0                                                           <- ps
+    SpotLights_Deferred,             // t1                                                           <- ps
+    Textures_Deferred,               // t2-t4: G-Buffer textures                                     <- ps
+    NumRootParameters_Deferred
 };
 
 
@@ -158,7 +176,7 @@ XMMATRIX XM_CALLCONV LookAtMatrix(FXMVECTOR Position, FXMVECTOR Direction, FXMVE
 // =====================================================================================
 
 
-Sample2::Sample2()
+Sample5::Sample5()
     : Game()
     , m_ScissorRect(CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX))
     , m_Forward(0)
@@ -184,31 +202,29 @@ Sample2::Sample2()
     }
 }
 
-Sample2::~Sample2()
+Sample5::~Sample5()
 {
     _aligned_free(m_pAlignedCameraData);
 }
 
-bool Sample2::Initialize(const wchar_t* windowTitle, int width, int height, bool vSync)
+bool Sample5::Initialize(const wchar_t* windowTitle, int width, int height, bool vSync)
 {
     if (!Game::Initialize(windowTitle, width, height, vSync)) return false;
 
     ResizeEventArgs resizeEventArgs(width, height);
     OnResize(resizeEventArgs);
 
-    // --
-
-    XMVECTOR cameraPos = XMVectorSet(0, 5, -20, 1);
+    XMVECTOR cameraPos = XMVectorSet(10, 10, -20, 1);
     XMVECTOR cameraTarget = XMVectorSet(0, 5, 0, 1);
     XMVECTOR cameraUp = XMVectorSet(0, 1, 0, 0);
 
     m_Camera.set_LookAt(cameraPos, cameraTarget, cameraUp);
-    m_Camera.set_Projection(45.0f, width / (float)height, 0.1f, 100.0f);
+    m_Camera.set_Projection(45.0f, width / (float)height, 0.1f, 200.0f);
 
     return true;
 }
 
-bool Sample2::LoadContent()
+bool Sample5::LoadContent()
 {
     auto& app = Application::Get();
     auto  device        = app.GetDevice();
@@ -220,23 +236,28 @@ bool Sample2::LoadContent()
     ThrowIfFailed(exe_path_str.empty() == false, "Can't find the .exe path!");
     // --
     SetWorkingDirToSolutionDir(exe_path_str);
-
-    // Create a Cube mesh
-    m_CubeMesh = Mesh::CreateCube(*commandList);
-    m_SphereMesh = Mesh::CreateSphere(*commandList);
-    m_ConeMesh = Mesh::CreateCone(*commandList);
-    m_TorusMesh = Mesh::CreateTorus(*commandList);
-    m_PlaneMesh = Mesh::CreatePlane(*commandList);
-    // Create an inverted (reverse winding order) cube so the insides are not clipped.
-    m_SkyboxMesh = Mesh::CreateCube(*commandList, 1.0f, true);
+	std::wstring solution_dir_str = exe_path_str;
 
     // Load some textures
     commandList->LoadTextureFromFile(m_DefaultTexture, L"Assets/Textures/DefaultWhite.bmp");
     commandList->LoadTextureFromFile(m_DirectXTexture, L"Assets/Textures/Directx9.png");
-    commandList->LoadTextureFromFile(m_EarthTexture, L"Assets/Textures/earth.dds");
-    commandList->LoadTextureFromFile(m_MonaLisaTexture, L"Assets/Textures/Mona_Lisa.jpg");
     commandList->LoadTextureFromFile(m_GraceCathedralTexture, L"Assets/Textures/grace-new.hdr");
-//    commandList->LoadTextureFromFile(m_GraceCathedralTexture, L"Assets/Textures/UV_Test_Pattern.png");
+
+    // Create Meshes
+    m_SphereMesh = Mesh::CreateSphere(*commandList);
+    m_ConeMesh = Mesh::CreateCone(*commandList);
+
+    // Create an inverted (reverse winding order) cube so the insides are not clipped.
+    m_SkyboxMesh = Mesh::CreateCube(*commandList, 1.0f, true);
+
+    m_LoadedMeshParts = AssimpLoader::Load(*commandList, L"Assets/Models/FBX/Sponza/Sponza.fbx", m_DefaultTexture);
+    //m_LoadedMeshParts = AssimpLoader::Load(*commandList, L"Assets/Models/FBX/sponza_2/sponza.sdkmesh", m_DefaultTexture);
+    
+	// [OPT_2] Sort the loaded mesh parts by their diffuse texture to minimize texture binding changes when rendering.
+    std::sort(m_LoadedMeshParts.begin(), m_LoadedMeshParts.end(),
+        [](const LoadedMeshPart& a, const LoadedMeshPart& b) {
+            return &a.diffuseTexture < &b.diffuseTexture;
+        });
 
     // Create a cubemap for the HDR panorama.
     auto cubemapDesc = m_GraceCathedralTexture.GetD3D12ResourceDesc();
@@ -250,10 +271,11 @@ bool Sample2::LoadContent()
 
     // Create an HDR intermediate render target.
     DXGI_FORMAT HDRFormat = DXGI_FORMAT_R16G16B16A16_FLOAT;
-    DXGI_FORMAT depthBufferFormat = DXGI_FORMAT_D32_FLOAT;
+    DXGI_FORMAT depthBufferFormat = DXGI_FORMAT_R32_TYPELESS;
 
     // Create an off-screen render target with a single color buffer and a depth buffer.
-    auto colorDesc = CD3DX12_RESOURCE_DESC::Tex2D(HDRFormat, m_Width, m_Height);
+    // Array size of 1, and 1 mip level since this is an off-screen render target that won't be sampled from.
+	auto colorDesc = CD3DX12_RESOURCE_DESC::Tex2D(HDRFormat, m_Width, m_Height, 1, 1);  
     colorDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
 
     D3D12_CLEAR_VALUE colorClearValue;
@@ -263,25 +285,51 @@ bool Sample2::LoadContent()
     colorClearValue.Color[2] = 0.9f;
     colorClearValue.Color[3] = 1.0f;
 
-    Texture HDRTexture = Texture(colorDesc, &colorClearValue,
-        TextureUsage::RenderTarget,
-        L"HDR Texture");
+    Texture HDRTexture = Texture(colorDesc, &colorClearValue, TextureUsage::RenderTarget, L"HDR Texture");
 
     // Create a depth buffer for the HDR render target.
-    auto depthDesc = CD3DX12_RESOURCE_DESC::Tex2D(depthBufferFormat, m_Width, m_Height);
+    auto depthDesc = CD3DX12_RESOURCE_DESC::Tex2D(depthBufferFormat, m_Width, m_Height, 1, 1);
     depthDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 
     D3D12_CLEAR_VALUE depthClearValue;
-    depthClearValue.Format = depthDesc.Format;
+	depthClearValue.Format = depthDesc.Format;
     depthClearValue.DepthStencil = { 1.0f, 0 };
 
-    Texture depthTexture = Texture(depthDesc, &depthClearValue,
-        TextureUsage::Depth,
-        L"Depth Render Target");
+    std::shared_ptr<Texture> sharedDepthTexture = std::make_shared<Texture>(depthDesc, &depthClearValue, TextureUsage::Depth, L"Depth Render Target");
 
     // Attach the HDR texture to the HDR render target.
     m_HDRRenderTarget.AttachTexture(AttachmentPoint::Color0, HDRTexture);
-    m_HDRRenderTarget.AttachTexture(AttachmentPoint::DepthStencil, depthTexture);
+    m_HDRRenderTarget.AttachTextureShared(AttachmentPoint::DepthStencil, sharedDepthTexture);
+
+    // Create G-Buffer render target with multiple color attachments
+    {
+        DXGI_FORMAT gbufferFormats[NUM_GBUFFER_RTS] = {
+            DXGI_FORMAT_R8G8B8A8_UNORM,         // Albedo + Specular Power
+            DXGI_FORMAT_R16G16B16A16_FLOAT,     // Normal (higher precision)
+        };
+
+        // Just one mip is enough.
+        auto colorDesc = CD3DX12_RESOURCE_DESC::Tex2D(gbufferFormats[0], m_Width, m_Height, 1, 1);
+        colorDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+        // --
+        colorClearValue.Format = gbufferFormats[0];
+        colorClearValue.Color[0] = 0.0f;
+        colorClearValue.Color[1] = 0.0f;
+        colorClearValue.Color[2] = 0.0f;
+        colorClearValue.Color[3] = 0.0f;
+        // --
+        Texture gbufferRT0 = Texture(colorDesc, &colorClearValue, TextureUsage::RenderTarget, L"GBuffer RT0");
+    
+		colorDesc.Format = gbufferFormats[1];
+        colorClearValue.Format = gbufferFormats[1];
+        Texture gbufferRT1 = Texture(colorDesc, &colorClearValue, TextureUsage::RenderTarget, L"GBuffer RT1");
+
+        // Create G-Buffer with multiple render targets
+        m_GBufferRT.AttachTexture(AttachmentPoint::Color0, gbufferRT0);
+        m_GBufferRT.AttachTexture(AttachmentPoint::Color1, gbufferRT1);
+        m_GBufferRT.AttachTextureShared(AttachmentPoint::DepthStencil, sharedDepthTexture);
+    }
+
 
     D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
     featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
@@ -295,8 +343,8 @@ bool Sample2::LoadContent()
         // Load the Skybox shaders.
         ComPtr<ID3DBlob> vs;
         ComPtr<ID3DBlob> ps;
-        ThrowIfFailed(D3DReadFileToBlob( (exe_path_str + L"\\Skybox_VS.cso").c_str(), &vs));
-        ThrowIfFailed(D3DReadFileToBlob( (exe_path_str + L"\\Skybox_PS.cso").c_str(), &ps));
+        ThrowIfFailed(D3DReadFileToBlob( (solution_dir_str + L"\\Skybox_VS.cso").c_str(), &vs));
+        ThrowIfFailed(D3DReadFileToBlob( (solution_dir_str + L"\\Skybox_PS.cso").c_str(), &ps));
 
         // Setup the input layout for the skybox vertex shader.
         D3D12_INPUT_ELEMENT_DESC inputLayout[1] = {
@@ -352,8 +400,8 @@ bool Sample2::LoadContent()
         // Load the HDR shaders.
         ComPtr<ID3DBlob> vs;
         ComPtr<ID3DBlob> ps;
-        ThrowIfFailed(D3DReadFileToBlob((exe_path_str + L"\\HDR_VS.cso").c_str(), &vs));
-        ThrowIfFailed(D3DReadFileToBlob((exe_path_str + L"\\HDR_PS.cso").c_str(), &ps));
+        ThrowIfFailed(D3DReadFileToBlob((solution_dir_str + L"\\HDR_VS.cso").c_str(), &vs));
+        ThrowIfFailed(D3DReadFileToBlob((solution_dir_str + L"\\HDR_PS.cso").c_str(), &ps));
 
         // Allow input layout and deny unnecessary access to certain pipeline stages.
         D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
@@ -363,17 +411,16 @@ bool Sample2::LoadContent()
             D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
 
         CD3DX12_DESCRIPTOR_RANGE1 descriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2);
-
+        // --
         CD3DX12_ROOT_PARAMETER1 rootParameters[RootParameters::NumRootParameters];
-        rootParameters[RootParameters::MatricesCB].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_VERTEX);
-        rootParameters[RootParameters::MaterialCB].InitAsConstantBufferView(0, 1, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
-        rootParameters[RootParameters::LightPropertiesCB].InitAsConstants(sizeof(LightProperties) / 4, 1, 0, D3D12_SHADER_VISIBILITY_PIXEL);
-        rootParameters[RootParameters::PointLights].InitAsShaderResourceView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
-        rootParameters[RootParameters::SpotLights].InitAsShaderResourceView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
-        rootParameters[RootParameters::Textures].InitAsDescriptorTable(1, &descriptorRange, D3D12_SHADER_VISIBILITY_PIXEL);
-
-        CD3DX12_STATIC_SAMPLER_DESC linearRepeatSampler(0, D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR);
-        CD3DX12_STATIC_SAMPLER_DESC anisotropicSampler(0, D3D12_FILTER_ANISOTROPIC);
+        rootParameters[RootParameters::MatricesCB].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_VERTEX);  // b0, VERTEX shader uses SPACE0
+        rootParameters[RootParameters::MaterialCB].InitAsConstantBufferView(0, 1, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);   // b0, PIXEL  shader uses SPACE1
+        rootParameters[RootParameters::LightPropertiesCB].InitAsConstants(sizeof(LightProperties) / 4, 1, 0, D3D12_SHADER_VISIBILITY_PIXEL);         // b1
+        rootParameters[RootParameters::PointLights].InitAsShaderResourceView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);  // t0
+        rootParameters[RootParameters::SpotLights].InitAsShaderResourceView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);   // t1
+        rootParameters[RootParameters::Textures].InitAsDescriptorTable(1, &descriptorRange, D3D12_SHADER_VISIBILITY_PIXEL);                          // t2 - DESCRIPTOR HEAP see descriptorRange
+        // --
+        CD3DX12_STATIC_SAMPLER_DESC linearRepeatSampler(0, D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR);                                              // s0
 
         CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDescription;
         rootSignatureDescription.Init_1_1(RootParameters::NumRootParameters, rootParameters, 1, &linearRepeatSampler, rootSignatureFlags);
@@ -424,8 +471,8 @@ bool Sample2::LoadContent()
         // Create the SDR PSO
         ComPtr<ID3DBlob> vs;
         ComPtr<ID3DBlob> ps;
-        ThrowIfFailed(D3DReadFileToBlob((exe_path_str + L"\\HDRtoSDR_VS.cso").c_str(), &vs));
-        ThrowIfFailed(D3DReadFileToBlob((exe_path_str + L"\\HDRtoSDR_PS.cso").c_str(), &ps));
+        ThrowIfFailed(D3DReadFileToBlob((solution_dir_str + L"\\HDRtoSDR_VS.cso").c_str(), &vs));
+        ThrowIfFailed(D3DReadFileToBlob((solution_dir_str + L"\\HDRtoSDR_PS.cso").c_str(), &ps));
 
         CD3DX12_RASTERIZER_DESC rasterizerDesc(D3D12_DEFAULT);
         rasterizerDesc.CullMode = D3D12_CULL_MODE_NONE;
@@ -453,13 +500,148 @@ bool Sample2::LoadContent()
         ThrowIfFailed(device->CreatePipelineState(&sdrPipelineStateStreamDesc, IID_PPV_ARGS(&m_SDRPipelineState)));
     }
 
+	// [G-Buffer] - Root Signature and PSO
+    {
+        // === G-Buffer Root Signature (same as HDR forward) ===
+
+        CD3DX12_DESCRIPTOR_RANGE1 descriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+        // --
+        CD3DX12_ROOT_PARAMETER1 rootParameters[GbufferRootParams::NumRootParameters_Gbuffer];
+        rootParameters[GbufferRootParams::MatricesCB_GBuffer].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_VERTEX);  // b0, VERTEX shader uses SPACE0
+        rootParameters[GbufferRootParams::MaterialCB_GBuffer].InitAsConstantBufferView(0, 1, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);   // b0, PIXEL  shader uses SPACE1
+        rootParameters[GbufferRootParams::Textures_GBuffer].InitAsDescriptorTable(1, &descriptorRange, D3D12_SHADER_VISIBILITY_PIXEL);                          // t0 - DESCRIPTOR HEAP see descriptorRange
+        
+
+        CD3DX12_STATIC_SAMPLER_DESC linearRepeatSampler(0, D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR);                                                         // s0 
+
+        // Allow input layout and deny unnecessary access to certain pipeline stages.
+        D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
+            D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
+            D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+            D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+            D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
+
+        CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDescription;
+        rootSignatureDescription.Init_1_1(GbufferRootParams::NumRootParameters_Gbuffer, rootParameters, 1, &linearRepeatSampler, rootSignatureFlags);
+
+        m_GBufferRootSignature.SetRootSignatureDesc(rootSignatureDescription.Desc_1_1, featureData.HighestVersion);
+
+        // === G-Buffer PSO ===
+
+        ComPtr<ID3DBlob> vs, ps;
+        ThrowIfFailed(D3DReadFileToBlob((solution_dir_str + L"\\GBuffer_VS.cso").c_str(), &vs));
+        ThrowIfFailed(D3DReadFileToBlob((solution_dir_str + L"\\GBuffer_PS.cso").c_str(), &ps));
+
+        CD3DX12_DEPTH_STENCIL_DESC1 depthStencilDesc(D3D12_DEFAULT);
+        depthStencilDesc.DepthEnable = TRUE;
+        depthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+        depthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+
+        struct PipelineStateStream
+        {
+            CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE pRootSignature;
+            CD3DX12_PIPELINE_STATE_STREAM_INPUT_LAYOUT InputLayout;
+            CD3DX12_PIPELINE_STATE_STREAM_PRIMITIVE_TOPOLOGY PrimitiveTopologyType;
+            CD3DX12_PIPELINE_STATE_STREAM_VS VS;
+            CD3DX12_PIPELINE_STATE_STREAM_PS PS;
+            CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL1 DepthStencil;
+            CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL_FORMAT DSVFormat;
+            CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS RTVFormats;
+        } gbufferPipelineStateStream;
+
+        gbufferPipelineStateStream.pRootSignature = m_GBufferRootSignature.GetRootSignature().Get();
+        gbufferPipelineStateStream.InputLayout = { VertexPositionNormalTexture::InputElements, VertexPositionNormalTexture::InputElementCount };
+        gbufferPipelineStateStream.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+        gbufferPipelineStateStream.VS = CD3DX12_SHADER_BYTECODE(vs.Get());
+        gbufferPipelineStateStream.PS = CD3DX12_SHADER_BYTECODE(ps.Get());
+        gbufferPipelineStateStream.DepthStencil = depthStencilDesc;
+        gbufferPipelineStateStream.DSVFormat  = m_GBufferRT.GetDepthStencilFormat();
+        gbufferPipelineStateStream.RTVFormats = m_GBufferRT.GetRenderTargetFormats();
+
+        D3D12_PIPELINE_STATE_STREAM_DESC gbufferPipelineStateStreamDesc = {
+            sizeof(PipelineStateStream), &gbufferPipelineStateStream
+        };
+        ThrowIfFailed(device->CreatePipelineState(&gbufferPipelineStateStreamDesc, IID_PPV_ARGS(&m_GBufferPSO)));
+    }
+
+    // [Deferred Lighting] - Root Signature and PSO
+    {
+        // === Deferred Lighting Root Signature ===
+
+        CD3DX12_DESCRIPTOR_RANGE1 descriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 2);
+        // --
+        CD3DX12_ROOT_PARAMETER1 rootParameters[DeferredRootParams::NumRootParameters_Deferred];
+        rootParameters[DeferredRootParams::InvProjCB_Deferred].InitAsConstants(sizeof(DirectX::XMMATRIX)/4, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL);                 // b0
+        rootParameters[DeferredRootParams::LightPropertiesCB_Deferred].InitAsConstants(sizeof(LightProperties) / 4, 1, 0, D3D12_SHADER_VISIBILITY_PIXEL);         // b1
+        rootParameters[DeferredRootParams::PointLights_Deferred].InitAsShaderResourceView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);  // t0
+        rootParameters[DeferredRootParams::SpotLights_Deferred].InitAsShaderResourceView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);   // t1
+        rootParameters[DeferredRootParams::Textures_Deferred].InitAsDescriptorTable(1, &descriptorRange, D3D12_SHADER_VISIBILITY_PIXEL);                          // t2,t3,t4 - DESCRIPTOR HEAP see descriptorRange
+
+
+        D3D12_STATIC_SAMPLER_DESC pointSampler = {};
+        pointSampler.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+        pointSampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+        pointSampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+        pointSampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+        pointSampler.ShaderRegister = 0;                                                                                                                           // s0
+        pointSampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+        // Allow input layout and deny unnecessary access to certain pipeline stages.
+        D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
+            D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
+            D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+            D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+            D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
+
+        CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDescription;
+        rootSignatureDescription.Init_1_1(DeferredRootParams::NumRootParameters_Deferred, rootParameters, 1, &pointSampler, rootSignatureFlags);
+
+        m_DeferredLightingRootSignature.SetRootSignatureDesc(rootSignatureDescription.Desc_1_1, featureData.HighestVersion);
+
+        // === Deferred Lighting PSO ===
+
+        struct DeferredPipelineStateStream
+        {
+            CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE pRootSignature;
+            CD3DX12_PIPELINE_STATE_STREAM_PRIMITIVE_TOPOLOGY PrimitiveTopologyType;
+            CD3DX12_PIPELINE_STATE_STREAM_VS VS;
+            CD3DX12_PIPELINE_STATE_STREAM_PS PS;
+            CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL1 DepthStencil;
+            CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL_FORMAT DSVFormat;
+            CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS RTVFormats;
+        } deferredPipelineStateStream;
+
+        ComPtr<ID3DBlob> vs, ps;
+        ThrowIfFailed(D3DReadFileToBlob((solution_dir_str + L"DeferredLighting_VS.cso").c_str(), &vs));
+        ThrowIfFailed(D3DReadFileToBlob((solution_dir_str + L"DeferredLighting_PS.cso").c_str(), &ps));
+
+        deferredPipelineStateStream.pRootSignature = m_DeferredLightingRootSignature.GetRootSignature().Get();
+        deferredPipelineStateStream.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+        deferredPipelineStateStream.VS = CD3DX12_SHADER_BYTECODE(vs.Get());
+        deferredPipelineStateStream.PS = CD3DX12_SHADER_BYTECODE(ps.Get());
+
+        CD3DX12_DEPTH_STENCIL_DESC1 depthStencilDesc(D3D12_DEFAULT);
+        depthStencilDesc.DepthEnable = FALSE;
+        depthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+        depthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+        // --
+        deferredPipelineStateStream.DepthStencil = depthStencilDesc;
+        deferredPipelineStateStream.DSVFormat  = m_HDRRenderTarget.GetDepthStencilFormat();    // HDR output
+        deferredPipelineStateStream.RTVFormats = m_HDRRenderTarget.GetRenderTargetFormats();   // HDR output
+
+        D3D12_PIPELINE_STATE_STREAM_DESC deferredPipelineStateStreamDesc = {
+            sizeof(DeferredPipelineStateStream), &deferredPipelineStateStream
+        };
+        ThrowIfFailed(device->CreatePipelineState(&deferredPipelineStateStreamDesc, IID_PPV_ARGS(&m_DeferredLightingPSO)));
+    }
+
     auto fenceValue = commandQueue->ExecuteCommandList(commandList);
     commandQueue->WaitForFenceValue(fenceValue);
 
     return true;
 }
 
-void Sample2::RescaleHDRRenderTarget(float scale)
+void Sample5::RescaleRenderTargets(float scale)
 {
     uint32_t width = static_cast<uint32_t>(m_Width * scale);
     uint32_t height = static_cast<uint32_t>(m_Height * scale);
@@ -468,9 +650,10 @@ void Sample2::RescaleHDRRenderTarget(float scale)
     height = clamp<uint32_t>(height, 1, D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION);
 
     m_HDRRenderTarget.Resize(width, height);
+    m_GBufferRT.Resize(width, height);
 }
 
-void Sample2::OnResize(ResizeEventArgs& e)
+void Sample5::OnResize(ResizeEventArgs& e)
 {
     Game::OnResize(e);
 
@@ -481,19 +664,19 @@ void Sample2::OnResize(ResizeEventArgs& e)
 
         float fov = m_Camera.get_FoV();
         float aspectRatio = m_Width / (float)m_Height;
-        m_Camera.set_Projection(fov, aspectRatio, 0.1f, 100.0f);
+        m_Camera.set_Projection(fov, aspectRatio, 0.1f, 200.0f);
 
-        RescaleHDRRenderTarget(m_RenderScale);
+        RescaleRenderTargets(m_RenderScale);
     }
 }
 
-void Sample2::UnloadContent()
+void Sample5::UnloadContent()
 {
 }
 
 static double g_FPS = 0.0;
 
-void Sample2::OnUpdate()
+void Sample5::OnUpdate()
 {
     static uint64_t frameCount = 0;
     static double totalTime = 0.0;
@@ -661,7 +844,7 @@ float ACESFilmicTonemappingPlot(void*, int index)
         ACESFilmicTonemapping(g_TonemapParameters.LinearWhite, g_TonemapParameters.A, g_TonemapParameters.B, g_TonemapParameters.C, g_TonemapParameters.D, g_TonemapParameters.E, g_TonemapParameters.F);
 }
 
-void Sample2::OnGUI()
+void Sample5::OnGUI()
 {
     static bool showDemoWindow = false;
     static bool showOptions = true;
@@ -726,8 +909,21 @@ void Sample2::OnGUI()
             if (renderScale != m_RenderScale)
             {
                 m_RenderScale = renderScale;
-                RescaleHDRRenderTarget(m_RenderScale);
+                RescaleRenderTargets(m_RenderScale);
             }
+        }
+        
+        {
+            const char* renderModeNames[] = { "Forward", "Deferred" };
+            int currentMode = static_cast<int>(m_RenderingMode);
+
+            if (ImGui::Combo("Rendering Mode", &currentMode, renderModeNames, 2))
+            {
+                m_RenderingMode = static_cast<RenderingMode>(currentMode);
+            }
+
+            ImGui::SameLine();
+            ShowHelpMarker("Forward: Traditional forward rendering.\nDeferred: G-Buffer based deferred rendering.");
         }
 
         {
@@ -804,7 +1000,6 @@ void Sample2::OnGUI()
         }
 
         ImGui::End();
-
     }
 }
 
@@ -816,7 +1011,7 @@ void XM_CALLCONV ComputeMatrices(FXMMATRIX model, CXMMATRIX view, CXMMATRIX view
     mat.ModelViewProjectionMatrix = model * viewProjection;
 }
 
-void Sample2::OnRender()
+void Sample5::OnRender()
 {
     Game::OnRender();
 
@@ -824,7 +1019,7 @@ void Sample2::OnRender()
     auto commandQueue = app.GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
     auto commandList = commandQueue->GetCommandList();
 
-    // Clear the render targets.
+    // 1. Clear the render targets.
     {
         FLOAT clearColor[] = { 0.4f, 0.6f, 0.9f, 1.0f };
 
@@ -836,7 +1031,7 @@ void Sample2::OnRender()
     commandList->SetViewport(m_HDRRenderTarget.GetViewport());
     commandList->SetScissorRect(m_ScissorRect);
 
-    // Render the skybox.
+    // 2. Render the skybox.
     {
         // The view matrix should only consider the camera's rotation, but not the translation.
         auto viewMatrix = XMMatrixTranspose(XMMatrixRotationQuaternion(m_Camera.get_Rotation()));
@@ -860,197 +1055,223 @@ void Sample2::OnRender()
         m_SkyboxMesh->Draw(*commandList);
     }
 
+	// 3. Render the scene (FBX model + debug shapes) in HDR to an off-screen render target, using either forward or deferred rendering.
+    {
+        XMMATRIX viewMatrix = m_Camera.get_ViewMatrix();
+        XMMATRIX viewProjectionMatrix = viewMatrix * m_Camera.get_ProjectionMatrix();
 
+        if (m_RenderingMode == RenderingMode::Forward)
+        {
+            RenderForward(commandList, viewMatrix, viewProjectionMatrix);
+        }
+        else // Deferred
+        {
+            RenderDeferred(commandList, viewMatrix, viewProjectionMatrix);
+        }
+    }
+
+    // 4. FSQ Posteffect: perform HDR -> SDR tonemapping directly to the Window's render target.
+    {
+        commandList->SetRenderTarget(app.GetRenderTarget());
+        commandList->SetViewport(app.GetRenderTarget().GetViewport());
+        commandList->SetScissorRect(m_ScissorRect);
+        commandList->SetPipelineState(m_SDRPipelineState);
+        commandList->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        commandList->SetGraphicsRootSignature(m_SDRRootSignature);
+        commandList->SetGraphics32BitConstants(0, g_TonemapParameters);
+        commandList->SetShaderResourceView(1, 0, *m_HDRRenderTarget.GetTexture(Color0), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+        commandList->Draw(3);
+    }
+
+	// 5. Execute the command list.
+    commandQueue->ExecuteCommandList(commandList);
+
+    // 6. Render GUI.
+    OnGUI();
+
+    // 7. Present
+    app.Present();
+}
+
+void Sample5::RenderForward(std::shared_ptr<CommandList> commandList, DirectX::CXMMATRIX viewMatrix, DirectX::CXMMATRIX viewProjectionMatrix)
+{
+    // 1. Draw FBX model with multiple mesh parts and materials.
     commandList->SetPipelineState(m_HDRPipelineState);
     commandList->SetGraphicsRootSignature(m_HDRRootSignature);
 
-    // Upload lights
-    LightProperties lightProps;
-    lightProps.NumPointLights = static_cast<uint32_t>(m_PointLights.size());
-    lightProps.NumSpotLights = static_cast<uint32_t>(m_SpotLights.size());
+    // -- Upload lights properties to CB and SB --
+    LightProperties lightProperties;
+    lightProperties.NumPointLights = static_cast<uint32_t>(m_PointLights.size());
+    lightProperties.NumSpotLights = static_cast<uint32_t>(m_SpotLights.size());
 
-    commandList->SetGraphics32BitConstants(RootParameters::LightPropertiesCB, lightProps);
+    commandList->SetGraphics32BitConstants(RootParameters::LightPropertiesCB, lightProperties);
     commandList->SetGraphicsDynamicStructuredBuffer(RootParameters::PointLights, m_PointLights);
     commandList->SetGraphicsDynamicStructuredBuffer(RootParameters::SpotLights, m_SpotLights);
 
-    // Draw the earth sphere
-    XMMATRIX translationMatrix = XMMatrixTranslation(-4.0f, 2.0f, -4.0f);
-    XMMATRIX rotationMatrix = XMMatrixIdentity();
-    XMMATRIX scaleMatrix = XMMatrixScaling(4.0f, 4.0f, 4.0f);
-    XMMATRIX worldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
-    XMMATRIX viewMatrix = m_Camera.get_ViewMatrix();
-    XMMATRIX viewProjectionMatrix = viewMatrix * m_Camera.get_ProjectionMatrix();
-
-    Mat matrices;
-    ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
-
-    commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MatricesCB, matrices);
-    commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MaterialCB, Material::White);
-    commandList->SetShaderResourceView(RootParameters::Textures, 0, m_EarthTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-
-    m_SphereMesh->Draw(*commandList);
-
-    // Draw a cube
-    translationMatrix = XMMatrixTranslation(4.0f, 4.0f, 4.0f);
-    rotationMatrix = XMMatrixRotationY(XMConvertToRadians(45.0f));
-    scaleMatrix = XMMatrixScaling(4.0f, 8.0f, 4.0f);
-    worldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
-
-    ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
-
-    commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MatricesCB, matrices);
-    commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MaterialCB, Material::White);
-    commandList->SetShaderResourceView(RootParameters::Textures, 0, m_MonaLisaTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-
-    m_CubeMesh->Draw(*commandList);
-
-    // Draw a torus
-    translationMatrix = XMMatrixTranslation(4.0f, 0.6f, -4.0f);
-    rotationMatrix = XMMatrixRotationY(XMConvertToRadians(45.0f));
-    scaleMatrix = XMMatrixScaling(4.0f, 4.0f, 4.0f);
-    worldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
-
-    ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
-
-    commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MatricesCB, matrices);
-    commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MaterialCB, Material::Ruby);
-    commandList->SetShaderResourceView(RootParameters::Textures, 0, m_DefaultTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-
-    m_TorusMesh->Draw(*commandList);
-
-    // Floor plane.
-    float scalePlane = 20.0f;
-    float translateOffset = scalePlane / 2.0f;
-
-    translationMatrix = XMMatrixTranslation(0.0f, 0.0f, 0.0f);
-    rotationMatrix = XMMatrixIdentity();
-    scaleMatrix = XMMatrixScaling(scalePlane, 1.0f, scalePlane);
-    worldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
-
-    ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
-
-    commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MatricesCB, matrices);
-    commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MaterialCB, Material::White);
-    commandList->SetShaderResourceView(RootParameters::Textures, 0, m_DirectXTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-
-    m_PlaneMesh->Draw(*commandList);
-
-    // Back wall
-    translationMatrix = XMMatrixTranslation(0, translateOffset, translateOffset);
-    rotationMatrix = XMMatrixRotationX(XMConvertToRadians(-90));
-    worldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
-
-    ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
-
-    commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MatricesCB, matrices);
-
-    m_PlaneMesh->Draw(*commandList);
-
-    // Ceiling plane
-    translationMatrix = XMMatrixTranslation(0, translateOffset * 2.0f, 0);
-    rotationMatrix = XMMatrixRotationX(XMConvertToRadians(180));
-    worldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
-
-    ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
-
-    commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MatricesCB, matrices);
-
-    m_PlaneMesh->Draw(*commandList);
-
-    // Front wall
-    translationMatrix = XMMatrixTranslation(0, translateOffset, -translateOffset);
-    rotationMatrix = XMMatrixRotationX(XMConvertToRadians(90));
-    worldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
-
-    ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
-
-    commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MatricesCB, matrices);
-
-    m_PlaneMesh->Draw(*commandList);
-
-    // Left wall
-    translationMatrix = XMMatrixTranslation(-translateOffset, translateOffset, 0);
-    rotationMatrix = XMMatrixRotationX(XMConvertToRadians(-90)) * XMMatrixRotationY(XMConvertToRadians(-90));
-    worldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
-
-    ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
-
-    commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MatricesCB, matrices);
-    commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MaterialCB, Material::Red);
-    commandList->SetShaderResourceView(RootParameters::Textures, 0, m_DefaultTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-
-    m_PlaneMesh->Draw(*commandList);
-
-    // Right wall
-    translationMatrix = XMMatrixTranslation(translateOffset, translateOffset, 0);
-    rotationMatrix = XMMatrixRotationX(XMConvertToRadians(-90)) * XMMatrixRotationY(XMConvertToRadians(90));
-    worldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
-
-    ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
-
-    commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MatricesCB, matrices);
-    commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MaterialCB, Material::Blue);
-    m_PlaneMesh->Draw(*commandList);
-
-    // Draw shapes to visualize the position of the lights in the scene.
-    Material lightMaterial;
-    // No specular
-    lightMaterial.Specular = { 0, 0, 0, 1 };
-    for (const auto& l : m_PointLights)
+	// RENDER FBX MODEL
     {
-        lightMaterial.Emissive = l.Color;
-        XMVECTOR lightPos = XMLoadFloat4(&l.PositionWS);
-        worldMatrix = XMMatrixTranslationFromVector(lightPos);
+        float scale = 1 / 10.0f;
+
+        XMMATRIX translationMatrix = XMMatrixTranslation(0.0f, 0.0f, 0.0f);
+        XMMATRIX rotationMatrix = XMMatrixIdentity();
+	    XMMATRIX scaleMatrix = XMMatrixScaling(scale, scale, scale);
+        XMMATRIX worldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
+
+        Mat matrices;
         ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
-
+        // --
         commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MatricesCB, matrices);
-        commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MaterialCB, lightMaterial);
 
-        m_SphereMesh->Draw(*commandList);
+        // Returns the frustum in view (camera) space
+        // --
+        // The projection matrix transforms from view space -> clip/projection space.
+        // So when you create a frustum from the projection matrix, the resulting planes represent the 
+        // view volume boundaries in the coordinate system where the camera is at the origin � which is view space.
+        DirectX::BoundingFrustum cameraFrustum;
+        DirectX::BoundingFrustum::CreateFromMatrix(cameraFrustum, m_Camera.get_ProjectionMatrix());
+
+        // Transform the Frustum from View to World space
+        XMMATRIX inverseView = XMMatrixInverse(nullptr, viewMatrix);
+        cameraFrustum.Transform(cameraFrustum, inverseView);
+
+        Texture* currentTexture = nullptr;
+        Material* currentMaterial = nullptr;
+        for (auto& part : m_LoadedMeshParts)
+        {
+            // Transform the mesh part's bounding box to World space
+            DirectX::BoundingBox worldBounds;
+            part.boundingBox.Transform(worldBounds, worldMatrix);
+
+            // [OPT_1] Frustum culling in World space - cameraFrustum vs AABB of mesh part
+            if (!worldBounds.Intersects(cameraFrustum))
+                continue;
+
+            if (&part.material != currentMaterial)
+            {
+                commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MaterialCB, part.material);
+                currentMaterial = &part.material;
+            }
+
+            // [OPT_2] Only change texture if different
+            if (&part.diffuseTexture != currentTexture)
+            {
+                commandList->SetShaderResourceView(RootParameters::Textures, 0, part.diffuseTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+                currentTexture = &part.diffuseTexture;
+            }
+
+            part.mesh->Draw(*commandList);
+        }
+    }
+}
+
+void Sample5::RenderDeferred(std::shared_ptr<CommandList> commandList, DirectX::CXMMATRIX viewMatrix, DirectX::CXMMATRIX viewProjectionMatrix)
+{
+    // === PASS 1: G-Buffer Generation ===
+
+    commandList->SetRenderTarget(m_GBufferRT);
+    commandList->SetViewport(m_GBufferRT.GetViewport());
+    commandList->SetScissorRect(m_ScissorRect);
+
+    // Clear G-Buffer
+    FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+    commandList->ClearTexture(*m_GBufferRT.GetTexture(AttachmentPoint::Color0), clearColor);
+    commandList->ClearTexture(*m_GBufferRT.GetTexture(AttachmentPoint::Color1), clearColor);
+    commandList->ClearDepthStencilTexture(*m_GBufferRT.GetTexture(AttachmentPoint::DepthStencil), D3D12_CLEAR_FLAG_DEPTH);
+
+    // Set G-Buffer PSO
+    commandList->SetPipelineState(m_GBufferPSO);
+    commandList->SetGraphicsRootSignature(m_GBufferRootSignature);
+
+    // Render meshes into G-Buffer (same loop as forward, but no lights needed)
+    // RENDER FBX MODEL
+    {
+        float scale = 1 / 10.0f;
+
+        XMMATRIX translationMatrix = XMMatrixTranslation(0.0f, 0.0f, 0.0f);
+        XMMATRIX rotationMatrix = XMMatrixIdentity();
+        XMMATRIX scaleMatrix = XMMatrixScaling(scale, scale, scale);
+        XMMATRIX worldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
+
+        Mat matrices;
+        ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
+        // --
+        commandList->SetGraphicsDynamicConstantBuffer(GbufferRootParams::MatricesCB_GBuffer, matrices);
+
+        // Returns the frustum in view (camera) space
+        // --
+        // The projection matrix transforms from view space -> clip/projection space.
+        // So when you create a frustum from the projection matrix, the resulting planes represent the 
+        // view volume boundaries in the coordinate system where the camera is at the origin � which is view space.
+        DirectX::BoundingFrustum cameraFrustum;
+        DirectX::BoundingFrustum::CreateFromMatrix(cameraFrustum, m_Camera.get_ProjectionMatrix());
+
+        // Transform the Frustum from View to World space
+        XMMATRIX inverseView = XMMatrixInverse(nullptr, viewMatrix);
+        cameraFrustum.Transform(cameraFrustum, inverseView);
+
+        Texture* currentTexture = nullptr;
+        Material* currentMaterial = nullptr;
+        for (auto& part : m_LoadedMeshParts)
+        {
+            // Transform the mesh part's bounding box to World space
+            DirectX::BoundingBox worldBounds;
+            part.boundingBox.Transform(worldBounds, worldMatrix);
+
+            // [OPT_1] Frustum culling in World space - cameraFrustum vs AABB of mesh part
+            if (!worldBounds.Intersects(cameraFrustum))
+                continue;
+
+            if (&part.material != currentMaterial)
+            {
+                commandList->SetGraphicsDynamicConstantBuffer(GbufferRootParams::MaterialCB_GBuffer, part.material);
+                currentMaterial = &part.material;
+            }
+
+            // [OPT_2] Only change texture if different
+            if (&part.diffuseTexture != currentTexture)
+            {
+                commandList->SetShaderResourceView(GbufferRootParams::Textures_GBuffer, 0, part.diffuseTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+                currentTexture = &part.diffuseTexture;
+            }
+
+            part.mesh->Draw(*commandList);
+        }
     }
 
-    for (const auto& l : m_SpotLights)
-    {
-        lightMaterial.Emissive = l.Color;
-        XMVECTOR lightPos = XMLoadFloat4(&l.PositionWS);
-        XMVECTOR lightDir = XMLoadFloat4(&l.DirectionWS);
-        XMVECTOR up = XMVectorSet(0, 1, 0, 0);
+    // === PASS 2: Deferred Lighting ===
 
-        // Rotate the cone so it is facing the Z axis.
-        rotationMatrix = XMMatrixRotationX(XMConvertToRadians(-90.0f));
-        worldMatrix = rotationMatrix * LookAtMatrix(lightPos, lightDir, up);
+    commandList->SetRenderTarget(m_HDRRenderTarget);
+    commandList->SetViewport(m_HDRRenderTarget.GetViewport());
+    commandList->SetScissorRect(m_ScissorRect);
 
-        ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
+    commandList->SetPipelineState(m_DeferredLightingPSO);
+    commandList->SetGraphicsRootSignature(m_DeferredLightingRootSignature);
 
-        commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MatricesCB, matrices);
-        commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MaterialCB, lightMaterial);
+    XMMATRIX invProj = m_Camera.get_InverseProjectionMatrix();
+    
+    LightProperties lightProperties;
+    lightProperties.NumPointLights = static_cast<uint32_t>(m_PointLights.size());
+    lightProperties.NumSpotLights = static_cast<uint32_t>(m_SpotLights.size());
 
-        m_ConeMesh->Draw(*commandList);
-    }
+    commandList->SetGraphics32BitConstants(DeferredRootParams::InvProjCB_Deferred, invProj);
+    commandList->SetGraphics32BitConstants(DeferredRootParams::LightPropertiesCB_Deferred, lightProperties);
+    commandList->SetGraphicsDynamicStructuredBuffer(DeferredRootParams::PointLights_Deferred, m_PointLights);
+    commandList->SetGraphicsDynamicStructuredBuffer(DeferredRootParams::SpotLights_Deferred, m_SpotLights);
 
-    // Perform HDR -> SDR tonemapping directly to the Window's render target.
-    commandList->SetRenderTarget(app.GetRenderTarget());
-    commandList->SetViewport(app.GetRenderTarget().GetViewport());
-    commandList->SetPipelineState(m_SDRPipelineState);
+    // G-Buffer textures
+    commandList->SetShaderResourceView(DeferredRootParams::Textures_Deferred, 0, *m_GBufferRT.GetTexture(AttachmentPoint::Color0), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    commandList->SetShaderResourceView(DeferredRootParams::Textures_Deferred, 1, *m_GBufferRT.GetTexture(AttachmentPoint::Color1), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    commandList->SetShaderResourceView(DeferredRootParams::Textures_Deferred, 2, *m_GBufferRT.GetTexture(AttachmentPoint::DepthStencil), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+    // Draw full-screen triangle
     commandList->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    commandList->SetGraphicsRootSignature(m_SDRRootSignature);
-    commandList->SetGraphics32BitConstants(0, g_TonemapParameters);
-    commandList->SetShaderResourceView(1, 0, *m_HDRRenderTarget.GetTexture(Color0), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-
     commandList->Draw(3);
-
-    commandQueue->ExecuteCommandList(commandList);
-
-    // Render GUI.
-    OnGUI();
-
-    // Present
-    app.Present();
 }
 
 static bool g_AllowFullscreenToggle = true;
 
-void Sample2::OnKeyPressed(KeyEventArgs& e)
+void Sample5::OnKeyPressed(KeyEventArgs& e)
 {
     Game::OnKeyPressed(e);
 
@@ -1117,7 +1338,7 @@ void Sample2::OnKeyPressed(KeyEventArgs& e)
     }
 }
 
-void Sample2::OnKeyReleased(KeyEventArgs& e)
+void Sample5::OnKeyReleased(KeyEventArgs& e)
 {
     Game::OnKeyReleased(e);
 
@@ -1161,7 +1382,7 @@ void Sample2::OnKeyReleased(KeyEventArgs& e)
     }
 }
 
-void Sample2::OnMouseMoved(MouseMotionEventArgs& e)
+void Sample5::OnMouseMoved(MouseMotionEventArgs& e)
 {
     Game::OnMouseMoved(e);
 
@@ -1180,7 +1401,7 @@ void Sample2::OnMouseMoved(MouseMotionEventArgs& e)
 }
 
 
-void Sample2::OnMouseWheel(MouseWheelEventArgs& e)
+void Sample5::OnMouseWheel(MouseWheelEventArgs& e)
 {
     Game::OnMouseWheel(e);
 
