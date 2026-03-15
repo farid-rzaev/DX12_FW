@@ -16,7 +16,7 @@ void ReportLiveObjects()
 
 int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLine, int nCmdShow)
 {
-	const wchar_t* windowTitle = L"Sample 4 - Deferred Rendering";
+	const wchar_t* windowTitle = L"Sample 5 - Deferred PBR GBuffers - 3RTs";
 
 	int retCode = 0;
 

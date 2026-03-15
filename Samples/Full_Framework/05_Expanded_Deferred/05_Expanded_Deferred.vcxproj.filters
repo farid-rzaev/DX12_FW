@@ -19,12 +19,6 @@
     <FxCompile Include="Shaders\GBuffer_VS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="Shaders\HDR_PS.hlsl">
-      <Filter>Shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="Shaders\HDR_VS.hlsl">
-      <Filter>Shaders</Filter>
-    </FxCompile>
     <FxCompile Include="Shaders\HDRtoSDR_PS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>

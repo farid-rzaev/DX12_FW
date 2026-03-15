@@ -56,19 +56,19 @@ struct DX12_FW_API Material
     {}
 
     DirectX::XMFLOAT4 Emissive;
-    //----------------------------------- (16 byte boundary)
+    //----------------------------------------------------- (16 byte boundary)
     DirectX::XMFLOAT4 Ambient;
-    //----------------------------------- (16 byte boundary)
+    //----------------------------------------------------- (16 byte boundary)
     DirectX::XMFLOAT4 Diffuse;
-    //----------------------------------- (16 byte boundary)
+    //----------------------------------------------------- (16 byte boundary)
     DirectX::XMFLOAT4 Specular;
-    //----------------------------------- (16 byte boundary)
-    float Roughness;
-    float Metalness;
-    float EmissiveMask;
+    //----------------------------------------------------- (16 byte boundary)
+    float Roughness;    // 0 = smooth, 1 = rough
+    float Metalness;    // 0 = dielectric, 1 = metal
+    float EmissiveMask; // 0 = non-emissive, 1 = emissive
     float _Padding;
-    //----------------------------------- (16 byte boundary)
-    // Total:                              16 * 5 = 80 bytes
+    //----------------------------------------------------- (16 byte boundary)
+    // Total:                                               16 * 5 = 80 bytes
     
     // Define some interesting materials.
     static const Material Red;

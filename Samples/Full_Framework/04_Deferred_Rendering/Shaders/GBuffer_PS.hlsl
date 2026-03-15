@@ -45,7 +45,7 @@ GBufferOutput main(GBufferPSInput IN)
     // TODO: In future to avoid holes in depth buffer, consider having two separate PSOs for deferred G-Buffer rendering: 
     // 1. GBuffer_PS_Opaque (no clip) 
     // 2. GBuffer_PS_AlphaTest (with clip)
-    // We would also need to sort your m_LoadedMeshParts by whether they need alpha testing, and draw them in two separate loops in the Render() function.
+    // We would also need to sort m_LoadedMeshParts by whether they need alpha testing, and draw them in two separate loops in the Render() function.
     clip(texColor.a - 0.1f);
     
     // Store albedo (diffuse color) and specular power

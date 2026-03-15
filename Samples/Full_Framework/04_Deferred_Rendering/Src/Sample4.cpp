@@ -240,7 +240,6 @@ bool Sample4::LoadContent()
 
     // Load some textures
     commandList->LoadTextureFromFile(m_DefaultTexture, L"Assets/Textures/DefaultWhite.bmp");
-    commandList->LoadTextureFromFile(m_DirectXTexture, L"Assets/Textures/Directx9.png");
     commandList->LoadTextureFromFile(m_GraceCathedralTexture, L"Assets/Textures/grace-new.hdr");
 
     // Create Meshes

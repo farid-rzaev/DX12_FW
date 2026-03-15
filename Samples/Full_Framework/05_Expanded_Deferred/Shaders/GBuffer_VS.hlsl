@@ -2,7 +2,7 @@ struct Mat
 {
     matrix ModelMatrix;
     matrix ModelViewMatrix;
-    matrix InverseTransposeModelViewMatrix;
+    matrix InverseTransposeModelMatrix;
     matrix ModelViewProjectionMatrix;
 };
 
@@ -17,8 +17,7 @@ struct VertexPositionNormalTexture
 
 struct GBufferVSOutput
 {
-    float4 PositionVS : POSITION;
-    float3 NormalVS   : NORMAL;
+    float3 NormalWS   : NORMAL;
     float2 TexCoord   : TEXCOORD;
     float4 Position   : SV_Position;
 };
@@ -28,8 +27,7 @@ GBufferVSOutput main(VertexPositionNormalTexture IN)
     GBufferVSOutput OUT;
 
     OUT.Position = mul(MatCB.ModelViewProjectionMatrix, float4(IN.Position, 1.0f));
-    OUT.PositionVS = mul( MatCB.ModelViewMatrix, float4(IN.Position, 1.0f));
-    OUT.NormalVS = mul((float3x3)MatCB.InverseTransposeModelViewMatrix, IN.Normal);
+    OUT.NormalWS = mul((float3x3)MatCB.InverseTransposeModelMatrix, IN.Normal);
     OUT.TexCoord = IN.TexCoord;
 
     return OUT;
