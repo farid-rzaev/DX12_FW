@@ -1222,6 +1222,12 @@ void Sample5::OnKeyReleased(KeyEventArgs& e)
             g_AllowFullscreenToggle = true;
             }
             break;
+        case KeyCode::F3:
+            m_LightingViewMode = static_cast<LightingViewMode>
+                (
+                    (static_cast<int>(m_LightingViewMode) + 1) % static_cast<int>(LightingViewMode::Count)
+                );
+            break;
         case KeyCode::Up:
         case KeyCode::W:
             m_Forward = 0.0f;
