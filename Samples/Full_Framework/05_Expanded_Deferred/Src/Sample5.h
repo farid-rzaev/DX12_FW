@@ -16,6 +16,18 @@
 
 #include <DirectXMath.h>
 
+enum class LightingViewMode : uint32_t
+{
+    Final = 0,         // Normal lit output
+    Albedo,            // [RT0] Raw albedo - catches texture/material issues
+    Normals,           // [RT1] World-space normals as color - catches normal bugs
+    PBR,               // [RT2] Roughness/Metalness/Emissive
+    Depth,             // Linear or Raw depth
+    DiffuseOnly,       // Lighting: diffuse  term only
+    SpecularOnly,      // Lighting: specular term only
+    AmbientOnly,       // Lighting: ambient  term only
+    Count
+};
 
 class Sample5 : public Game
 {
@@ -53,6 +65,9 @@ protected:
 
 private: /* DEFERRED RENDERING */
     
+	// Debug view mode switch
+    LightingViewMode m_LightingViewMode = LightingViewMode::Final;
+
     static const int NUM_GBUFFER_RTS = 3;   // GBuff RTs: RT0=AlbedoAO, RT1=Normal, RT2=Roughness,Metalness,EmissiveMask
 	RenderTarget m_GBufferRT;               // Will hold multiple Color attachment Textures and a Depth buffer for the G-Buffer pass.
 

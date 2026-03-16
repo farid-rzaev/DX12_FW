@@ -45,10 +45,13 @@ struct Mat
 struct DeferredLightingCommon
 {
     XMMATRIX InverseViewProjectionMatrix;
+    
     XMFLOAT3 CameraPositionWS;
+	uint32_t LightingViewMode;
+
     uint32_t NumPointLights;
     uint32_t NumSpotLights;
-	uint32_t _Padding[3]; // Pad to 16-byte boundary
+	uint32_t _Padding[2]; // Pad to 16-byte boundary
 };
 
 enum TonemapMethod : uint32_t
@@ -124,10 +127,10 @@ enum GbufferRootParams
 
 enum DeferredRootParams
 {
-    DeferredLightingCommonCB_Deferred,      // b0                                                           <- ps
-    PointLights_Deferred,            // t0                                                           <- ps
-    SpotLights_Deferred,             // t1                                                           <- ps
-    Textures_Deferred,               // t2-t4: G-Buffer textures                                     <- ps
+    DeferredLightingCommonCB_Deferred,  // b0                                                           <- ps
+    PointLights_Deferred,               // t0                                                           <- ps
+    SpotLights_Deferred,                // t1                                                           <- ps
+    Textures_Deferred,                  // t2-t4: G-Buffer textures                                     <- ps
     NumRootParameters_Deferred
 };
 
@@ -855,6 +858,20 @@ void Sample5::OnGUI()
         }
 
         {
+            const char* modes[] = { "Final", "Albedo", "Normals", "PBR", "Depth",
+                                    "Diffuse Only", "Specular Only", "Ambient Only" };
+            int current = static_cast<int>(m_LightingViewMode);
+
+            if (ImGui::Combo("View Mode", &current, modes, 8))
+            {
+                m_LightingViewMode = static_cast<LightingViewMode>(current);
+            }
+
+            ImGui::SameLine();
+            ShowHelpMarker("Final - Normal lit output;\n Albedo - [RT0] Raw albedo;\n Normals - [RT1] World-space normals;\n PBR - [RT2] Roughness/Metalness/Emissive;\n Depth - Linear or Raw depth;\n DiffuseOnly - Lighting (diffuse  term only);\n SpecularOnly - Lighting (specular term only);\n AmbientOnly - Lighting (ambient  term only).");
+        }
+
+        {
             sprintf_s(buffer, _countof(buffer), "FPS: %.2f (%.2f ms)  ", g_FPS, 1.0 / g_FPS * 1000.0);
             auto fpsTextSize = ImGui::CalcTextSize(buffer);
             ImGui::SameLine(ImGui::GetWindowWidth() - fpsTextSize.x);
@@ -1104,6 +1121,7 @@ void Sample5::RenderDeferred(std::shared_ptr<CommandList> commandList, DirectX::
     deferredLightingCommon.NumSpotLights = static_cast<uint32_t>(m_SpotLights.size());
     deferredLightingCommon.InverseViewProjectionMatrix = XMMatrixInverse(nullptr, viewProjectionMatrix);
     XMStoreFloat3(&deferredLightingCommon.CameraPositionWS, m_Camera.get_Translation()); // set deferredLightingCommon.CameraPositionW
+	deferredLightingCommon.LightingViewMode = static_cast<uint32_t>(m_LightingViewMode);
 
     commandList->SetGraphics32BitConstants(DeferredRootParams::DeferredLightingCommonCB_Deferred, deferredLightingCommon);
     commandList->SetGraphicsDynamicStructuredBuffer(DeferredRootParams::PointLights_Deferred, m_PointLights);

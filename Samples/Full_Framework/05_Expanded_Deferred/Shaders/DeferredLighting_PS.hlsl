@@ -27,10 +27,12 @@ struct DeferredLightingCommon
     matrix InverseViewProjectionMatrix;
     //----------------------------------- (16*4 byte boundary)
     float3 CameraPositionWS;
+    uint LightingViewMode;
+    // ---------------------------------- (16 byte boundary)
     uint NumPointLights;
     uint NumSpotLights;
-    float3 _Padding;
-    //----------------------------------- (16*2 byte boundary)
+    uint2 _Padding;
+    //----------------------------------- (16 byte boundary)
 };
 
 // --------------------------------------------------------------------------------
@@ -115,6 +117,19 @@ float4 main(float2 texCoord : TEXCOORD /*UV space*/) : SV_Target
     float3 normalWS = OctahedralDecode(normalPacked.rg);
     float3 albedo   = albedoAO.rgb;
     
+    uint lightingViewMode = LightPropertiesCB.LightingViewMode;
+    // --
+    if (lightingViewMode == 1) return float4(albedo, 1.0);                          // Albedo
+    if (lightingViewMode == 2) return float4(normalWS * 0.5 + 0.5, 1.0);            // Normals
+    if (lightingViewMode == 3) return float4(pbrData.r, pbrData.g, pbrData.b, 1.0); // PBR
+    if (lightingViewMode == 4)                                                      // Depth
+    {
+        // Raw NDC depth hwDepth in [0, 1] can be hard to read. A simple linear depth is better for visualization:
+        float linearDepth = length(LightPropertiesCB.CameraPositionWS - positionWS); // view-space depth
+        float normalized = 1.0 - saturate(linearDepth / 100.0); // map [0,100] to [0,1] -> [1,0] (near->bright)
+        return float4(normalized.xxx, 1.0);
+    }
+    
     // Map roughness to a Blinn-Phong exponent: Roughness -> specular power (bridge)
     float roughness = pbrData.r;
     float specularPower = (1.0 - roughness) * 128.0; // rough -> low power, smooth -> high power
@@ -159,8 +174,13 @@ float4 main(float2 texCoord : TEXCOORD /*UV space*/) : SV_Target
         specularAccum += DoSpecular(V, normalWS, L, specularPower) * attenuation * spotIntensity * light.Color.rgb * light.Intensity;
     }
     
-    // Final color: ambient + diffuse + specular
     float3 ambient = float3(0.1, 0.1, 0.1); // Ambient light intensity (constant)
+    
+    if (lightingViewMode == 5) return float4(diffuseAccum, 1.0);   // Lighting: diffuse  term only
+    if (lightingViewMode == 6) return float4(specularAccum, 1.0);  // Lighting: specular term only
+    if (lightingViewMode == 7) return float4(ambient, 1.0);        // Lighting: ambient  term only
+    
+    // Final color: ambient + diffuse + specular
     float3 finalColor = (ambient + diffuseAccum + specularAccum) * albedo.rgb;
     
     return float4(finalColor, 1.0);
