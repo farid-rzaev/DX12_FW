@@ -1,5 +1,4 @@
-// This is the exact copy of the 00_Cube project but hooked up to the FULL (not simplified) 
-// version of the framework DX12_FW.
+// Sample 5 - Deferred with new RT3(Material Props) and Debug Visualizations for GBugger and Lighting. Lighting model is still BlinnPhong
 
 #include "Sample5.h"
 
@@ -16,7 +15,7 @@ void ReportLiveObjects()
 
 int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLine, int nCmdShow)
 {
-	const wchar_t* windowTitle = L"Sample 5 - Deferred PBR GBuffers - 3RTs";
+	const wchar_t* windowTitle = L"Sample 5 - Deferred with new RT3 (Material Props) and Debug Visualizations for GBugger and Lighting.";
 
 	int retCode = 0;
 

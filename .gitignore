@@ -8,3 +8,5 @@
 *.orig
 *.VC.db
 imgui.ini
+
+*.local.json

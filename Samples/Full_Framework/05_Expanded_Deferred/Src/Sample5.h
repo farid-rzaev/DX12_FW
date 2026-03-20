@@ -65,7 +65,7 @@ protected:
 
 private: /* DEFERRED RENDERING */
     
-	// Debug view mode switch
+	// Lighting view mode switch - for DEBUG
     LightingViewMode m_LightingViewMode = LightingViewMode::Final;
 
     static const int NUM_GBUFFER_RTS = 3;   // GBuff RTs: RT0=AlbedoAO, RT1=Normal, RT2=Roughness,Metalness,EmissiveMask
