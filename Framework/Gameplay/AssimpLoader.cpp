@@ -36,6 +36,27 @@ namespace
         MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, result.data(), size);
         return result;
     }
+
+    void LoadTextureFromFile(CommandList& commandList, const std::filesystem::path& modelDir, const aiString& texPath, Texture& textureOut, bool& hasTextureOut)
+    {
+        std::string pathStr(texPath.C_Str());
+
+        // Skip embedded textures (path starts with *)
+        if (!pathStr.empty() && pathStr[0] != '*')
+        {
+            std::filesystem::path fullPath = modelDir / pathStr;
+            std::wstring fullPathW = fullPath.lexically_normal().wstring();
+            if (std::filesystem::exists(fullPath))
+            {
+                try
+                {
+                    commandList.LoadTextureFromFile(textureOut, fullPathW);
+                    hasTextureOut = true;
+                }
+                catch (...) { /* use default */ }
+            }
+        }
+    }
 }
 
 std::vector<LoadedMeshPart> AssimpLoader::Load(
@@ -159,33 +180,59 @@ std::vector<LoadedMeshPart> AssimpLoader::Load(
 
         // Diffuse texture
         bool hasDiffuse = false;
+        bool hasRoughness = false;
+        bool hasMetalness = false;
         if (aiMesh->mMaterialIndex < scene->mNumMaterials)
         {
             aiMaterial* mat = scene->mMaterials[aiMesh->mMaterialIndex];
-            aiString texPath;
-            if (mat->GetTexture(aiTextureType_DIFFUSE, 0, &texPath) == AI_SUCCESS)
+
+            // Read PBR scalar factors (glTF 2.0 populates these; FBX usually won't)
             {
-                std::string pathStr(texPath.C_Str());
-                // Skip embedded textures (path starts with *)
-                if (!pathStr.empty() && pathStr[0] != '*')
+                ai_real aiRoughness = 0.5f;
+                if (mat->Get(AI_MATKEY_ROUGHNESS_FACTOR, aiRoughness) == AI_SUCCESS)
                 {
-                    std::filesystem::path fullPath = modelDir / pathStr;
-                    std::wstring fullPathW = fullPath.lexically_normal().wstring();
-                    if (std::filesystem::exists(fullPath))
-                    {
-                        try
-                        {
-                            commandList.LoadTextureFromFile(part.diffuseTexture, fullPathW);
-                            hasDiffuse = true;
-                        }
-                        catch (...) { /* use default */ }
-                    }
+                    part.material.Roughness = static_cast<float>(aiRoughness);
                 }
+                else
+                {
+                    part.material.Roughness = 0.5f; // fallback
+                }
+
+                ai_real aiMetalness = 0.0f;
+                if (mat->Get(AI_MATKEY_METALLIC_FACTOR, aiMetalness) == AI_SUCCESS)
+                {
+                    part.material.Metalness = static_cast<float>(aiMetalness);
+                }
+                else
+                {
+                    part.material.Metalness = 0.0f; // fallback
+                }
+            }
+
+            aiString diffuseTexPath;
+            if (mat->GetTexture(aiTextureType_DIFFUSE, 0, &diffuseTexPath) == AI_SUCCESS)
+            {
+				LoadTextureFromFile(commandList, modelDir, diffuseTexPath, part.diffuseTexture, hasDiffuse);
+            }
+
+            // Roughness texture
+            aiString roughnessTexPath;
+            if (mat->GetTexture(aiTextureType_DIFFUSE_ROUGHNESS, 0, &roughnessTexPath) == AI_SUCCESS)
+            {
+                LoadTextureFromFile(commandList, modelDir, roughnessTexPath, part.roughnessTexture, hasRoughness);
+            }
+
+            // Metalness texture
+            aiString metalnessTexPath;
+            if (mat->GetTexture(aiTextureType_METALNESS, 0, &metalnessTexPath) == AI_SUCCESS)
+            {
+                LoadTextureFromFile(commandList, modelDir, metalnessTexPath, part.metalnessTexture, hasMetalness);
             }
         }
 
-        if (!hasDiffuse)
-            part.diffuseTexture = defaultTexture;
+        if (!hasDiffuse)   part.diffuseTexture   = defaultTexture;
+        if (!hasRoughness) part.roughnessTexture = defaultTexture;
+        if (!hasMetalness) part.metalnessTexture = defaultTexture;
 
         parts.push_back(std::move(part));
     }

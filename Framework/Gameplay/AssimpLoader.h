@@ -16,7 +16,9 @@
 struct LoadedMeshPart
 {
     std::unique_ptr<Mesh> mesh;
-    Texture diffuseTexture;   // Loaded or copied from default
+    Texture diffuseTexture;     // Loaded or copied from default
+    Texture roughnessTexture;   // R channel = roughness
+    Texture metalnessTexture;   // G channel = metalness
     Material material;
     DirectX::BoundingBox boundingBox;
 };
