@@ -15,7 +15,7 @@ void ReportLiveObjects()
 
 int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLine, int nCmdShow)
 {
-	const wchar_t* windowTitle = L"Sample 6 - PBR_CookTorrance.";
+	const wchar_t* windowTitle = L"Sample 6 - PBR_CookTorrance Direct Lighting (No Indirect).";
 
 	int retCode = 0;
 
