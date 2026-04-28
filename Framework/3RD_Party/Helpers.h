@@ -1,8 +1,9 @@
 #pragma once
 
-// Minimize the num of
-// headers from Windows.h
+// Minimize the num of headers from Windows.h
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
 #include <Windows.h> // For HRESULT
 #include <exception> // For std::exception
 
