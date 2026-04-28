@@ -2,7 +2,7 @@
 
 #include "Resource.h"
 
-class Buffer : public Resource
+class DX12_FW_API Buffer : public Resource
 {
 public:
     explicit Buffer(const std::wstring& name = L"");

@@ -99,7 +99,7 @@ void Window::Resize(UINT32 width, UINT32 height)
 }
 
 
-UINT Window::Present(const Texture& texture)
+UINT32 Window::Present(const Texture& texture)
 {
 	auto commandQueue = Application::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
 	auto commandList = commandQueue->GetCommandList();

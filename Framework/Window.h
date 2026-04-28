@@ -53,9 +53,9 @@ public:
 	void Show() { ::ShowWindow(g_hWnd, SW_SHOW); }
 	virtual ~Window();
 	   
-	void Update();
-	void Resize(UINT32 width, UINT32 height);
-	UINT Present(const Texture& texture = Texture());
+	void   Update();
+	void   Resize(UINT32 width, UINT32 height);
+	UINT32 Present(const Texture& texture = Texture());
 
 public:   // SET / GET
 	bool IsFullscreen() const			{ return g_Fullscreen; }
@@ -97,13 +97,13 @@ private:
 
 private:
 	// Window handle
-	HWND     g_hWnd = nullptr;
-	UINT32   m_ClientWidth = 1920;
-	UINT32   m_ClientHeight = 1080;
+	HWND    g_hWnd = nullptr;
+	UINT32  m_ClientWidth = 1920;
+	UINT32  m_ClientHeight = 1080;
 	
-	UINT64	 m_FenceValues[NUM_FRAMES_IN_FLIGHT];
-	uint64_t m_FrameValues[NUM_FRAMES_IN_FLIGHT];
-	UINT	 m_CurrentBackBufferIndex;
+	UINT64	m_FenceValues[NUM_FRAMES_IN_FLIGHT];
+	UINT64	m_FrameValues[NUM_FRAMES_IN_FLIGHT];
+	UINT32	m_CurrentBackBufferIndex;
 
 	// Can be toggled with the Alt+Enter or F11
 	bool g_Fullscreen = false;

@@ -8,37 +8,36 @@
 
 #include <vector>
 
-class RootSignature
+class DX12_FW_API RootSignature
 {
 public:
     // TODO: Add (deep) copy/move constructors and assignment operators!
-    DX12_FW_API RootSignature();
-    DX12_FW_API RootSignature(
-        const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc, 
+    RootSignature();
+    RootSignature(const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc, 
         D3D_ROOT_SIGNATURE_VERSION rootSignatureVersion
     );
 
-    virtual DX12_FW_API ~RootSignature();
+    virtual ~RootSignature();
 
-    DX12_FW_API void Destroy();
+    void Destroy();
 
-    DX12_FW_API Microsoft::WRL::ComPtr<ID3D12RootSignature> GetRootSignature() const
+    Microsoft::WRL::ComPtr<ID3D12RootSignature> GetRootSignature() const
     {
         return m_RootSignature;
     }
 
-    DX12_FW_API void SetRootSignatureDesc(
+    void SetRootSignatureDesc(
         const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc,
         D3D_ROOT_SIGNATURE_VERSION rootSignatureVersion
     );
 
-    DX12_FW_API const D3D12_ROOT_SIGNATURE_DESC1& GetRootSignatureDesc() const
+    const D3D12_ROOT_SIGNATURE_DESC1& GetRootSignatureDesc() const
     {
         return m_RootSignatureDesc;
     }
 
-    DX12_FW_API uint32_t GetDescriptorTableBitMask(D3D12_DESCRIPTOR_HEAP_TYPE descriptorHeapType) const;
-    DX12_FW_API uint32_t GetNumDescriptors(uint32_t rootIndex) const;
+    uint32_t GetDescriptorTableBitMask(D3D12_DESCRIPTOR_HEAP_TYPE descriptorHeapType) const;
+    uint32_t GetNumDescriptors(uint32_t rootIndex) const;
 
 protected:
 

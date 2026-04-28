@@ -6,7 +6,7 @@
 #include <Framework/Application.h>
 //class Applicatrion;
 
-class ConstantBuffer : public Buffer
+class DX12_FW_API ConstantBuffer : public Buffer
 {
 public:
     ConstantBuffer(const std::wstring & name = L"");

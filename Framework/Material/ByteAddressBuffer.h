@@ -8,7 +8,7 @@
 
 class Application;
 
-class ByteAddressBuffer : public Buffer
+class DX12_FW_API ByteAddressBuffer : public Buffer
 {
 public:
     ByteAddressBuffer(const std::wstring& name = L"");
