@@ -26,7 +26,7 @@ public:
 	// Wait for another command queue to finish.
 	void Wait(const CommandQueue& other);
 
-	// Returns the fence value to wait for this command list.
+	// Returns the fence value to wait for this command list. Also enqueue compute follow-up work on top of primary quque.
 	uint64_t ExecuteCommandList(std::shared_ptr<CommandList> commandList);
 	uint64_t ExecuteCommandLists(const std::vector<std::shared_ptr<CommandList> >& commandLists);
 	

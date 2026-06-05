@@ -232,45 +232,112 @@ bool Sample7::Initialize(const wchar_t* windowTitle, int width, int height, bool
 bool Sample7::LoadContent()
 {
     auto& app = Application::Get();
-    auto  device        = app.GetDevice();
-    auto  commandQueue  = app.GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COPY);
-    auto  commandList   = commandQueue->GetCommandList();
+    auto  device = app.GetDevice();
+
+    auto  copyCommandQueue = app.GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COPY);
+    auto  copyCommandList = copyCommandQueue->GetCommandList();
+
+    auto  computeCommandQueue = app.GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COMPUTE);
+    auto  computeCommandList = computeCommandQueue->GetCommandList();
 
     // Set solution dir as current working dirrectory
     std::wstring exe_path_str = GetExePath();
     ThrowIfFailed(exe_path_str.empty() == false, "Can't find the .exe path!");
     // --
     SetWorkingDirToSolutionDir(exe_path_str);
-	std::wstring solution_dir_str = exe_path_str;
+    std::wstring solution_dir_str = exe_path_str;
 
     // Load some textures
-    commandList->LoadTextureFromFile(m_DefaultTexture, L"Assets/Textures/DefaultWhite.bmp");
-    commandList->LoadTextureFromFile(m_GraceCathedralTexture, L"Assets/Textures/grace-new.hdr");
+    copyCommandList->LoadTextureFromFile(m_DefaultTexture, L"Assets/Textures/DefaultWhite.bmp");
+    copyCommandList->LoadTextureFromFile(m_GraceCathedralPanoTexture, L"Assets/Textures/grace-new.hdr");
 
     // Create Meshes
-    m_SphereMesh = Mesh::CreateSphere(*commandList);
-    m_ConeMesh = Mesh::CreateCone(*commandList);
+    m_SphereMesh = Mesh::CreateSphere(*copyCommandList);
+    m_ConeMesh = Mesh::CreateCone(*copyCommandList);
 
     // Create an inverted (reverse winding order) cube so the insides are not clipped.
-    m_SkyboxMesh = Mesh::CreateCube(*commandList, 1.0f, true);
+    m_SkyboxMesh = Mesh::CreateCube(*copyCommandList, 1.0f, true);
 
-    m_LoadedMeshParts = AssimpLoader::Load(*commandList, L"Assets/Models/glTF/Sponza.gltf", m_DefaultTexture);
+	// Load Sponza model with multiple mesh parts, materials, and textures.
+    {
+        m_LoadedMeshParts = AssimpLoader::Load(*copyCommandList, L"Assets/Models/glTF/Sponza.gltf", m_DefaultTexture);
+
+        // [OPT_2] Sort the loaded mesh parts by their diffuse texture to minimize texture binding changes when rendering.
+        std::sort(m_LoadedMeshParts.begin(), m_LoadedMeshParts.end(),
+            [](const LoadedMeshPart& a, const LoadedMeshPart& b) {
+                return &a.diffuseTexture < &b.diffuseTexture;
+            });
+    }
+
+    // Create a Cubemap for the HDR panorama.
+    {
+        auto cubemapDesc                = m_GraceCathedralPanoTexture.GetD3D12ResourceDesc();
+        cubemapDesc.Width               = cubemapDesc.Height = 1024;
+        cubemapDesc.DepthOrArraySize    = 6;
+        cubemapDesc.MipLevels           = 0;   // FULL mip chain       
+
+        m_GraceCathedralCubemap = Texture(cubemapDesc, nullptr, TextureUsage::Albedo, L"Grace Cathedral Cubemap");
+
+        // Convert the 2D panorama to a 3D cubemap.
+        computeCommandList->PanoToCubemap(m_GraceCathedralPanoTexture, m_GraceCathedralCubemap);
+    }
+
+	// ------------------   IBL Precomputation   ------------------
+
+    // Diffuse low-frequency (no sharp detail) ambient - hemisphere convolution 
+    {
+        // IrradianceCubemap(R16G16B16A16_FLOAT, 32x32, array 6, mips 1, UAV)
+        D3D12_RESOURCE_DESC irradianceCubemapDesc{};
+        irradianceCubemapDesc.Dimension             = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+        irradianceCubemapDesc.Height                = 32;
+        irradianceCubemapDesc.Width                 = 32;
+        irradianceCubemapDesc.DepthOrArraySize      = 6;
+        irradianceCubemapDesc.MipLevels             = 1;
+        irradianceCubemapDesc.Format                = DXGI_FORMAT_R16G16B16A16_FLOAT;
+        irradianceCubemapDesc.Flags                 = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+        irradianceCubemapDesc.SampleDesc.Count      = 1;
+        irradianceCubemapDesc.SampleDesc.Quality    = 0;
+        // --
+        m_IrradianceCubemap = Texture(irradianceCubemapDesc, nullptr, TextureUsage::RenderTarget, L"IBL - Irradiance Cubemap");
+
+        computeCommandList->EnvToIrradianceCubemap(m_GraceCathedralCubemap, m_IrradianceCubemap);
+    }
+
+    // Specular GGX prefilter across roughness / mips(keeps reflections, blur varies by roughness).
+    {
+        // m_SpecularPrefilterCubemap(R16G16B16A16_FLOAT, 128x128, array 6, full mips, UAV)
+        D3D12_RESOURCE_DESC specCubemapDesc = m_GraceCathedralCubemap.GetD3D12ResourceDesc();
+        specCubemapDesc.Width               = 128;
+        specCubemapDesc.Height              = 128;
+        specCubemapDesc.DepthOrArraySize    = 6;
+        specCubemapDesc.MipLevels           = 0;        // FULL mip chain
+        specCubemapDesc.Flags              |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+        // --
+        m_SpecularPrefilterCubemap = Texture(specCubemapDesc, nullptr, TextureUsage::RenderTarget, L"IBL - Specular Prefilter Cubemap");
+
+        computeCommandList->EnvToSpecularPrefilterCubemap(m_GraceCathedralCubemap, m_SpecularPrefilterCubemap);
+    }
+
+	// BRDF LUT for split-sum approximation of the specular IBL integral.
+    {
+        // m_BRDFLUT(R16G16_FLOAT, 512x512, array 1, mips 1, UAV)
+        D3D12_RESOURCE_DESC brdfLUTDesc = {};
+        brdfLUTDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+        brdfLUTDesc.Width               = 512;
+        brdfLUTDesc.Height              = 512;
+        brdfLUTDesc.DepthOrArraySize    = 1;
+        brdfLUTDesc.MipLevels           = 1;
+        brdfLUTDesc.Format              = DXGI_FORMAT_R16G16_FLOAT;
+        brdfLUTDesc.Flags               = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+        brdfLUTDesc.SampleDesc.Count    = 1;
+        brdfLUTDesc.SampleDesc.Quality  = 0;
+        // --
+        m_BrdfLUT = Texture(brdfLUTDesc, nullptr, TextureUsage::RenderTarget, L"IBL - BRDF LUT");
+
+        computeCommandList->BrdfLut(m_BrdfLUT);
+    }
     
-	// [OPT_2] Sort the loaded mesh parts by their diffuse texture to minimize texture binding changes when rendering.
-    std::sort(m_LoadedMeshParts.begin(), m_LoadedMeshParts.end(),
-        [](const LoadedMeshPart& a, const LoadedMeshPart& b) {
-            return &a.diffuseTexture < &b.diffuseTexture;
-        });
-
-    // Create a cubemap for the HDR panorama.
-    auto cubemapDesc = m_GraceCathedralTexture.GetD3D12ResourceDesc();
-    cubemapDesc.Width = cubemapDesc.Height = 1024;
-    cubemapDesc.DepthOrArraySize = 6;
-    cubemapDesc.MipLevels = 0;
-
-    m_GraceCathedralCubemap = Texture(cubemapDesc, nullptr, TextureUsage::Albedo, L"Grace Cathedral Cubemap");
-    // Convert the 2D panorama to a 3D cubemap.
-    commandList->PanoToCubemap(m_GraceCathedralCubemap, m_GraceCathedralTexture);
+    // -------------------------------------------------------------
 
     // Create an HDR intermediate render target.
     DXGI_FORMAT HDRFormat = DXGI_FORMAT_R16G16B16A16_FLOAT;
@@ -298,6 +365,7 @@ bool Sample7::LoadContent()
 	depthClearValue.Format = depthDesc.Format;
     depthClearValue.DepthStencil = { 1.0f, 0 };
 
+    // Making depth buffer shared_ptr as GBuffer RT and HDR RT are having shared ownership of the buffer
     std::shared_ptr<Texture> sharedDepthTexture = std::make_shared<Texture>(depthDesc, &depthClearValue, TextureUsage::Depth, L"Depth Render Target");
 
     // Attach the HDR texture to the HDR render target.
@@ -307,7 +375,7 @@ bool Sample7::LoadContent()
     // Create G-Buffer render target with multiple color attachments
     {
         DXGI_FORMAT gbufferFormats[NUM_GBUFFER_RTS] = {
-            DXGI_FORMAT_R8G8B8A8_UNORM,     // Albedo(RGB) + AO(A
+            DXGI_FORMAT_R8G8B8A8_UNORM,     // Albedo(RGB) + AO(A)
 			DXGI_FORMAT_R10G10B10A2_UNORM,  // Oct-encoded world-space Normal(RG), unused(BA)
 			DXGI_FORMAT_R8G8B8A8_UNORM,     // Roughness + Metalness + Emissive (RGB), unused (A)
         };
@@ -519,21 +587,22 @@ bool Sample7::LoadContent()
     {
         // === Deferred Lighting Root Signature ===
 
-        CD3DX12_DESCRIPTOR_RANGE1 descriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 2);
+        CD3DX12_DESCRIPTOR_RANGE1 descriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4 /*num_descriptors*/, 2 /*register*/);
         // --
         CD3DX12_ROOT_PARAMETER1 rootParameters[DeferredRootParams::NumRootParameters_Deferred];
-        rootParameters[DeferredRootParams::DeferredLightingCommonCB_Deferred].InitAsConstants(sizeof(DeferredLightingCommon) / 4, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL);            // b0
+        rootParameters[DeferredRootParams::DeferredLightingCommonCB_Deferred].InitAsConstants(sizeof(DeferredLightingCommon) / 4, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL); // b0
         rootParameters[DeferredRootParams::PointLights_Deferred].InitAsShaderResourceView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);        // t0
         rootParameters[DeferredRootParams::SpotLights_Deferred].InitAsShaderResourceView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);         // t1
-        rootParameters[DeferredRootParams::Textures_Deferred].InitAsDescriptorTable(1, &descriptorRange, D3D12_SHADER_VISIBILITY_PIXEL);                                // t2,t3,t4,t5 - DESCRIPTOR HEAP see descriptorRange
-
+        rootParameters[DeferredRootParams::Textures_Deferred].InitAsDescriptorTable(1, &descriptorRange, D3D12_SHADER_VISIBILITY_PIXEL);                                // t2-t8 - DESCRIPTOR HEAP (see descriptorRange):
+                                                                                                                                                                        //   * t2-t5: GBuffer + depth, t6 - irradiance cube,
+                                                                                                                                                                        //   * t7 - specular prefilter cube, t8 - BRDF LUT
 
         D3D12_STATIC_SAMPLER_DESC pointSampler = {};
         pointSampler.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
         pointSampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
         pointSampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
         pointSampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-        pointSampler.ShaderRegister = 0;                                                                                                                           // s0
+        pointSampler.ShaderRegister = 0;                                                                                                                                                                        // s0
         pointSampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
         // Allow input layout and deny unnecessary access to certain pipeline stages.
@@ -585,8 +654,19 @@ bool Sample7::LoadContent()
         ThrowIfFailed(device->CreatePipelineState(&deferredPipelineStateStreamDesc, IID_PPV_ARGS(&m_DeferredLightingPSO)));
     }
 
-    auto fenceValue = commandQueue->ExecuteCommandList(commandList);
-    commandQueue->WaitForFenceValue(fenceValue);
+    PixProfiler& profiler = Application::Get().GetPixProfiler();
+    PIX_BEGIN_GPU_CAPTURE(profiler, g_CaptureGPUTraceOnLoadAssets);
+    {
+        auto fenceValue = copyCommandQueue->ExecuteCommandList(copyCommandList);
+        copyCommandQueue->WaitForFenceValue(fenceValue);
+        
+        fenceValue = computeCommandQueue->ExecuteCommandList(computeCommandList);
+        computeCommandQueue->WaitForFenceValue(fenceValue);
+
+	    // Wait for Compute queue to finish the cubemap generation before we start rendering.
+        //copyCommandQueue->Flush();
+    }
+    PIX_END_GPU_CAPTURE(profiler, g_CaptureGPUTraceOnLoadAssets);
 
     return true;
 }

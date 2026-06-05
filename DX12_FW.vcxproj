@@ -48,33 +48,37 @@
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)_Output\Temp\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
-    <IncludePath>$(OutDir)Shaders;$(SolutionDir);$(SolutionDir)External\DirectXTex\DirectXTex;$(SolutionDir)External\assimp-master\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(OutDir)Shaders;$(SolutionDir);$(SolutionDir)External\DirectXTex\DirectXTex;$(SolutionDir)External\assimp-master\include;$(SolutionDir)External\Pix\winpixeventruntime.1.0.240308001\Include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\;$(SolutionDir)External\Pix\winpixeventruntime.1.0.240308001\Lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)_Output\Temp\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
-    <IncludePath>$(OutDir)Shaders;$(SolutionDir);$(SolutionDir)External\DirectXTex\DirectXTex;$(SolutionDir)External\assimp-master\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(OutDir)Shaders;$(SolutionDir);$(SolutionDir)External\DirectXTex\DirectXTex;$(SolutionDir)External\assimp-master\include;$(SolutionDir)External\Pix\winpixeventruntime.1.0.240308001\Include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)_Output\Bin\$(Platform)\$(Configuration)\;$(SolutionDir)External\Pix\winpixeventruntime.1.0.240308001\Lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PrecompiledHeader>
       </PrecompiledHeader>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;DX12_FW_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalOptions>/wd4251 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>assimp-vc143-mt.lib;zlibstatic.lib;DirectXTex.lib;D3DCompiler.lib;d3d12.lib;dxgi.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>WinPixEventRuntime.lib;assimp-vc143-mt.lib;zlibstatic.lib;DirectXTex.lib;D3DCompiler.lib;d3d12.lib;dxgi.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>
       </AdditionalLibraryDirectories>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy /Y /D $(SolutionDir)External\Pix\winpixeventruntime.1.0.240308001\Lib\WinPixEventRuntime.dll $(OutDir)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -85,16 +89,20 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;DX12_FW_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>
+      </AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>assimp-vc143-mt.lib;zlibstatic.lib;DirectXTex.lib;D3DCompiler.lib;d3d12.lib;dxgi.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>WinPixEventRuntime.lib;assimp-vc143-mt.lib;zlibstatic.lib;DirectXTex.lib;D3DCompiler.lib;d3d12.lib;dxgi.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy /Y /D $(SolutionDir)External\Pix\winpixeventruntime.1.0.240308001\Lib\WinPixEventRuntime.dll $(OutDir)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Framework\3RD_Party\IMGUI\imgui.cpp" />
@@ -110,6 +118,7 @@
     <ClCompile Include="Framework\DescriptorAllocator.cpp" />
     <ClCompile Include="Framework\DescriptorAllocatorPage.cpp" />
     <ClCompile Include="Framework\DynamicDescriptorHeap.cpp" />
+    <ClCompile Include="Framework\Events\PixProfiler.cpp" />
     <ClCompile Include="Framework\Game.cpp" />
     <ClCompile Include="Framework\Gameplay\AssimpLoader.cpp" />
     <ClCompile Include="Framework\Gameplay\Camera.cpp" />
@@ -127,6 +136,9 @@
     <ClCompile Include="Framework\Material\UploadBuffer.cpp" />
     <ClCompile Include="Framework\Material\VertexBuffer.cpp" />
     <ClCompile Include="Framework\PSOs\GenerateMipsPSO.cpp" />
+    <ClCompile Include="Framework\PSOs\IBL\BrdfLutPSO.cpp" />
+    <ClCompile Include="Framework\PSOs\IBL\EnvToIrradianceCubemapPSO.cpp" />
+    <ClCompile Include="Framework\PSOs\IBL\EnvToSpecularPrefilterCubemapPSO.cpp" />
     <ClCompile Include="Framework\PSOs\PanoToCubemapPSO.cpp" />
     <ClCompile Include="Framework\ResourceStateTracker.cpp" />
     <ClCompile Include="Framework\RootSignature.cpp" />
@@ -154,6 +166,7 @@
     <ClInclude Include="Framework\DynamicDescriptorHeap.h" />
     <ClInclude Include="Framework\Events\Events.h" />
     <ClInclude Include="Framework\Events\KeyCodes.h" />
+    <ClInclude Include="Framework\Events\PixProfiler.h" />
     <ClInclude Include="Framework\Game.h" />
     <ClInclude Include="Framework\Gameplay\AssimpLoader.h" />
     <ClInclude Include="Framework\Gameplay\Camera.h" />
@@ -173,6 +186,9 @@
     <ClInclude Include="Framework\Material\UploadBuffer.h" />
     <ClInclude Include="Framework\Material\VertexBuffer.h" />
     <ClInclude Include="Framework\PSOs\GenerateMipsPSO.h" />
+    <ClInclude Include="Framework\PSOs\IBL\BrdfLutPSO.h" />
+    <ClInclude Include="Framework\PSOs\IBL\EnvToIrradianceCubemapPSO.h" />
+    <ClInclude Include="Framework\PSOs\IBL\EnvToSpecularPrefilterCubemapPSO.h" />
     <ClInclude Include="Framework\PSOs\PanoToCubemapPSO.h" />
     <ClInclude Include="Framework\ResourceStateTracker.h" />
     <ClInclude Include="Framework\RootSignature.h" />
@@ -188,6 +204,36 @@
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.1</ShaderModel>
       <VariableName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">g_GenerateMips_CS</VariableName>
       <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)Shaders\%(Filename).h</HeaderFileOutput>
+    </FxCompile>
+    <FxCompile Include="Framework\Shaders\IBL\IBL_BRDF_LUT_CS.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.1</ShaderModel>
+      <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)Shaders\%(Filename).h</HeaderFileOutput>
+      <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)Shaders\%(Filename).h</HeaderFileOutput>
+      <VariableName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">g_IBL_BRDF_LUT_CS</VariableName>
+      <VariableName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">g_IBL_BRDF_LUT_CS</VariableName>
+    </FxCompile>
+    <FxCompile Include="Framework\Shaders\IBL\IBL_IrradianceConv_CS.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.1</ShaderModel>
+      <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)Shaders\%(Filename).h</HeaderFileOutput>
+      <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)Shaders\%(Filename).h</HeaderFileOutput>
+      <VariableName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">g_IBL_IrradianceConv_CS</VariableName>
+      <VariableName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">g_IBL_IrradianceConv_CS</VariableName>
+    </FxCompile>
+    <FxCompile Include="Framework\Shaders\IBL\IBL_SpecularPrefilter_CS.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.1</ShaderModel>
+      <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)Shaders\%(Filename).h</HeaderFileOutput>
+      <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)Shaders\%(Filename).h</HeaderFileOutput>
+      <VariableName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">g_IBL_SpecularPrefilter_CS</VariableName>
+      <VariableName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">g_IBL_SpecularPrefilter_CS</VariableName>
     </FxCompile>
     <FxCompile Include="Framework\Shaders\ImGUI_PS.hlsl">
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
@@ -230,6 +276,9 @@
     <ProjectReference Include="External\DirectXTex\DirectXTex.vcxproj">
       <Project>{3a1cba4f-2831-4128-9cb2-8108661f3d00}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Framework\Shaders\IBL\IBL_Helpers.hlsli" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

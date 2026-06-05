@@ -21,6 +21,9 @@ class DynamicDescriptorHeap;
 class GenerateMipsPSO;
 class IndexBuffer;
 class PanoToCubemapPSO;
+class EnvToIrradianceCubemapPSO;
+class EnvToSpecularPrefilterCubemapPSO;
+class BrdfLutPSO;
 class RenderTarget;
 class Resource;
 class ResourceStateTracker;
@@ -138,7 +141,11 @@ public:
     void GenerateMips( Texture& texture );
 
      // Generate a cubemap texture from a panoramic (equirectangular) texture.
-    void PanoToCubemap(Texture& cubemap, const Texture& pano);
+    void PanoToCubemap(const Texture& inPanoTexture, Texture& outCubemapTexture);
+
+    void EnvToIrradianceCubemap(const Texture& cubemapTexture, const Texture& panoTexture);
+    void EnvToSpecularPrefilterCubemap(const Texture& inCubemapTexture, const Texture& outSpecularPrefilterTexture);
+    void BrdfLut(const Texture& outBrdfLutTexture);
 
     // Copy subresource data to a texture.
     void CopyTextureSubresource( Texture& texture, uint32_t firstSubresource, uint32_t numSubresources, D3D12_SUBRESOURCE_DATA* subresourceData );
@@ -336,6 +343,10 @@ private:
 	std::unique_ptr<GenerateMipsPSO>                    m_GenerateMipsPSO;
     // Pipeline state object for converting panorama (equirectangular) to cubemaps
     std::unique_ptr<PanoToCubemapPSO>                   m_PanoToCubemapPSO;
+    // Pipeline state object for converting Environment Cubemap into Irradiance Cubemap.
+    std::unique_ptr<EnvToIrradianceCubemapPSO>          m_EnvToIrradianceCubemapPSO;
+    std::unique_ptr<EnvToSpecularPrefilterCubemapPSO>   m_EnvToSpecularPrefilterCubemapPSO;
+    std::unique_ptr<BrdfLutPSO>                         m_BrdfLutPSO;
 
     // Objects that are being tracked by a command list that is "in-flight" on 
     // the command-queue and cannot be deleted. To ensure objects are not deleted 

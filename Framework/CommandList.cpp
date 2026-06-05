@@ -30,6 +30,9 @@
 // PSO
 #include <Framework/PSOs/GenerateMipsPSO.h>
 #include <Framework/PSOs/PanoToCubemapPSO.h>
+#include <Framework/PSOs/IBL/EnvToIrradianceCubemapPSO.h>
+#include <Framework/PSOs/IBL/EnvToSpecularPrefilterCubemapPSO.h>
+#include <Framework/PSOs/IBL/BrdfLutPSO.h>
 
 // ------------------------------------------------------------------------------------------------------
 
@@ -98,7 +101,7 @@ void CommandList::UAVBarrier(Microsoft::WRL::ComPtr<ID3D12Resource> resource, bo
     }
 }
 
-void CommandList::UAVBarrier( const Resource& resource, bool flushBarriers )
+void CommandList::UAVBarrier( const Resource& resource, bool /*flushBarriers*/ )
 {
     UAVBarrier(resource.GetD3D12Resource());
 }
@@ -115,7 +118,7 @@ void CommandList::AliasingBarrier(Microsoft::WRL::ComPtr<ID3D12Resource> beforeR
     }
 }
 
-void CommandList::AliasingBarrier(const Resource& beforeResource, const Resource& afterResource, bool flushBarriers)
+void CommandList::AliasingBarrier(const Resource& beforeResource, const Resource& afterResource, bool /*flushBarriers*/)
 {
     AliasingBarrier(beforeResource.GetD3D12Resource(), afterResource.GetD3D12Resource());
 }
@@ -136,9 +139,9 @@ void CommandList::CopyResource(Microsoft::WRL::ComPtr<ID3D12Resource> dstRes, Mi
 
     // To ensure neither the source nor the destination resources go out of scope while the resource is still being referenced
     //      by the command list, the resources are added to a list of tracked objects using the TrackResource.
-    // Using the TrackResource method, short lived (temporary) resoruces can be used on a command list without having to track 
+    // Using the TrackResource method, short lived (temporary) resources can be used on a command list without having to track 
     //      their lifetime outside of the command list. This is useful for generating mipmaps on texture resources when the 
-    //      original texture resource doesn�t support UAV writes, a temporary resource object is created which supports UAV 
+    //      original texture resource doesn't support UAV writes, a temporary resource object is created which supports UAV 
     //      writes. The temporary resource will stay in scope until the command list is reset 
     //      (when it is finished executing on the command queue).
     TrackResource(dstRes);
@@ -386,221 +389,229 @@ void CommandList::GenerateMips( Texture& texture )
         return;
     }
 
-    auto resource = texture.GetD3D12Resource();
-
-    // If the texture doesn't have a valid resource, do nothing.
-    if ( !resource ) return;
-    auto resourceDesc = resource->GetDesc();
-
-    // If the texture only has a single mip level (level 0)
-    // do nothing.
-    if (resourceDesc.MipLevels == 1 ) return;
-    // Currently, only non-multi-sampled 2D textures are supported.
-    if (resourceDesc.Dimension != D3D12_RESOURCE_DIMENSION_TEXTURE2D || 
-        resourceDesc.DepthOrArraySize != 1 ||
-        resourceDesc.SampleDesc.Count > 1 )
+    PixProfiler& profiler = m_Application.GetPixProfiler();
+    PIX_SCOPE_MARKER(profiler, m_d3d12CommandList.Get(), L"GenerateMips");
     {
-        throw std::exception( "GenerateMips is only supported for non-multi-sampled 2D Textures." );
-    }
+        auto resource = texture.GetD3D12Resource();
 
-    auto uavFormat = resourceDesc.Format;
+        // If the texture doesn't have a valid resource, do nothing.
+        if ( !resource ) return;
+        auto resourceDesc = resource->GetDesc();
 
-    ComPtr<ID3D12Resource> uavResource = resource;
-    // Create an alias of the original resource.
-    // This is done to perform a GPU copy of resources with different formats.
-    // BGR -> RGB texture copies will fail GPU validation unless performed 
-    // through an alias of the BRG resource in a placed heap.
-    ComPtr<ID3D12Resource> aliasResource;
+        // If the texture only has a single mip level (level 0)
+        // do nothing.
+        if (resourceDesc.MipLevels == 1 ) return;
+        // Currently, only non-multi-sampled 2D textures are supported.
+        if (resourceDesc.Dimension != D3D12_RESOURCE_DIMENSION_TEXTURE2D || 
+            resourceDesc.DepthOrArraySize != 1 ||
+            resourceDesc.SampleDesc.Count > 1 )
+        {
+            throw std::exception( "GenerateMips is only supported for non-multi-sampled 2D Textures." );
+        }
 
-    // If the passed-in resource does not allow for UAV access
-    // then create a staging resource that is used to generate
-    // the mipmap chain.
-    if ( !texture.CheckUAVSupport() || 
-       ( resourceDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS ) == 0 )
-    {
-        auto device = m_Application.GetDevice();
+        auto uavFormat = resourceDesc.Format;
 
-        // Describe an alias resource that is used to copy the original texture.
-        auto aliasDesc = resourceDesc;
-        // Placed resources can't be render targets or depth-stencil views.
-        aliasDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-        aliasDesc.Flags &= ~(D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
+        ComPtr<ID3D12Resource> uavResource = resource;
+        // Create an alias of the original resource.
+        // This is done to perform a GPU copy of resources with different formats.
+        // BGR -> RGB texture copies will fail GPU validation unless performed 
+        // through an alias of the BRG resource in a placed heap.
+        ComPtr<ID3D12Resource> aliasResource;
 
-        // Describe a UAV compatible resource that is used to perform
-        // mipmapping of the original texture.
-        auto uavDesc = aliasDesc;   // The flags for the UAV description must match that of the alias description.
-        uavDesc.Format = Texture::GetUAVCompatableFormat(resourceDesc.Format);
+        // If the passed-in resource does not allow for UAV access
+        // then create a staging resource that is used to generate
+        // the mipmap chain.
+        if ( !texture.CheckUAVSupport() || 
+           ( resourceDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS ) == 0 )
+        {
+            auto device = m_Application.GetDevice();
 
-        D3D12_RESOURCE_DESC resourceDescs[] = {
-            aliasDesc,
-            uavDesc
-        };
+            // Describe an alias resource that is used to copy the original texture.
+            auto aliasDesc = resourceDesc;
+            // Placed resources can't be render targets or depth-stencil views.
+            aliasDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+            aliasDesc.Flags &= ~(D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
 
-        // Create a heap that is large enough to store a copy of the original resource.
-        auto allocationInfo = device->GetResourceAllocationInfo(0, _countof(resourceDescs), resourceDescs );
+            // Describe a UAV compatible resource that is used to perform
+            // mipmapping of the original texture.
+            auto uavDesc = aliasDesc;   // The flags for the UAV description must match that of the alias description.
+            uavDesc.Format = Texture::GetUAVCompatableFormat(resourceDesc.Format);
 
-        D3D12_HEAP_DESC heapDesc = {};
-        heapDesc.SizeInBytes = allocationInfo.SizeInBytes;
-        heapDesc.Alignment = allocationInfo.Alignment;
-        heapDesc.Flags = D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES;
-        heapDesc.Properties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-        heapDesc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-        heapDesc.Properties.Type = D3D12_HEAP_TYPE_DEFAULT;
+            D3D12_RESOURCE_DESC resourceDescs[] = {
+                aliasDesc,
+                uavDesc
+            };
 
-        ComPtr<ID3D12Heap> heap;
-        ThrowIfFailed(device->CreateHeap(&heapDesc, IID_PPV_ARGS(&heap)));
+            // Create a heap that is large enough to store a copy of the original resource.
+            auto allocationInfo = device->GetResourceAllocationInfo(0, _countof(resourceDescs), resourceDescs );
 
-        // Make sure the heap does not go out of scope until the command list
-        // is finished executing on the command queue.
-        TrackResource(heap);
+            D3D12_HEAP_DESC heapDesc = {};
+            heapDesc.SizeInBytes = allocationInfo.SizeInBytes;
+            heapDesc.Alignment = allocationInfo.Alignment;
+            heapDesc.Flags = D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES;
+            heapDesc.Properties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+            heapDesc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+            heapDesc.Properties.Type = D3D12_HEAP_TYPE_DEFAULT;
 
-        // Create a placed resource that matches the description of the 
-        // original resource. This resource is used to copy the original 
-        // texture to the UAV compatible resource.
-        ThrowIfFailed(device->CreatePlacedResource(
-            heap.Get(),
-            0,
-            &aliasDesc,
-            D3D12_RESOURCE_STATE_COMMON,
-            nullptr,
-            IID_PPV_ARGS(&aliasResource)
-        ));
+            ComPtr<ID3D12Heap> heap;
+            ThrowIfFailed(device->CreateHeap(&heapDesc, IID_PPV_ARGS(&heap)));
 
-        ResourceStateTracker::AddGlobalResourceState(aliasResource.Get(), D3D12_RESOURCE_STATE_COMMON);
-        // Ensure the scope of the alias resource.
-        TrackResource(aliasResource);
+            // Make sure the heap does not go out of scope until the command list
+            // is finished executing on the command queue.
+            TrackResource(heap);
 
-        // Create a UAV compatible resource in the same heap as the alias
-        // resource.
-        ThrowIfFailed(device->CreatePlacedResource(
-            heap.Get(),
-            0,
-            &uavDesc,
-            D3D12_RESOURCE_STATE_COMMON,
-            nullptr,
-            IID_PPV_ARGS(&uavResource)
-        ));
+            // Create a placed resource that matches the description of the 
+            // original resource. This resource is used to copy the original 
+            // texture to the UAV compatible resource.
+            ThrowIfFailed(device->CreatePlacedResource(
+                heap.Get(),
+                0,
+                &aliasDesc,
+                D3D12_RESOURCE_STATE_COMMON,
+                nullptr,
+                IID_PPV_ARGS(&aliasResource)
+            ));
 
-        ResourceStateTracker::AddGlobalResourceState(uavResource.Get(), D3D12_RESOURCE_STATE_COMMON);
-        // Ensure the scope of the UAV compatible resource.
-        TrackResource(uavResource);
+            ResourceStateTracker::AddGlobalResourceState(aliasResource.Get(), D3D12_RESOURCE_STATE_COMMON);
+            // Ensure the scope of the alias resource.
+            TrackResource(aliasResource);
 
-        // Add an aliasing barrier for the alias resource.
-        AliasingBarrier(nullptr, aliasResource);
+            // Create a UAV compatible resource in the same heap as the alias
+            // resource.
+            ThrowIfFailed(device->CreatePlacedResource(
+                heap.Get(),
+                0,
+                &uavDesc,
+                D3D12_RESOURCE_STATE_COMMON,
+                nullptr,
+                IID_PPV_ARGS(&uavResource)
+            ));
 
-        // Copy the original resource to the alias resource.
-        // This ensures GPU validation.
-        CopyResource(aliasResource, resource);
+            ResourceStateTracker::AddGlobalResourceState(uavResource.Get(), D3D12_RESOURCE_STATE_COMMON);
+            // Ensure the scope of the UAV compatible resource.
+            TrackResource(uavResource);
+
+            // Add an aliasing barrier for the alias resource.
+            AliasingBarrier(nullptr, aliasResource);
+
+            // Copy the original resource to the alias resource.
+            // This ensures GPU validation.
+            CopyResource(aliasResource, resource);
         
 
-        // Add an aliasing barrier for the UAV compatible resource.
-        AliasingBarrier(aliasResource, uavResource);
+            // Add an aliasing barrier for the UAV compatible resource.
+            AliasingBarrier(aliasResource, uavResource);
 
-        uavFormat = uavDesc.Format;
-    }
+            uavFormat = uavDesc.Format;
+        }
 
-    // Generate mips with the UAV compatible resource.
-    GenerateMips_UAV(Texture(uavResource, texture.GetTextureUsage()), uavFormat);
+        // Generate mips with the UAV compatible resource.
+        GenerateMips_UAV(Texture(uavResource, texture.GetTextureUsage()), uavFormat);
 
-    if (aliasResource)
-    {
-        AliasingBarrier(uavResource, aliasResource);
-        // Copy the alias resource back to the original resource.
-        CopyResource(resource, aliasResource);
+        if (aliasResource)
+        {
+            AliasingBarrier(uavResource, aliasResource);
+            // Copy the alias resource back to the original resource.
+            CopyResource(resource, aliasResource);
+        }
     }
 }
 
 void CommandList::GenerateMips_UAV( Texture& texture, DXGI_FORMAT format )
 {
-    if ( !m_GenerateMipsPSO )
+    PixProfiler& profiler = m_Application.GetPixProfiler();
+    PIX_SCOPE_MARKER(profiler, m_d3d12CommandList.Get(), L"GenerateMips_UAV");
     {
-        m_GenerateMipsPSO = std::make_unique<GenerateMipsPSO>();
-    }
-
-    m_d3d12CommandList->SetPipelineState( m_GenerateMipsPSO->GetPipelineState().Get() );
-    SetComputeRootSignature( m_GenerateMipsPSO->GetRootSignature() );
-
-    GenerateMipsCB generateMipsCB;
-    generateMipsCB.IsSRGB = Texture::IsSRGBFormat(format);
-
-    auto resource = texture.GetD3D12Resource();
-    auto resourceDesc = resource->GetDesc();
-
-    // Create an SRV that uses the format of the original texture.
-    D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-    srvDesc.Format = format;
-    srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-    srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;  // Only 2D textures are supported (this was checked in the calling function).
-    srvDesc.Texture2D.MipLevels = resourceDesc.MipLevels;
-
-    for ( uint32_t srcMip = 0; srcMip < resourceDesc.MipLevels - 1u; )
-    {
-        uint64_t srcWidth = resourceDesc.Width >> srcMip;
-        uint32_t srcHeight = resourceDesc.Height >> srcMip;
-        uint32_t dstWidth = static_cast<uint32_t>( srcWidth >> 1 );
-        uint32_t dstHeight = srcHeight >> 1;
-
-        // 0b00(0): Both width and height are even.
-        // 0b01(1): Width is odd, height is even.
-        // 0b10(2): Width is even, height is odd.
-        // 0b11(3): Both width and height are odd.
-        generateMipsCB.SrcDimension = ( srcHeight & 1 ) << 1 | ( srcWidth & 1 );
-
-        // How many mipmap levels to compute this pass (max 4 mips per pass)
-        DWORD mipCount;
-
-        // The number of times we can half the size of the texture and get
-        // exactly a 50% reduction in size.
-        // A 1 bit in the width or height indicates an odd dimension.
-        // The case where either the width or the height is exactly 1 is handled
-        // as a special case (as the dimension does not require reduction).
-        _BitScanForward( &mipCount, ( dstWidth == 1 ? dstHeight : dstWidth ) | 
-                                    ( dstHeight == 1 ? dstWidth : dstHeight ) );
-        // Maximum number of mips to generate is 4.
-        mipCount = std::min<DWORD>( 4, mipCount + 1 );
-        // Clamp to total number of mips left over.
-        mipCount = ( srcMip + mipCount ) >= resourceDesc.MipLevels ? 
-            resourceDesc.MipLevels - srcMip - 1 : mipCount;
-
-        // Dimensions should not reduce to 0.
-        // This can happen if the width and height are not the same.
-        dstWidth = std::max<DWORD>( 1, dstWidth );
-        dstHeight = std::max<DWORD>( 1, dstHeight );
-
-        generateMipsCB.SrcMipLevel = srcMip;
-        generateMipsCB.NumMipLevels = mipCount;
-        generateMipsCB.TexelSize.x = 1.0f / (float)dstWidth;
-        generateMipsCB.TexelSize.y = 1.0f / (float)dstHeight;
-
-        SetCompute32BitConstants( GenerateMips::GenerateMipsCB, generateMipsCB );
-
-        SetShaderResourceView( GenerateMips::SrcMip, 0, texture, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, srcMip, 1, &srvDesc );
-
-        for ( uint32_t mip = 0; mip < mipCount; ++mip )
+        if ( !m_GenerateMipsPSO )
         {
-            D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
-            uavDesc.Format = resourceDesc.Format;
-            uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
-            uavDesc.Texture2D.MipSlice = srcMip + mip + 1;
-
-            SetUnorderedAccessView(GenerateMips::OutMip, mip, texture, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, srcMip + mip + 1, 1, &uavDesc );
+            m_GenerateMipsPSO = std::make_unique<GenerateMipsPSO>();
         }
 
-        // Pad any unused mip levels with a default UAV. Doing this keeps the DX12 runtime happy.
-        if ( mipCount < 4 )
+        m_d3d12CommandList->SetPipelineState( m_GenerateMipsPSO->GetPipelineState().Get() );
+        SetComputeRootSignature( m_GenerateMipsPSO->GetRootSignature() );
+
+        GenerateMipsCB generateMipsCB;
+        generateMipsCB.IsSRGB = Texture::IsSRGBFormat(format);
+
+        auto resource = texture.GetD3D12Resource();
+        auto resourceDesc = resource->GetDesc();
+
+        // Create an SRV that uses the format of the original texture.
+        D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+        srvDesc.Format = format;
+        srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+        srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;  // Only 2D textures are supported (this was checked in the calling function).
+        srvDesc.Texture2D.MipLevels = resourceDesc.MipLevels;
+
+        for ( uint32_t srcMip = 0; srcMip < resourceDesc.MipLevels - 1u; )
         {
-            m_DynamicDescriptorHeap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->StageDescriptors( GenerateMips::OutMip, mipCount, 4 - mipCount, m_GenerateMipsPSO->GetDefaultUAV() );
-        }
+            uint64_t srcWidth = resourceDesc.Width >> srcMip;
+            uint32_t srcHeight = resourceDesc.Height >> srcMip;
+            uint32_t dstWidth = static_cast<uint32_t>( srcWidth >> 1 );
+            uint32_t dstHeight = srcHeight >> 1;
+
+            // 0b00(0): Both width and height are even.
+            // 0b01(1): Width is odd, height is even.
+            // 0b10(2): Width is even, height is odd.
+            // 0b11(3): Both width and height are odd.
+            generateMipsCB.SrcDimension = ( srcHeight & 1 ) << 1 | ( srcWidth & 1 );
+
+            // How many mipmap levels to compute this pass (max 4 mips per pass)
+            DWORD mipCount;
+
+            // The number of times we can half the size of the texture and get
+            // exactly a 50% reduction in size.
+            // A 1 bit in the width or height indicates an odd dimension.
+            // The case where either the width or the height is exactly 1 is handled
+            // as a special case (as the dimension does not require reduction).
+            _BitScanForward( &mipCount, ( dstWidth == 1 ? dstHeight : dstWidth ) | 
+                                        ( dstHeight == 1 ? dstWidth : dstHeight ) );
+            // Maximum number of mips to generate is 4.
+            mipCount = std::min<DWORD>( 4, mipCount + 1 );
+            // Clamp to total number of mips left over.
+            mipCount = ( srcMip + mipCount ) >= resourceDesc.MipLevels ? 
+                resourceDesc.MipLevels - srcMip - 1 : mipCount;
+
+            // Dimensions should not reduce to 0.
+            // This can happen if the width and height are not the same.
+            dstWidth = std::max<DWORD>( 1, dstWidth );
+            dstHeight = std::max<DWORD>( 1, dstHeight );
+
+            generateMipsCB.SrcMipLevel = srcMip;
+            generateMipsCB.NumMipLevels = mipCount;
+            generateMipsCB.TexelSize.x = 1.0f / (float)dstWidth;
+            generateMipsCB.TexelSize.y = 1.0f / (float)dstHeight;
+
+            SetCompute32BitConstants( GenerateMips::GenerateMipsCB, generateMipsCB );
+
+            SetShaderResourceView( GenerateMips::SrcMip, 0, texture, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, srcMip, 1, &srvDesc );
+
+            for ( uint32_t mip = 0; mip < mipCount; ++mip )
+            {
+                D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+                uavDesc.Format = resourceDesc.Format;
+                uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+                uavDesc.Texture2D.MipSlice = srcMip + mip + 1;
+
+                SetUnorderedAccessView(GenerateMips::OutMip, mip, texture, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, srcMip + mip + 1, 1, &uavDesc );
+            }
+
+            // Pad any unused mip levels with a default UAV. Doing this keeps the DX12 runtime happy.
+            if ( mipCount < 4 )
+            {
+                m_DynamicDescriptorHeap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->StageDescriptors( GenerateMips::OutMip, mipCount, 4 - mipCount, m_GenerateMipsPSO->GetDefaultUAV() );
+            }
         
-        Dispatch( Math::DivideByMultiple(dstWidth, 8), Math::DivideByMultiple(dstHeight, 8) );
+            Dispatch( Math::DivideByMultiple(dstWidth, 8), Math::DivideByMultiple(dstHeight, 8) );
 
-        UAVBarrier( texture );
+            UAVBarrier( texture );
 
-        srcMip += mipCount;
+            srcMip += mipCount;
+        }
     }
 }
 
-void CommandList::PanoToCubemap(Texture& cubemapTexture, const Texture& panoTexture )
+void CommandList::PanoToCubemap(const Texture& inPanoTexture, Texture& outCubemapTexture)
 {
     if (m_d3d12CommandListType == D3D12_COMMAND_LIST_TYPE_COPY)
     {
@@ -608,98 +619,267 @@ void CommandList::PanoToCubemap(Texture& cubemapTexture, const Texture& panoText
         {
             m_ComputeCommandList = m_Application.GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COMPUTE)->GetCommandList();
         }
-        m_ComputeCommandList->PanoToCubemap(cubemapTexture, panoTexture);
+        m_ComputeCommandList->PanoToCubemap(inPanoTexture, outCubemapTexture);
         return;
     }
 
-    if (!m_PanoToCubemapPSO)
+    PixProfiler& profiler = m_Application.GetPixProfiler();
+    PIX_SCOPE_MARKER(profiler, m_d3d12CommandList.Get(), L"PanoToCubemap");
     {
-        m_PanoToCubemapPSO = std::make_unique<PanoToCubemapPSO>();
-    }
-
-    auto device = m_Application.GetDevice();
-
-    auto cubemapResource = cubemapTexture.GetD3D12Resource();
-    if (!cubemapResource) return;
-
-    CD3DX12_RESOURCE_DESC cubemapDesc(cubemapResource->GetDesc());
-
-    auto stagingResource = cubemapResource;
-    Texture stagingTexture(stagingResource);
-    // If the passed-in resource does not allow for UAV access
-    // then create a staging resource that is used to generate
-    // the cubemap.
-    if ((cubemapDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) == 0)
-    {
-        auto stagingDesc = cubemapDesc;
-        stagingDesc.Format = Texture::GetUAVCompatableFormat(cubemapDesc.Format);
-        stagingDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-
-        ThrowIfFailed(device->CreateCommittedResource(
-            &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-            D3D12_HEAP_FLAG_NONE,
-            &stagingDesc,
-            D3D12_RESOURCE_STATE_COPY_DEST,
-            nullptr,
-            IID_PPV_ARGS(&stagingResource)
-
-        ));
-
-        ResourceStateTracker::AddGlobalResourceState(stagingResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST);
-
-        stagingTexture.SetD3D12Resource(stagingResource);
-        stagingTexture.CreateViews();
-        stagingTexture.SetName(L"Pano to Cubemap Staging Texture");
-
-        CopyResource(stagingTexture, cubemapTexture );
-    }
-
-    TransitionBarrier(stagingTexture, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-
-    m_d3d12CommandList->SetPipelineState(m_PanoToCubemapPSO->GetPipelineState().Get());
-    SetComputeRootSignature(m_PanoToCubemapPSO->GetRootSignature());
-
-    PanoToCubemapCB panoToCubemapCB;
-
-    D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
-    uavDesc.Format = Texture::GetUAVCompatableFormat(cubemapDesc.Format);
-    uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
-    uavDesc.Texture2DArray.FirstArraySlice = 0;
-    uavDesc.Texture2DArray.ArraySize = 6;
-
-    for (uint32_t mipSlice = 0; mipSlice < cubemapDesc.MipLevels; )
-    {
-        // Maximum number of mips to generate per pass is 5.
-        uint32_t numMips = std::min<uint32_t>(5, cubemapDesc.MipLevels - mipSlice);
-
-        panoToCubemapCB.FirstMip = mipSlice;
-        panoToCubemapCB.CubemapSize = std::max<uint32_t>( static_cast<uint32_t>( cubemapDesc.Width ), cubemapDesc.Height) >> mipSlice;
-        panoToCubemapCB.NumMips = numMips;
-
-        SetCompute32BitConstants(PanoToCubemapRS::PanoToCubemapCB, panoToCubemapCB);
-
-        SetShaderResourceView(PanoToCubemapRS::SrcTexture, 0, panoTexture, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-
-        for ( uint32_t mip = 0; mip < numMips; ++mip )
+        if (!m_PanoToCubemapPSO)
         {
-            uavDesc.Texture2DArray.MipSlice = mipSlice + mip;
-            SetUnorderedAccessView(PanoToCubemapRS::DstMips, mip, stagingTexture, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, 0, 0, &uavDesc);
+            m_PanoToCubemapPSO = std::make_unique<PanoToCubemapPSO>();
         }
 
-        if (numMips < 5)
+        auto device = m_Application.GetDevice();
+
+        auto cubemapResource = outCubemapTexture.GetD3D12Resource();
+        if (!cubemapResource) return;
+
+        CD3DX12_RESOURCE_DESC cubemapDesc(cubemapResource->GetDesc());
+
+        auto stagingResource = cubemapResource;
+        Texture stagingTexture(stagingResource);
+
+        // If the passed-in resource does not allow for UAV access then create
+        // a staging resource that is used to generate the cubemap.
+        if ((cubemapDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) == 0)
         {
-            // Pad unused mips. This keeps DX12 runtime happy.
-            m_DynamicDescriptorHeap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->StageDescriptors(PanoToCubemapRS::DstMips, panoToCubemapCB.NumMips, 5 - numMips, m_PanoToCubemapPSO->GetDefaultUAV());
+            auto stagingDesc = cubemapDesc;
+            stagingDesc.Format = Texture::GetUAVCompatableFormat(cubemapDesc.Format);
+            stagingDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
+            ThrowIfFailed(device->CreateCommittedResource(
+                &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+                D3D12_HEAP_FLAG_NONE,
+                &stagingDesc,
+                D3D12_RESOURCE_STATE_COPY_DEST,
+                nullptr,
+                IID_PPV_ARGS(&stagingResource)
+
+            ));
+
+            ResourceStateTracker::AddGlobalResourceState(stagingResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST);
+
+            stagingTexture.SetD3D12Resource(stagingResource);
+            stagingTexture.CreateViews();
+            stagingTexture.SetName(L"Pano to Cubemap Staging Texture");
+
+            CopyResource(stagingTexture, outCubemapTexture);
         }
 
-        Dispatch(Math::DivideByMultiple(panoToCubemapCB.CubemapSize, 16), Math::DivideByMultiple(panoToCubemapCB.CubemapSize, 16), 6 );
+        TransitionBarrier(stagingTexture, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
-        mipSlice += numMips;
+        m_d3d12CommandList->SetPipelineState(m_PanoToCubemapPSO->GetPipelineState().Get());
+        SetComputeRootSignature(m_PanoToCubemapPSO->GetRootSignature());
+
+        PanoToCubemapCB panoToCubemapCB {};
+
+        D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+        uavDesc.Format                          = Texture::GetUAVCompatableFormat(cubemapDesc.Format);
+        uavDesc.ViewDimension                   = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
+        uavDesc.Texture2DArray.FirstArraySlice  = 0;
+        uavDesc.Texture2DArray.ArraySize        = 6;
+
+        for (uint32_t mipSlice = 0; mipSlice < cubemapDesc.MipLevels; )
+        {
+            // Maximum number of mips to generate per pass is 5.
+            uint32_t numMips = std::min<uint32_t>(5, cubemapDesc.MipLevels - mipSlice);
+
+            panoToCubemapCB.FirstMip = mipSlice;
+            panoToCubemapCB.CubemapSize = std::max<uint32_t>( static_cast<uint32_t>( cubemapDesc.Width ), cubemapDesc.Height) >> mipSlice;
+            panoToCubemapCB.NumMips = numMips;
+
+            SetCompute32BitConstants(PanoToCubemapRS::PanoToCubemapCB, panoToCubemapCB);
+
+            SetShaderResourceView(PanoToCubemapRS::SrcTexture, 0, inPanoTexture, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+
+            for ( uint32_t mip = 0; mip < numMips; ++mip )
+            {
+                uavDesc.Texture2DArray.MipSlice = mipSlice + mip;
+                SetUnorderedAccessView(PanoToCubemapRS::DstMips, mip, stagingTexture, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, 0, 0, &uavDesc);
+            }
+
+            if (numMips < 5)
+            {
+                // Pad unused mips. This keeps DX12 runtime happy.
+                m_DynamicDescriptorHeap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->StageDescriptors(PanoToCubemapRS::DstMips, panoToCubemapCB.NumMips, 5 - numMips, m_PanoToCubemapPSO->GetDefaultUAV());
+            }
+
+            Dispatch(Math::DivideByMultiple(panoToCubemapCB.CubemapSize, 16), Math::DivideByMultiple(panoToCubemapCB.CubemapSize, 16), 6 );
+
+            mipSlice += numMips;
+        }
+
+        if (stagingResource != cubemapResource)
+        {
+            CopyResource(outCubemapTexture, stagingTexture);
+        }
+    }
+}
+
+void CommandList::EnvToIrradianceCubemap(const Texture& inCubemapTexture, const Texture& outIrradianceTexture)
+{
+    if (m_d3d12CommandListType == D3D12_COMMAND_LIST_TYPE_COPY)
+    {
+        if (!m_ComputeCommandList)
+        {
+            m_ComputeCommandList = m_Application.GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COMPUTE)->GetCommandList();
+        }
+        m_ComputeCommandList->EnvToIrradianceCubemap(inCubemapTexture, outIrradianceTexture);
+        return;
     }
 
-    if (stagingResource != cubemapResource)
+    PixProfiler& profiler = m_Application.GetPixProfiler();
+    PIX_SCOPE_MARKER(profiler, m_d3d12CommandList.Get(), L"EnvToIrradianceCubemap");
     {
-        CopyResource(cubemapTexture, stagingTexture);
+        if (!m_EnvToIrradianceCubemapPSO)
+        {
+            m_EnvToIrradianceCubemapPSO = std::make_unique<EnvToIrradianceCubemapPSO>();
+        }
+
+        m_d3d12CommandList->SetPipelineState(m_EnvToIrradianceCubemapPSO->GetPipelineState().Get());
+        SetComputeRootSignature(m_EnvToIrradianceCubemapPSO->GetRootSignature());
+
+        EnvToIrradianceCubemapCB envToIrradianceCubemapCB {};
+        envToIrradianceCubemapCB.OutputSize = 32;
+
+        SetCompute32BitConstants(EnvToIrradianceCubemapRS::EnvToIrradianceCubemapCB, envToIrradianceCubemapCB);
+
+        D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+        srvDesc.Format                  = inCubemapTexture.GetD3D12ResourceDesc().Format;
+        srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+        srvDesc.ViewDimension           = D3D12_SRV_DIMENSION_TEXTURECUBE;
+        srvDesc.TextureCube.MipLevels   = (UINT)-1;                         // Use all mips.
+
+        SetShaderResourceView(EnvToIrradianceCubemapRS::SrcCubemap, 0, inCubemapTexture, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, 0, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, &srvDesc);
+
+        //D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+        //uavDesc.Format = Texture::GetUAVCompatableFormat(cubemapDesc.Format);
+        //uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
+        //uavDesc.Texture2DArray.FirstArraySlice = 0;
+        //uavDesc.Texture2DArray.ArraySize = 6;
+
+        // pDesc = nullptr => D3D will guess defaults from resource: format and dimension (if NOT TYPELESS).
+        // If the resource is Buffer:  UAV will cover the entire buffer. It will be treated as a typed buffer (not raw/structured unless explicitly defined). ["Use the whole buffer, interpreted using its format."]
+        // If the resource is Texture: It will use - Mip level 0 (the highest resolution). If it’s an Array Texture: will use All array slices. ["Bind the top-level mip of the texture, across all slices."]
+        SetUnorderedAccessView(EnvToIrradianceCubemapRS::DstCubemap, 0, outIrradianceTexture, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+		// Output size = 32. Thread group size = 8. Dispatch(4, 4, 6) will generate a 32x32 cubemap face (with 6 faces) in a single dispatch.
+        Dispatch(4, 4, 6);
+    }
+}
+
+void CommandList::EnvToSpecularPrefilterCubemap(const Texture& inCubemapTexture, const Texture& outSpecularPrefilterTexture)
+{
+    if (m_d3d12CommandListType == D3D12_COMMAND_LIST_TYPE_COPY)
+    {
+        if (!m_ComputeCommandList)
+        {
+            m_ComputeCommandList = m_Application.GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COMPUTE)->GetCommandList();
+        }
+        m_ComputeCommandList->EnvToSpecularPrefilterCubemap(inCubemapTexture, outSpecularPrefilterTexture);
+        return;
+    }
+
+    PixProfiler& profiler = m_Application.GetPixProfiler();
+    PIX_SCOPE_MARKER(profiler, m_d3d12CommandList.Get(), L"EnvToSpecularPrefilterCubemap");
+    {
+        if (!m_EnvToSpecularPrefilterCubemapPSO)
+        {
+            m_EnvToSpecularPrefilterCubemapPSO = std::make_unique<EnvToSpecularPrefilterCubemapPSO>();
+        }
+
+        m_d3d12CommandList->SetPipelineState(m_EnvToSpecularPrefilterCubemapPSO->GetPipelineState().Get());
+        SetComputeRootSignature(m_EnvToSpecularPrefilterCubemapPSO->GetRootSignature());
+
+        auto pCubemapResource = outSpecularPrefilterTexture.GetD3D12Resource();
+        if (!pCubemapResource) return;
+
+        CD3DX12_RESOURCE_DESC cubemapDesc(pCubemapResource->GetDesc());
+
+		uint16_t numMips = cubemapDesc.MipLevels;
+        uint32_t outCubemapWidth = (uint32_t) cubemapDesc.Width;
+
+        D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+        uavDesc.Format                          = Texture::GetUAVCompatableFormat(cubemapDesc.Format);
+        uavDesc.ViewDimension                   = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
+        uavDesc.Texture2DArray.FirstArraySlice  = 0;
+        uavDesc.Texture2DArray.ArraySize        = 6;
+
+        for (uint32_t mipSlice = 0; mipSlice < numMips; ++mipSlice)
+        {
+			std::wstring mipMarkerName = L"Mip_" + std::to_wstring(mipSlice);
+            PIX_SCOPE_MARKER(profiler, m_d3d12CommandList.Get(), mipMarkerName.c_str());
+
+            uint32_t faceSize = std::max<uint32_t>(1u, (uint32_t)outCubemapWidth >> mipSlice);
+            float roughness = (numMips > 1) ? (float)mipSlice / (float)(numMips - 1) : 0.f;
+
+            EnvToSpecularPrefilterCubemapCB envToSpecularPrefilterCubemapCB {};
+            envToSpecularPrefilterCubemapCB.OutputSize  = faceSize;
+            envToSpecularPrefilterCubemapCB.Roughness   = roughness;
+
+            SetCompute32BitConstants(EnvToSpecularPrefilterCubemapRS::EnvToSpecularPrefilterCubemapCB, envToSpecularPrefilterCubemapCB);
+
+            D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+            srvDesc.Format = inCubemapTexture.GetD3D12ResourceDesc().Format;
+            srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+            srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
+            srvDesc.TextureCube.MipLevels = (UINT)-1;                         // Use all mips.
+            // --
+            SetShaderResourceView(EnvToSpecularPrefilterCubemapRS::SrcCubemap, 0, inCubemapTexture, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, 0, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, &srvDesc);
+
+			uavDesc.Texture2DArray.MipSlice = mipSlice;
+            SetUnorderedAccessView(EnvToSpecularPrefilterCubemapRS::DstCubemap, 0, outSpecularPrefilterTexture, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, 0, 0, &uavDesc);
+            
+            // DivideByMultiple is an analog of ceiling()
+			uint32_t dispatchSize = std::max<uint32_t>(1u, Math::DivideByMultiple(faceSize, 8));
+            Dispatch(dispatchSize, dispatchSize, 6);
+
+            // Not always strictly required on sequential dispatches, but adding  for clarity / GPU overlap edge cases.
+            UAVBarrier(outSpecularPrefilterTexture);
+        }
+    }
+}
+
+void CommandList::BrdfLut(const Texture& outBrdfLutTexture)
+{
+    if (m_d3d12CommandListType == D3D12_COMMAND_LIST_TYPE_COPY)
+    {
+        if (!m_ComputeCommandList)
+        {
+            m_ComputeCommandList = m_Application.GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COMPUTE)->GetCommandList();
+        }
+        m_ComputeCommandList->BrdfLut(outBrdfLutTexture);
+        return;
+    }
+
+    PixProfiler& profiler = m_Application.GetPixProfiler();
+    PIX_SCOPE_MARKER(profiler, m_d3d12CommandList.Get(), L"BRDF LUT");
+    {
+        if (!m_BrdfLutPSO)
+        {
+            m_BrdfLutPSO = std::make_unique<BrdfLutPSO>();
+        }
+
+        m_d3d12CommandList->SetPipelineState(m_BrdfLutPSO->GetPipelineState().Get());
+        SetComputeRootSignature(m_BrdfLutPSO->GetRootSignature());
+
+        //D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+        //uavDesc.Format = Texture::GetUAVCompatableFormat(cubemapDesc.Format);
+        //uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
+        //uavDesc.Texture2DArray.FirstArraySlice = 0;
+        //uavDesc.Texture2DArray.ArraySize = 6;
+
+        // pDesc = nullptr => D3D will guess defaults from resource: format and dimension (if NOT TYPELESS).
+        // If the resource is Buffer:  UAV will cover the entire buffer. It will be treated as a typed buffer (not raw/structured unless explicitly defined). ["Use the whole buffer, interpreted using its format."]
+        // If the resource is Texture: It will use - Mip level 0 (the highest resolution). If it’s an Array Texture: will use All array slices. ["Bind the top-level mip of the texture, across all slices."]
+        SetUnorderedAccessView(BrdfLutRS::DstTexture, 0, outBrdfLutTexture, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+        // Thread group size = 8, outBrdfLutTexture=512x512x1 => Dispatch(64, 64, 1) in a single dispatch.
+        auto outTexureDesc = outBrdfLutTexture.GetD3D12ResourceDesc();
+        uint32_t dispatchSize = std::max<uint32_t>(1u, Math::DivideByMultiple(outTexureDesc.Width, 8));
+        Dispatch(64, 64, 1);
     }
 }
 

@@ -58,7 +58,32 @@ PanoToCubemapPSO::PanoToCubemapPSO()
 
     ThrowIfFailed(device->CreatePipelineState(&pipelineStateStreamDesc, IID_PPV_ARGS(&m_PipelineState)));
 
+    // ------------------------------------------------------------------------------------
     // Create some default texture UAV's to pad any unused UAV's during mip map generation.
+    // ------------------------------------------------------------------------------------
+    // Why do we need that?
+    // --
+    // At dispatch time, the driver expects five valid GPU descriptors in that table whenever that root parameter is used.
+    // 
+    // The Texture wrapper is built around a real ID3D12Resource + SRV / RTV / UAV views for that resource. 
+    // Here we are not binding a mip of the real cubemap; we are creating five standalone null UAV 
+    // descriptors (note CreateUnorderedAccessView(nullptr, nullptr, &uavDesc, ...) — no resource).
+    // There is no Texture object that “owns” those null views in the same way, so the PSO helper allocates CPU 
+    // descriptor heap space and fills it with null UAVs itself.
+
+    // Each compute pass may only need fewer than 5 mip UAVs (e.g. numMips = 3). The root signature still
+    // has 5 UAV slots in the table. If we left slots 3–4 unbound or garbage, validation can complain and behavior is undefined.
+    // So the code PADs the unused slots with null UAVs (valid descriptors that point at no resource).That matches what happens
+    // on the command list when fewer mips are generated :
+    //   if (numMips < 5)
+    //   {
+    //      // Pad unused mips. This keeps DX12 runtime happy.
+    //      m_DynamicDescriptorHeap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->StageDescriptors(PanoToCubemapRS::DstMips, panoToCubemapCB.NumMips, 5 - numMips, m_PanoToCubemapPSO->GetDefaultUAV());
+    //   }
+    //
+    // So we always supply a full contiguous set of descriptors for the declared root signature table size, using null placeholders where the shader pass does not use a real UAV.
+    // ------------------------------------------------------------------------------------
+
     m_DefaultUAV = app.AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 5);
     UINT descriptorHandleIncrementSize = app.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 

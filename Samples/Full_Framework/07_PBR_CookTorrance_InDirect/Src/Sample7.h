@@ -18,16 +18,18 @@
 
 enum class LightingViewMode : uint32_t
 {
-    Final = 0,         // Normal lit output
-    Albedo,            // [RT0] Raw albedo - catches texture/material issues
-    Normals,           // [RT1] World-space normals as color - catches normal bugs
-    PBR,               // [RT2] Roughness/Metalness/Emissive
-    Depth,             // Linear or Raw depth
-    DiffuseOnly,       // Lighting: diffuse  term only
-    SpecularOnly,      // Lighting: specular term only
-    AmbientOnly,       // Lighting: ambient  term only
+    Final = 0,           // Normal lit output
+    Albedo,              // [RT0] Raw albedo - catches texture/material issues
+    Normals,             // [RT1] World-space normals as color - catches normal bugs
+    PBR,                 // [RT2] Roughness/Metalness/Emissive
+    Depth,               // Linear or Raw depth
+    DiffuseOnly,         // Lighting: Diffuse  term only
+    SpecularOnly,        // Lighting: Specular term only
+    AmbientOnly,         // Lighting: Ambient  term only
     Count
 };
+
+const bool g_CaptureGPUTraceOnLoadAssets = true;
 
 class Sample7 : public Game
 {
@@ -63,6 +65,11 @@ protected:
 
     void OnGUI();
 
+private: /* IBL - Indirect Diffuse and Specular IBLs */
+    Texture m_IrradianceCubemap;
+    Texture m_SpecularPrefilterCubemap;
+    Texture m_BrdfLUT;
+
 private: /* DEFERRED RENDERING */
     
 	// Lighting view mode switch - for DEBUG
@@ -87,7 +94,7 @@ private:
     std::unique_ptr<Mesh> m_SkyboxMesh;
 
     Texture m_DefaultTexture;
-    Texture m_GraceCathedralTexture;
+    Texture m_GraceCathedralPanoTexture;
     Texture m_GraceCathedralCubemap;
 
     // HDR Render target

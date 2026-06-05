@@ -39,14 +39,18 @@ public:
     RenderTarget& operator=(const RenderTarget& other)    = default;
     RenderTarget& operator=(RenderTarget&& other)         = default;
 
-    // Attach a texture to the render target.
-    // The texture will be copied into the texture array.
+	// ----- OWNERSHIP -----
+    // Attach a texture to the render target. The texture will be copied into the texture array.
+    // RenderTarget will own attachments.
     void AttachTexture(AttachmentPoint attachmentPoint, const Texture& texture);
+    // Attach with Shared ownership. This is required when we have shared buffer (sharedDepthTexture) between different stages (GBuffer and HDR RT)
     void AttachTextureShared(AttachmentPoint attachmentPoint, std::shared_ptr<Texture> texture);
 
-    // Get texture
+    // ----- OBSERVERS -----
+    // Get texture - non-owning observer (borrows texture).
+    // The ptr is valid while RenderTarget owns that slot and has not replaced it.
+	// The ptr is not expected to be cached by the client, and is not expected to be valid after subsequent calls to AttachTexture or AttachTextureShared.
     const Texture* GetTexture(AttachmentPoint attachmentPoint) const;
-    Texture* GetTexture(AttachmentPoint attachmentPoint);
     // For internal framework usage, not for clients.
     const Texture* TryGetTexture(AttachmentPoint attachmentPoint) const;
 
@@ -77,6 +81,8 @@ public:
 
 private:
     
+    // RenderTarget owns attachments.
+	// This has to be a shared_ptr since the depth buffer can be shared between multiple render targets (GBuffer RT and HDR RT in Sample7).
     std::vector<std::shared_ptr<Texture>> m_Textures = {};
     DirectX::XMUINT2 m_Size;
 };

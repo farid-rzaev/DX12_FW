@@ -10,8 +10,6 @@ RenderTarget::RenderTarget()
 {
 }
 
-// Attach a texture to the render target.
-// The texture will be copied into the texture array.
 void RenderTarget::AttachTexture(AttachmentPoint attachmentPoint, const Texture& texture)
 {
     m_Textures[attachmentPoint] = std::make_shared<Texture>(texture);
@@ -37,12 +35,6 @@ void RenderTarget::AttachTextureShared(AttachmentPoint attachmentPoint, std::sha
 }
 
 const Texture* RenderTarget::GetTexture(AttachmentPoint attachmentPoint) const
-{
-    assert(m_Textures[attachmentPoint] != nullptr && "Texture slot not attached");
-    return m_Textures[attachmentPoint].get();
-}
-
-Texture* RenderTarget::GetTexture(AttachmentPoint attachmentPoint)
 {
     assert(m_Textures[attachmentPoint] != nullptr && "Texture slot not attached");
     return m_Textures[attachmentPoint].get();

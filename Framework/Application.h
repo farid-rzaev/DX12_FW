@@ -10,6 +10,7 @@
 // D3D12 extension library.
 #include <Framework/3RD_Party/D3D/d3dx12.h>
 #include <Framework/3RD_Party/Timer/HighResolutionClock.h>
+#include <Framework/Events/PixProfiler.h>
 
 // ComPtr
 #include <wrl.h>
@@ -41,7 +42,7 @@ public: // MAIN
 	bool Initialize(const wchar_t* windowTitle, int width, int height, bool vSync = false);
 	int  Run();
 
-	UINT8 Present(const Texture& texture = Texture()) { return m_Window->Present(texture); }
+	UINT32 Present(const Texture& texture = Texture()) { return m_Window->Present(texture); }
 
 	// SYNC frames
 	void Flush();
@@ -59,7 +60,9 @@ public: // DX12 HELPERs
 	std::shared_ptr<CommandQueue> GetCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT) const;
 	UINT						  GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE type) const;
 	// --
-	uint64_t&					  GetFrameCount()	   { return m_FrameCount; }
+	PixProfiler&				  GetPixProfiler() { return m_PixProfiler; }
+	// --
+	uint64_t&					  GetFrameCount() { return m_FrameCount; }
 	
 	// SUPPORT checks
 	DXGI_SAMPLE_DESC GetMultisampleQualityLevels(DXGI_FORMAT format, UINT numSamples, D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE) const;
@@ -113,7 +116,9 @@ private:
 	std::shared_ptr<CommandQueue>		 m_DirectCommandQueue	= nullptr;
 	std::shared_ptr<CommandQueue>		 m_ComputeCommandQueue	= nullptr;
 	std::shared_ptr<CommandQueue>		 m_CopyCommandQueue		= nullptr;
-										 
+					
+	PixProfiler							 m_PixProfiler;
+
 	// Frametimes						 
 	uint64_t							 m_FrameCount			= 0;
 };
