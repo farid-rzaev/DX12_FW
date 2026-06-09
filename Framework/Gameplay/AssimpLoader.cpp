@@ -234,6 +234,13 @@ std::vector<LoadedMeshPart> AssimpLoader::Load(
         if (!hasRoughness) part.roughnessTexture = defaultTexture;
         if (!hasMetalness) part.metalnessTexture = defaultTexture;
 
+        // Assimp glTF2 leaves metallicFactor at 1.0 when JSON omits it; glTF spec default is 0.
+        // Sponza and most architectural scenes are dielectric-heavy.
+        if (part.material.Metalness >= 1.0f && !hasMetalness)
+        {
+            part.material.Metalness = 0.0f;
+        }
+
         parts.push_back(std::move(part));
     }
 

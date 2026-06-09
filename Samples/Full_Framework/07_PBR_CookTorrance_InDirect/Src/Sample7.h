@@ -26,10 +26,12 @@ enum class LightingViewMode : uint32_t
     DiffuseOnly,         // Lighting: Diffuse  term only
     SpecularOnly,        // Lighting: Specular term only
     AmbientOnly,         // Lighting: Ambient  term only
+    IndirectDiffuseIBL,  // Lighting: Indirect Diffuse lighting from image-based lighting
+	IndirectSpecularIBL, // Lighting: Indirect Specular lighting from image-based lighting
     Count
 };
 
-const bool g_CaptureGPUTraceOnLoadAssets = true;
+const bool g_CaptureGPUTraceOnLoadAssets = false;
 
 class Sample7 : public Game
 {
@@ -68,7 +70,7 @@ protected:
 private: /* IBL - Indirect Diffuse and Specular IBLs */
     Texture m_IrradianceCubemap;
     Texture m_SpecularPrefilterCubemap;
-    Texture m_BrdfLUT;
+    Texture m_BrdfLut;
 
 private: /* DEFERRED RENDERING */
     

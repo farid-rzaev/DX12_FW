@@ -26,9 +26,9 @@ struct LoadedMeshPart
 class DX12_FW_API AssimpLoader
 {
 public:
-    // Loads an FBX/model file and returns mesh parts.
+    // Loads an model file and returns mesh parts.
     // commandList: used for CopyVertexBuffer/CopyIndexBuffer and LoadTextureFromFile
-    // modelPath: path relative to working dir, e.g. L"Assets/Models/FBX/box.fbx"
+    // modelPath: path relative to working dir, e.g. L"Assets/Models/"
     // defaultTexture: used when mesh has no diffuse texture or texture load fails
     static std::vector<LoadedMeshPart> Load(
         CommandList& commandList,

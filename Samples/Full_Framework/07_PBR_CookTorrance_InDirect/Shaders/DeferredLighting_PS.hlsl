@@ -1,6 +1,7 @@
 // --------------------------------------------------------------------------------
 //                                      STRUCTS
 // --------------------------------------------------------------------------------
+#define ACTIVATE_IBL
 
 struct PointLight
 {
@@ -139,9 +140,14 @@ Texture2D GBufferAlbedo                                  : register(t2);  // RGB
 Texture2D GBufferNormal                                  : register(t3);  // RG=oct-encoded WS normal (world-space normal in [0,1]), BA unused
 Texture2D GBufferPBR                                     : register(t4);  // R=roughness, G=metalness, B=emissive mask
 Texture2D<float> Depth                                   : register(t5);  // Hardware NDC depth [0,1]
-// --
-SamplerState PointSampler                                : register(s0);
 
+TextureCube<float4> AmbientIrradianceCube                : register(t6);
+TextureCube<float4> SpecularPrefilterCube                : register(t7);
+Texture2D<float2> BrdfLut                                : register(t8);
+
+// Samplers
+SamplerState PointSampler                                : register(s0);
+SamplerState linearClampSampler                          : register(s1);  // for LUT
 
 // --------------------------------------------------------------------------------
 //                                    MAIN
@@ -351,16 +357,54 @@ float4 main(float2 texCoord : TEXCOORD /*UV space*/) : SV_Target
         diffuseAccum += diff * NdotL * atten * spotIntensity * light.Color.rgb * light.Intensity;
         specularAccum += spec * NdotL * atten * spotIntensity * light.Color.rgb * light.Intensity;
     }
-    
+
+#if !defined(ACTIVATE_IBL)
     float3 ambient = float3(0.1, 0.1, 0.1); // Ambient light intensity (constant)
+#else
+    // --- IBL (indirect environment lighting) ---
+    float NdotV = saturate(dot(normalWS, V));
+    
+    // Same energy split as direct lights, but using view-dependent Fresnel
+    float3 F_ibl = F_Schlick(NdotV, F0);
+    float3 kS_ibl = F_ibl;
+    float3 kD_ibl = (1.0 - kS_ibl) * (1.0 - metalness);
+    
+    // DIFFUSE IBL: pre-convolved irradiance along normal
+    // Irradiance cubemap already stores hemisphere integral — do NOT divide by PI again
+    float3 irradiance = AmbientIrradianceCube.Sample(linearClampSampler, normalWS).rgb;
+    float3 indirectDiffuseIBL = kD_ibl * albedo * irradiance;
+    
+    // SPECULAR IBL: split-sum approximation
+    // R = reflection direction; sample blurred env map by roughness
+    float3 R = reflect(-V, normalWS);
+    
+    // 128×128 cubemap => 8 mips (0..7). Mip index = roughness * 7
+    const float MAX_REFLECTION_LOD = 7.0;
+    float3 prefilteredColor = SpecularPrefilterCube.SampleLevel(linearClampSampler, R, roughness * MAX_REFLECTION_LOD).rgb;
+    
+    // BRDF LUT stores (A, B) for: specular = prefiltered * (F*A + B)
+    float2 envBRDF = BrdfLut.Sample(linearClampSampler, float2(NdotV, roughness)).rg;
+    float3 indirectSpecularIBL = prefilteredColor * (F_ibl * envBRDF.x + envBRDF.y);
+#endif
+    
     
     if (lightingViewMode == 5) return float4(diffuseAccum, 1.0);   // Lighting: diffuse  term only
     if (lightingViewMode == 6) return float4(specularAccum, 1.0);  // Lighting: specular term only
-    if (lightingViewMode == 7) return float4(ambient, 1.0);        // Lighting: ambient  term only
+ #if !defined(ACTIVATE_IBL)
+    if (lightingViewMode == 7) return float4(ambient, 1.0);                                  // Lighting: ambient  term only
+#else
+    if (lightingViewMode == 7) return float4(indirectDiffuseIBL + indirectSpecularIBL, 1.0); // Lighting: Ambient  term only
+    if (lightingViewMode == 8) return float4(indirectDiffuseIBL, 1.0);                       // Lighting: Indirect Diffuse lighting from image-based lighting
+    if (lightingViewMode == 9) return float4(indirectSpecularIBL, 1.0);                      // Lighting: Indirect Specular lighting from image-based lighting
+#endif
     
     // Final color: ambient + diffuse + specular
     //float3 finalColor = (ambient + diffuseAccum + specularAccum) * albedo.rgb;
+ #if !defined(ACTIVATE_IBL)
     float3 finalColor = ambient * albedo + diffuseAccum + specularAccum;
+#else
+    float3 finalColor = diffuseAccum + specularAccum + indirectDiffuseIBL + indirectSpecularIBL;
+#endif
     
     float emissiveMask = pbrData.b;
     finalColor += albedo * emissiveMask * 2.0; // simple emissive boost

@@ -130,7 +130,7 @@ enum DeferredRootParams
     DeferredLightingCommonCB_Deferred,  // b0                                                           <- ps
     PointLights_Deferred,               // t0                                                           <- ps
     SpotLights_Deferred,                // t1                                                           <- ps
-    Textures_Deferred,                  // t2-t4: G-Buffer textures                                     <- ps
+    Textures_Deferred,                  // t2-t5: G-Buffer textures, t6-t8: IBL textures                <- ps
     NumRootParameters_Deferred
 };
 
@@ -241,11 +241,13 @@ bool Sample7::LoadContent()
     auto  computeCommandList = computeCommandQueue->GetCommandList();
 
     // Set solution dir as current working dirrectory
-    std::wstring exe_path_str = GetExePath();
-    ThrowIfFailed(exe_path_str.empty() == false, "Can't find the .exe path!");
+    std::wstring exePath = GetExePath();
+    ThrowIfFailed(exePath.empty() == false, "Can't find the .exe path!");
     // --
-    SetWorkingDirToSolutionDir(exe_path_str);
-    std::wstring solution_dir_str = exe_path_str;
+    SetWorkingDirToSolutionDir(exePath);
+
+    std::wstring solutionDir = exePath;
+    std::wstring shaderBytecodeDir = solutionDir + L"Shaders\\" + PROJECT_NAME;
 
     // Load some textures
     copyCommandList->LoadTextureFromFile(m_DefaultTexture, L"Assets/Textures/DefaultWhite.bmp");
@@ -320,9 +322,9 @@ bool Sample7::LoadContent()
 
 	// BRDF LUT for split-sum approximation of the specular IBL integral.
     {
-        // m_BRDFLUT(R16G16_FLOAT, 512x512, array 1, mips 1, UAV)
+        // m_BrdfLut(R16G16_FLOAT, 512x512, array 1, mips 1, UAV)
         D3D12_RESOURCE_DESC brdfLUTDesc = {};
-        brdfLUTDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+        brdfLUTDesc.Dimension           = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
         brdfLUTDesc.Width               = 512;
         brdfLUTDesc.Height              = 512;
         brdfLUTDesc.DepthOrArraySize    = 1;
@@ -332,9 +334,9 @@ bool Sample7::LoadContent()
         brdfLUTDesc.SampleDesc.Count    = 1;
         brdfLUTDesc.SampleDesc.Quality  = 0;
         // --
-        m_BrdfLUT = Texture(brdfLUTDesc, nullptr, TextureUsage::RenderTarget, L"IBL - BRDF LUT");
+        m_BrdfLut = Texture(brdfLUTDesc, nullptr, TextureUsage::RenderTarget, L"IBL - BRDF LUT");
 
-        computeCommandList->BrdfLut(m_BrdfLUT);
+        computeCommandList->BrdfLut(m_BrdfLut);
     }
     
     // -------------------------------------------------------------
@@ -420,8 +422,8 @@ bool Sample7::LoadContent()
         // Load the Skybox shaders.
         ComPtr<ID3DBlob> vs;
         ComPtr<ID3DBlob> ps;
-        ThrowIfFailed(D3DReadFileToBlob( (solution_dir_str + L"\\Skybox_VS.cso").c_str(), &vs));
-        ThrowIfFailed(D3DReadFileToBlob( (solution_dir_str + L"\\Skybox_PS.cso").c_str(), &ps));
+        ThrowIfFailed(D3DReadFileToBlob( (shaderBytecodeDir + L"\\Skybox_VS.cso").c_str(), &vs));
+        ThrowIfFailed(D3DReadFileToBlob( (shaderBytecodeDir + L"\\Skybox_PS.cso").c_str(), &ps));
 
         // Setup the input layout for the skybox vertex shader.
         D3D12_INPUT_ELEMENT_DESC inputLayout[1] = {
@@ -490,8 +492,8 @@ bool Sample7::LoadContent()
         // Create the SDR PSO
         ComPtr<ID3DBlob> vs;
         ComPtr<ID3DBlob> ps;
-        ThrowIfFailed(D3DReadFileToBlob((solution_dir_str + L"\\HDRtoSDR_VS.cso").c_str(), &vs));
-        ThrowIfFailed(D3DReadFileToBlob((solution_dir_str + L"\\HDRtoSDR_PS.cso").c_str(), &ps));
+        ThrowIfFailed(D3DReadFileToBlob((shaderBytecodeDir + L"\\HDRtoSDR_VS.cso").c_str(), &vs));
+        ThrowIfFailed(D3DReadFileToBlob((shaderBytecodeDir + L"\\HDRtoSDR_PS.cso").c_str(), &ps));
 
         CD3DX12_RASTERIZER_DESC rasterizerDesc(D3D12_DEFAULT);
         rasterizerDesc.CullMode = D3D12_CULL_MODE_NONE;
@@ -548,8 +550,8 @@ bool Sample7::LoadContent()
         // === G-Buffer PSO ===
 
         ComPtr<ID3DBlob> vs, ps;
-        ThrowIfFailed(D3DReadFileToBlob((solution_dir_str + L"\\GBuffer_VS.cso").c_str(), &vs));
-        ThrowIfFailed(D3DReadFileToBlob((solution_dir_str + L"\\GBuffer_PS.cso").c_str(), &ps));
+        ThrowIfFailed(D3DReadFileToBlob((shaderBytecodeDir + L"\\GBuffer_VS.cso").c_str(), &vs));
+        ThrowIfFailed(D3DReadFileToBlob((shaderBytecodeDir + L"\\GBuffer_PS.cso").c_str(), &ps));
 
         CD3DX12_DEPTH_STENCIL_DESC1 depthStencilDesc(D3D12_DEFAULT);
         depthStencilDesc.DepthEnable = TRUE;
@@ -587,7 +589,7 @@ bool Sample7::LoadContent()
     {
         // === Deferred Lighting Root Signature ===
 
-        CD3DX12_DESCRIPTOR_RANGE1 descriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4 /*num_descriptors*/, 2 /*register*/);
+        CD3DX12_DESCRIPTOR_RANGE1 descriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 7 /*num_descriptors*/, 2 /*shader_register_number*/);
         // --
         CD3DX12_ROOT_PARAMETER1 rootParameters[DeferredRootParams::NumRootParameters_Deferred];
         rootParameters[DeferredRootParams::DeferredLightingCommonCB_Deferred].InitAsConstants(sizeof(DeferredLightingCommon) / 4, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL); // b0
@@ -605,6 +607,10 @@ bool Sample7::LoadContent()
         pointSampler.ShaderRegister = 0;                                                                                                                                                                        // s0
         pointSampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
+		CD3DX12_STATIC_SAMPLER_DESC linearClampSampler(1, D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP);    // s1
+
+        D3D12_STATIC_SAMPLER_DESC samplers[2] = {pointSampler, linearClampSampler};
+
         // Allow input layout and deny unnecessary access to certain pipeline stages.
         D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
             D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
@@ -613,7 +619,7 @@ bool Sample7::LoadContent()
             D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
 
         CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDescription;
-        rootSignatureDescription.Init_1_1(DeferredRootParams::NumRootParameters_Deferred, rootParameters, 1, &pointSampler, rootSignatureFlags);
+        rootSignatureDescription.Init_1_1(DeferredRootParams::NumRootParameters_Deferred, rootParameters, 2, samplers, rootSignatureFlags);
 
         m_DeferredLightingRootSignature.SetRootSignatureDesc(rootSignatureDescription.Desc_1_1, featureData.HighestVersion);
 
@@ -631,8 +637,8 @@ bool Sample7::LoadContent()
         } deferredPipelineStateStream;
 
         ComPtr<ID3DBlob> vs, ps;
-        ThrowIfFailed(D3DReadFileToBlob((solution_dir_str + L"\\DeferredLighting_VS.cso").c_str(), &vs));
-        ThrowIfFailed(D3DReadFileToBlob((solution_dir_str + L"\\DeferredLighting_PS.cso").c_str(), &ps));
+        ThrowIfFailed(D3DReadFileToBlob((shaderBytecodeDir + L"\\DeferredLighting_VS.cso").c_str(), &vs));
+        ThrowIfFailed(D3DReadFileToBlob((shaderBytecodeDir + L"\\DeferredLighting_PS.cso").c_str(), &ps));
 
         deferredPipelineStateStream.pRootSignature = m_DeferredLightingRootSignature.GetRootSignature().Get();
         deferredPipelineStateStream.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
@@ -938,10 +944,11 @@ void Sample7::OnGUI()
 
         {
             const char* modes[] = { "Final", "Albedo", "Normals", "PBR", "Depth",
-                                    "Diffuse Only", "Specular Only", "Ambient Only" };
+                                    "Diffuse Only", "Specular Only", "Ambient Only",
+                                    "IndirectDiffuseIBL", "IndirectSpecularIBL"};
             int current = static_cast<int>(m_LightingViewMode);
 
-            if (ImGui::Combo("View Mode", &current, modes, 8))
+            if (ImGui::Combo("View Mode", &current, modes, static_cast<int>(LightingViewMode::Count)))
             {
                 m_LightingViewMode = static_cast<LightingViewMode>(current);
             }
@@ -1042,9 +1049,13 @@ void Sample7::OnRender()
     auto& app = Application::Get();
     auto commandQueue = app.GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
     auto commandList = commandQueue->GetCommandList();
+    PixProfiler& profiler = app.GetPixProfiler();
+
 
     // 1. Clear the render targets.
     {
+        PIX_SCOPE_MARKER(profiler, commandList->GetGraphicsCommandList().Get(), L"CLEAR - RTV & DSV");
+        
         FLOAT clearColor[] = { 0.4f, 0.6f, 0.9f, 1.0f };
 
         commandList->ClearTexture(*m_HDRRenderTarget.GetTexture(AttachmentPoint::Color0), clearColor);
@@ -1057,6 +1068,8 @@ void Sample7::OnRender()
 
     // 2. Render the skybox.
     {
+        PIX_SCOPE_MARKER(profiler, commandList->GetGraphicsCommandList().Get(), L"SKYBOX");
+
         // The view matrix should only consider the camera's rotation, but not the translation.
         auto viewMatrix = XMMatrixTranspose(XMMatrixRotationQuaternion(m_Camera.get_Rotation()));
         auto projMatrix = m_Camera.get_ProjectionMatrix();
@@ -1079,7 +1092,7 @@ void Sample7::OnRender()
         m_SkyboxMesh->Draw(*commandList);
     }
 
-	// 3. Render the scene (FBX model + debug shapes) in HDR to an off-screen render target, using either forward or deferred rendering.
+	// 3. Render the scene (model + debug shapes) in HDR to an off-screen render target, using either forward or deferred rendering.
     {
         XMMATRIX viewMatrix = m_Camera.get_ViewMatrix();
         XMMATRIX viewProjectionMatrix = viewMatrix * m_Camera.get_ProjectionMatrix();
@@ -1089,6 +1102,8 @@ void Sample7::OnRender()
 
     // 4. FSQ Posteffect: perform HDR -> SDR tonemapping directly to the Window's render target.
     {
+        PIX_SCOPE_MARKER(profiler, commandList->GetGraphicsCommandList().Get(), L"HDR_to_SDR");
+
         commandList->SetRenderTarget(app.GetRenderTarget());
         commandList->SetViewport(app.GetRenderTarget().GetViewport());
         commandList->SetScissorRect(m_ScissorRect);
@@ -1113,125 +1128,153 @@ void Sample7::OnRender()
 
 void Sample7::RenderDeferred(std::shared_ptr<CommandList> commandList, DirectX::CXMMATRIX viewMatrix, DirectX::CXMMATRIX viewProjectionMatrix)
 {
+    auto& app = Application::Get();
+    PixProfiler& profiler = app.GetPixProfiler();
+
     // === PASS 1: G-Buffer Generation ===
-
-    commandList->SetRenderTarget(m_GBufferRT);
-    commandList->SetViewport(m_GBufferRT.GetViewport());
-    commandList->SetScissorRect(m_ScissorRect);
-
-    // Clear G-Buffer
-    FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-    commandList->ClearTexture(*m_GBufferRT.GetTexture(AttachmentPoint::Color0), clearColor);
-    commandList->ClearTexture(*m_GBufferRT.GetTexture(AttachmentPoint::Color1), clearColor);
-    commandList->ClearTexture(*m_GBufferRT.GetTexture(AttachmentPoint::Color2), clearColor);
-    commandList->ClearDepthStencilTexture(*m_GBufferRT.GetTexture(AttachmentPoint::DepthStencil), D3D12_CLEAR_FLAG_DEPTH);
-
-    // Set G-Buffer PSO
-    commandList->SetPipelineState(m_GBufferPSO);
-    commandList->SetGraphicsRootSignature(m_GBufferRootSignature);
-
-    // Render meshes into G-Buffer (same loop as forward, but no lights needed)
-    // RENDER FBX MODEL
     {
-        float scale = 1 / 10.0f;
+        PIX_SCOPE_MARKER(profiler, commandList->GetGraphicsCommandList().Get(), L"G-BUFFER");
 
-        XMMATRIX translationMatrix = XMMatrixTranslation(0.0f, 0.0f, 0.0f);
-        XMMATRIX rotationMatrix = XMMatrixIdentity();
-        XMMATRIX scaleMatrix = XMMatrixScaling(scale, scale, scale);
-        XMMATRIX worldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
+        commandList->SetRenderTarget(m_GBufferRT);
+        commandList->SetViewport(m_GBufferRT.GetViewport());
+        commandList->SetScissorRect(m_ScissorRect);
 
-        Mat matrices;
-        ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
-        // --
-        commandList->SetGraphicsDynamicConstantBuffer(GbufferRootParams::MatricesCB_GBuffer, matrices);
+        // Clear G-Buffer
+        FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+        commandList->ClearTexture(*m_GBufferRT.GetTexture(AttachmentPoint::Color0), clearColor);
+        commandList->ClearTexture(*m_GBufferRT.GetTexture(AttachmentPoint::Color1), clearColor);
+        commandList->ClearTexture(*m_GBufferRT.GetTexture(AttachmentPoint::Color2), clearColor);
+        commandList->ClearDepthStencilTexture(*m_GBufferRT.GetTexture(AttachmentPoint::DepthStencil), D3D12_CLEAR_FLAG_DEPTH);
 
-        // Returns the frustum in view (camera) space
-        // --
-        // The projection matrix transforms from view space -> clip/projection space.
-        // So when you create a frustum from the projection matrix, the resulting planes represent the 
-        // view volume boundaries in the coordinate system where the camera is at the origin � which is view space.
-        DirectX::BoundingFrustum cameraFrustum;
-        DirectX::BoundingFrustum::CreateFromMatrix(cameraFrustum, m_Camera.get_ProjectionMatrix());
+        // Set G-Buffer PSO
+        commandList->SetPipelineState(m_GBufferPSO);
+        commandList->SetGraphicsRootSignature(m_GBufferRootSignature);
 
-        // Transform the Frustum from View to World space
-        XMMATRIX inverseView = XMMatrixInverse(nullptr, viewMatrix);
-        cameraFrustum.Transform(cameraFrustum, inverseView);
-
-        Material* currentMaterial = nullptr;
-
-        Texture* currentDiffuse = nullptr;
-        Texture* currentRoughness = nullptr;
-        Texture* currentMetalness = nullptr;
-
-        for (auto& part : m_LoadedMeshParts)
+        // Render meshes into G-Buffer (same loop as forward, but no lights needed)
+        // RENDER MODEL
         {
-            // Transform the mesh part's bounding box to World space
-            DirectX::BoundingBox worldBounds;
-            part.boundingBox.Transform(worldBounds, worldMatrix);
+            float scale = 1 / 10.0f;
 
-            // [OPT_1] Frustum culling in World space - cameraFrustum vs AABB of mesh part
-            if (!worldBounds.Intersects(cameraFrustum))
-                continue;
+            XMMATRIX translationMatrix = XMMatrixTranslation(0.0f, 0.0f, 0.0f);
+            XMMATRIX rotationMatrix = XMMatrixIdentity();
+            XMMATRIX scaleMatrix = XMMatrixScaling(scale, scale, scale);
+            XMMATRIX worldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
 
-            // [OPT_2] Only change material and textures if different
+            Mat matrices;
+            ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
+            // --
+            commandList->SetGraphicsDynamicConstantBuffer(GbufferRootParams::MatricesCB_GBuffer, matrices);
 
-            if (&part.material != currentMaterial)
+            // Returns the frustum in view (camera) space
+            // --
+            // The projection matrix transforms from view space -> clip/projection space.
+            // So when you create a frustum from the projection matrix, the resulting planes represent the 
+            // view volume boundaries in the coordinate system where the camera is at the origin � which is view space.
+            DirectX::BoundingFrustum cameraFrustum;
+            DirectX::BoundingFrustum::CreateFromMatrix(cameraFrustum, m_Camera.get_ProjectionMatrix());
+
+            // Transform the Frustum from View to World space
+            XMMATRIX inverseView = XMMatrixInverse(nullptr, viewMatrix);
+            cameraFrustum.Transform(cameraFrustum, inverseView);
+
+            Material* currentMaterial = nullptr;
+
+            Texture* currentDiffuse = nullptr;
+            Texture* currentRoughness = nullptr;
+            Texture* currentMetalness = nullptr;
+
+            for (auto& part : m_LoadedMeshParts)
             {
-                commandList->SetGraphicsDynamicConstantBuffer(GbufferRootParams::MaterialCB_GBuffer, part.material);
-                currentMaterial = &part.material;
-            }
+                // Transform the mesh part's bounding box to World space
+                DirectX::BoundingBox worldBounds;
+                part.boundingBox.Transform(worldBounds, worldMatrix);
 
-            if (&part.diffuseTexture != currentDiffuse)
-            {
-                commandList->SetShaderResourceView(GbufferRootParams::Textures_GBuffer, 0, part.diffuseTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-                currentDiffuse = &part.diffuseTexture;
-            }
+                // [OPT_1] Frustum culling in World space - cameraFrustum vs AABB of mesh part
+                if (!worldBounds.Intersects(cameraFrustum))
+                    continue;
 
-            if (&part.roughnessTexture != currentRoughness)
-            {
-                commandList->SetShaderResourceView(GbufferRootParams::Textures_GBuffer, 1, part.roughnessTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-                currentRoughness = &part.roughnessTexture;
-            }
+                // [OPT_2] Only change material and textures if different
 
-            if (&part.metalnessTexture != currentMetalness)
-            {
-                commandList->SetShaderResourceView(GbufferRootParams::Textures_GBuffer, 2, part.metalnessTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-                currentMetalness = &part.metalnessTexture;
-            }
+                if (&part.material != currentMaterial)
+                {
+                    commandList->SetGraphicsDynamicConstantBuffer(GbufferRootParams::MaterialCB_GBuffer, part.material);
+                    currentMaterial = &part.material;
+                }
 
-            part.mesh->Draw(*commandList);
+                if (&part.diffuseTexture != currentDiffuse)
+                {
+                    commandList->SetShaderResourceView(GbufferRootParams::Textures_GBuffer, 0, part.diffuseTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+                    currentDiffuse = &part.diffuseTexture;
+                }
+
+                if (&part.roughnessTexture != currentRoughness)
+                {
+                    commandList->SetShaderResourceView(GbufferRootParams::Textures_GBuffer, 1, part.roughnessTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+                    currentRoughness = &part.roughnessTexture;
+                }
+
+                if (&part.metalnessTexture != currentMetalness)
+                {
+                    commandList->SetShaderResourceView(GbufferRootParams::Textures_GBuffer, 2, part.metalnessTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+                    currentMetalness = &part.metalnessTexture;
+                }
+
+                part.mesh->Draw(*commandList);
+            }
         }
     }
 
     // === PASS 2: Deferred Lighting ===
+    {
+        PIX_SCOPE_MARKER(profiler, commandList->GetGraphicsCommandList().Get(), L"DEFERRED_LIGHTING");
 
-    commandList->SetRenderTarget(m_HDRRenderTarget);
-    commandList->SetViewport(m_HDRRenderTarget.GetViewport());
-    commandList->SetScissorRect(m_ScissorRect);
+        commandList->SetRenderTarget(m_HDRRenderTarget);
+        commandList->SetViewport(m_HDRRenderTarget.GetViewport());
+        commandList->SetScissorRect(m_ScissorRect);
 
-    commandList->SetPipelineState(m_DeferredLightingPSO);
-    commandList->SetGraphicsRootSignature(m_DeferredLightingRootSignature);
+        commandList->SetPipelineState(m_DeferredLightingPSO);
+        commandList->SetGraphicsRootSignature(m_DeferredLightingRootSignature);
 
-    DeferredLightingCommon deferredLightingCommon;
-    deferredLightingCommon.NumPointLights = static_cast<uint32_t>(m_PointLights.size());
-    deferredLightingCommon.NumSpotLights = static_cast<uint32_t>(m_SpotLights.size());
-    deferredLightingCommon.InverseViewProjectionMatrix = XMMatrixInverse(nullptr, viewProjectionMatrix);
-    XMStoreFloat3(&deferredLightingCommon.CameraPositionWS, m_Camera.get_Translation()); // set deferredLightingCommon.CameraPositionW
-	deferredLightingCommon.LightingViewMode = static_cast<uint32_t>(m_LightingViewMode);
+        DeferredLightingCommon deferredLightingCommon;
+        deferredLightingCommon.NumPointLights = static_cast<uint32_t>(m_PointLights.size());
+        deferredLightingCommon.NumSpotLights = static_cast<uint32_t>(m_SpotLights.size());
+        deferredLightingCommon.InverseViewProjectionMatrix = XMMatrixInverse(nullptr, viewProjectionMatrix);
+        XMStoreFloat3(&deferredLightingCommon.CameraPositionWS, m_Camera.get_Translation()); // set deferredLightingCommon.CameraPositionW
+        deferredLightingCommon.LightingViewMode = static_cast<uint32_t>(m_LightingViewMode);
 
-    commandList->SetGraphics32BitConstants(DeferredRootParams::DeferredLightingCommonCB_Deferred, deferredLightingCommon);
-    commandList->SetGraphicsDynamicStructuredBuffer(DeferredRootParams::PointLights_Deferred, m_PointLights);
-    commandList->SetGraphicsDynamicStructuredBuffer(DeferredRootParams::SpotLights_Deferred, m_SpotLights);
+        // CBs:
+        commandList->SetGraphics32BitConstants(DeferredRootParams::DeferredLightingCommonCB_Deferred, deferredLightingCommon);
 
-    // G-Buffer textures
-    commandList->SetShaderResourceView(DeferredRootParams::Textures_Deferred, 0, *m_GBufferRT.GetTexture(AttachmentPoint::Color0), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);         // albedoAO
-    commandList->SetShaderResourceView(DeferredRootParams::Textures_Deferred, 1, *m_GBufferRT.GetTexture(AttachmentPoint::Color1), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);         // normal
-    commandList->SetShaderResourceView(DeferredRootParams::Textures_Deferred, 2, *m_GBufferRT.GetTexture(AttachmentPoint::Color2), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);         // pbr
-    commandList->SetShaderResourceView(DeferredRootParams::Textures_Deferred, 3, *m_GBufferRT.GetTexture(AttachmentPoint::DepthStencil), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);   // depth
+        // SRVs:
+        // 0-1: Light buffers
+        commandList->SetGraphicsDynamicStructuredBuffer(DeferredRootParams::PointLights_Deferred, m_PointLights);
+        commandList->SetGraphicsDynamicStructuredBuffer(DeferredRootParams::SpotLights_Deferred, m_SpotLights);
 
-    // Draw full-screen triangle
-    commandList->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    commandList->Draw(3);
+        // 2-5: G-Buffer textures
+        commandList->SetShaderResourceView(DeferredRootParams::Textures_Deferred, 0, *m_GBufferRT.GetTexture(AttachmentPoint::Color0), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);         // G-Buffer: AlbedoAO
+        commandList->SetShaderResourceView(DeferredRootParams::Textures_Deferred, 1, *m_GBufferRT.GetTexture(AttachmentPoint::Color1), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);         // G-Buffer: Normal
+        commandList->SetShaderResourceView(DeferredRootParams::Textures_Deferred, 2, *m_GBufferRT.GetTexture(AttachmentPoint::Color2), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);         // G-Buffer: PBR
+        commandList->SetShaderResourceView(DeferredRootParams::Textures_Deferred, 3, *m_GBufferRT.GetTexture(AttachmentPoint::DepthStencil), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);   // G-Buffer: Depth
+
+        // 6-8: IBL textures
+        D3D12_SHADER_RESOURCE_VIEW_DESC irrSrvDesc = {};
+        irrSrvDesc.Format = m_IrradianceCubemap.GetD3D12ResourceDesc().Format;
+        irrSrvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+        irrSrvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
+        irrSrvDesc.TextureCube.MipLevels = 1;   // irradiance has 1 mip
+        
+        D3D12_SHADER_RESOURCE_VIEW_DESC specSrvDesc = irrSrvDesc;
+        specSrvDesc.Format = m_SpecularPrefilterCubemap.GetD3D12ResourceDesc().Format;
+        specSrvDesc.TextureCube.MipLevels = (UINT)-1;   // all mips
+
+        commandList->SetShaderResourceView(DeferredRootParams::Textures_Deferred, 4, m_IrradianceCubemap, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, 0, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, &irrSrvDesc);
+        commandList->SetShaderResourceView(DeferredRootParams::Textures_Deferred, 5, m_SpecularPrefilterCubemap, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, 0, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, &specSrvDesc);
+        commandList->SetShaderResourceView(DeferredRootParams::Textures_Deferred, 6, m_BrdfLut, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+        // Draw full-screen triangle
+        commandList->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        commandList->Draw(3);
+    }
 }
 
 static bool g_AllowFullscreenToggle = true;
