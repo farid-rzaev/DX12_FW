@@ -81,8 +81,12 @@ GBufferOutput main(GBufferPSInput IN)
     float3 normalWS  = normalize(IN.NormalWS);
     float2 octNormal = OctahedralEncode(normalWS); // pack 3d to 2d for storage in [R10G10]
     
-    float roughness = RoughnessTexture.Sample(LinearRepeatSampler, IN.TexCoord).r * MaterialCB.Roughness;
-    float metalness = MetalnessTexture.Sample(LinearRepeatSampler, IN.TexCoord).r * MaterialCB.Metalness;
+    // Prefer metalness texture slot; falls back to roughness texture if you only bind one ORM (Occlusion, Roughness, Metalness) map
+    float3 orm = MetalnessTexture.Sample(LinearRepeatSampler, IN.TexCoord).rgb;
+    //float roughness = RoughnessTexture.Sample(LinearRepeatSampler, IN.TexCoord).r * MaterialCB.Roughness;
+    
+    float roughness = orm.g * MaterialCB.Roughness; // G = roughness
+    float metalness = orm.b * MaterialCB.Metalness; // B = metalness
     
     output.RT0 = float4(albedo, 1.0); // AO=1 placeholder
     output.RT1 = float4(octNormal, 0.0, 0.0);
