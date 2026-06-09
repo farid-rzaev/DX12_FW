@@ -69,14 +69,14 @@ struct LightResult
     float4 Specular;
 };
 
-ConstantBuffer<Material> MaterialCB : register( b0, space1 );
-ConstantBuffer<LightProperties> LightPropertiesCB : register( b1 );
+ConstantBuffer<Material> MaterialCB                 : register( b0, space1 );
+ConstantBuffer<LightProperties> LightPropertiesCB   : register( b1 );
 
-StructuredBuffer<PointLight> PointLights : register( t0 );
-StructuredBuffer<SpotLight> SpotLights : register( t1 );
-Texture2D DiffuseTexture            : register( t2 );
+StructuredBuffer<PointLight> PointLights            : register( t0 );
+StructuredBuffer<SpotLight> SpotLights              : register( t1 );
+Texture2D DiffuseTexture                            : register( t2 );
 
-SamplerState LinearRepeatSampler    : register(s0);
+SamplerState LinearRepeatSampler                    : register( s0 );
 
 float3 LinearToSRGB( float3 x )
 {
@@ -97,7 +97,9 @@ float DoSpecular( float3 V, float3 N, float3 L )
     float3 R = normalize( reflect( -L, N ) );
     float RdotV = max( 0, dot( R, V ) );
 
-    return pow( RdotV, MaterialCB.SpecularPower );
+    // Using max(1.0f, ...) to guard against SpecularPower=ZERO.
+    // Cuz pow(x, 0) = 1 for any x > 0, but pow(0, 0) is undefined and can return NaN!!!
+    return pow(RdotV, max(1.0f, MaterialCB.SpecularPower));
 }
 
 float DoAttenuation( float c, float l, float q, float d )

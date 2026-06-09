@@ -140,10 +140,13 @@ bool Sample1::LoadContent()
     auto commandList = commandQueue->GetCommandList();
 
     // Set solution dir as current working dirrectory
-    std::wstring exe_path_str = GetExePath();
-    ThrowIfFailed(exe_path_str.empty() == false, "Can't find the .exe path!");
+    std::wstring exePath = GetExePath();
+    ThrowIfFailed(exePath.empty() == false, "Can't find the .exe path!");
+    // --
+    SetWorkingDirToSolutionDir(exePath);
 
-    SetWorkingDirToSolutionDir(exe_path_str);
+    std::wstring solutionDir = exePath;
+    std::wstring shaderBytecodeDir = solutionDir + L"Shaders\\" + PROJECT_NAME;
 
     // Create a Cube mesh
     m_CubeMesh = Mesh::CreateCube( *commandList );
@@ -160,11 +163,11 @@ bool Sample1::LoadContent()
 
     // Load the vertex shader.
     ComPtr<ID3DBlob> vertexShaderBlob;
-    ThrowIfFailed( D3DReadFileToBlob( (exe_path_str + L"\\VertexShader.cso").c_str(), &vertexShaderBlob));
+    ThrowIfFailed( D3DReadFileToBlob( (shaderBytecodeDir + L"\\VertexShader.cso").c_str(), &vertexShaderBlob));
 
     // Load the pixel shader.
     ComPtr<ID3DBlob> pixelShaderBlob;
-    ThrowIfFailed( D3DReadFileToBlob( (exe_path_str + L"\\PixelShader.cso").c_str(), &pixelShaderBlob));
+    ThrowIfFailed( D3DReadFileToBlob( (shaderBytecodeDir + L"\\PixelShader.cso").c_str(), &pixelShaderBlob));
 
     // Create a root signature.
     D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};

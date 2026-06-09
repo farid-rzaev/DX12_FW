@@ -38,12 +38,13 @@ struct Mat
 {
     XMMATRIX ModelMatrix;
     XMMATRIX ModelViewMatrix;
-    XMMATRIX InverseTransposeModelViewMatrix;
+    XMMATRIX InverseTransposeModelMatrix;
     XMMATRIX ModelViewProjectionMatrix;
 };
 
 struct LightProperties
 {
+    DirectX::XMFLOAT3 CameraPositionWS;
     uint32_t NumPointLights;
     uint32_t NumSpotLights;
 };
@@ -232,15 +233,18 @@ bool Sample4::LoadContent()
     auto  commandList   = commandQueue->GetCommandList();
 
     // Set solution dir as current working dirrectory
-    std::wstring exe_path_str = GetExePath();
-    ThrowIfFailed(exe_path_str.empty() == false, "Can't find the .exe path!");
+    // Set solution dir as current working dirrectory
+    std::wstring exePath = GetExePath();
+    ThrowIfFailed(exePath.empty() == false, "Can't find the .exe path!");
     // --
-    SetWorkingDirToSolutionDir(exe_path_str);
-	std::wstring solution_dir_str = exe_path_str;
+    SetWorkingDirToSolutionDir(exePath);
+
+    std::wstring solutionDir = exePath;
+    std::wstring shaderBytecodeDir = solutionDir + L"Shaders\\" + PROJECT_NAME;
 
     // Load some textures
     commandList->LoadTextureFromFile(m_DefaultTexture, L"Assets/Textures/DefaultWhite.bmp");
-    commandList->LoadTextureFromFile(m_GraceCathedralTexture, L"Assets/Textures/grace-new.hdr");
+    commandList->LoadTextureFromFile(m_GraceCathedralPanoTexture, L"Assets/Textures/grace-new.hdr");
 
     // Create Meshes
     m_SphereMesh = Mesh::CreateSphere(*commandList);
@@ -249,8 +253,7 @@ bool Sample4::LoadContent()
     // Create an inverted (reverse winding order) cube so the insides are not clipped.
     m_SkyboxMesh = Mesh::CreateCube(*commandList, 1.0f, true);
 
-    m_LoadedMeshParts = AssimpLoader::Load(*commandList, L"Assets/Models/FBX/Sponza/Sponza.fbx", m_DefaultTexture);
-    //m_LoadedMeshParts = AssimpLoader::Load(*commandList, L"Assets/Models/FBX/sponza_2/sponza.sdkmesh", m_DefaultTexture);
+    m_LoadedMeshParts = AssimpLoader::Load(*commandList, L"Assets/Models/glTF/Sponza.gltf", m_DefaultTexture);
     
 	// [OPT_2] Sort the loaded mesh parts by their diffuse texture to minimize texture binding changes when rendering.
     std::sort(m_LoadedMeshParts.begin(), m_LoadedMeshParts.end(),
@@ -259,14 +262,14 @@ bool Sample4::LoadContent()
         });
 
     // Create a cubemap for the HDR panorama.
-    auto cubemapDesc = m_GraceCathedralTexture.GetD3D12ResourceDesc();
+    auto cubemapDesc = m_GraceCathedralPanoTexture.GetD3D12ResourceDesc();
     cubemapDesc.Width = cubemapDesc.Height = 1024;
     cubemapDesc.DepthOrArraySize = 6;
     cubemapDesc.MipLevels = 0;
 
     m_GraceCathedralCubemap = Texture(cubemapDesc, nullptr, TextureUsage::Albedo, L"Grace Cathedral Cubemap");
     // Convert the 2D panorama to a 3D cubemap.
-    commandList->PanoToCubemap(m_GraceCathedralCubemap, m_GraceCathedralTexture);
+    commandList->PanoToCubemap(m_GraceCathedralPanoTexture, m_GraceCathedralCubemap);
 
     // Create an HDR intermediate render target.
     DXGI_FORMAT HDRFormat = DXGI_FORMAT_R16G16B16A16_FLOAT;
@@ -342,8 +345,8 @@ bool Sample4::LoadContent()
         // Load the Skybox shaders.
         ComPtr<ID3DBlob> vs;
         ComPtr<ID3DBlob> ps;
-        ThrowIfFailed(D3DReadFileToBlob( (solution_dir_str + L"\\Skybox_VS.cso").c_str(), &vs));
-        ThrowIfFailed(D3DReadFileToBlob( (solution_dir_str + L"\\Skybox_PS.cso").c_str(), &ps));
+        ThrowIfFailed(D3DReadFileToBlob( (shaderBytecodeDir + L"\\Skybox_VS.cso").c_str(), &vs));
+        ThrowIfFailed(D3DReadFileToBlob( (shaderBytecodeDir + L"\\Skybox_PS.cso").c_str(), &ps));
 
         // Setup the input layout for the skybox vertex shader.
         D3D12_INPUT_ELEMENT_DESC inputLayout[1] = {
@@ -399,8 +402,8 @@ bool Sample4::LoadContent()
         // Load the HDR shaders.
         ComPtr<ID3DBlob> vs;
         ComPtr<ID3DBlob> ps;
-        ThrowIfFailed(D3DReadFileToBlob((solution_dir_str + L"\\HDR_VS.cso").c_str(), &vs));
-        ThrowIfFailed(D3DReadFileToBlob((solution_dir_str + L"\\HDR_PS.cso").c_str(), &ps));
+        ThrowIfFailed(D3DReadFileToBlob((shaderBytecodeDir + L"\\HDR_VS.cso").c_str(), &vs));
+        ThrowIfFailed(D3DReadFileToBlob((shaderBytecodeDir + L"\\HDR_PS.cso").c_str(), &ps));
 
         // Allow input layout and deny unnecessary access to certain pipeline stages.
         D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
@@ -470,8 +473,8 @@ bool Sample4::LoadContent()
         // Create the SDR PSO
         ComPtr<ID3DBlob> vs;
         ComPtr<ID3DBlob> ps;
-        ThrowIfFailed(D3DReadFileToBlob((solution_dir_str + L"\\HDRtoSDR_VS.cso").c_str(), &vs));
-        ThrowIfFailed(D3DReadFileToBlob((solution_dir_str + L"\\HDRtoSDR_PS.cso").c_str(), &ps));
+        ThrowIfFailed(D3DReadFileToBlob((shaderBytecodeDir + L"\\HDRtoSDR_VS.cso").c_str(), &vs));
+        ThrowIfFailed(D3DReadFileToBlob((shaderBytecodeDir + L"\\HDRtoSDR_PS.cso").c_str(), &ps));
 
         CD3DX12_RASTERIZER_DESC rasterizerDesc(D3D12_DEFAULT);
         rasterizerDesc.CullMode = D3D12_CULL_MODE_NONE;
@@ -528,8 +531,8 @@ bool Sample4::LoadContent()
         // === G-Buffer PSO ===
 
         ComPtr<ID3DBlob> vs, ps;
-        ThrowIfFailed(D3DReadFileToBlob((solution_dir_str + L"\\GBuffer_VS.cso").c_str(), &vs));
-        ThrowIfFailed(D3DReadFileToBlob((solution_dir_str + L"\\GBuffer_PS.cso").c_str(), &ps));
+        ThrowIfFailed(D3DReadFileToBlob((shaderBytecodeDir + L"\\GBuffer_VS.cso").c_str(), &vs));
+        ThrowIfFailed(D3DReadFileToBlob((shaderBytecodeDir + L"\\GBuffer_PS.cso").c_str(), &ps));
 
         CD3DX12_DEPTH_STENCIL_DESC1 depthStencilDesc(D3D12_DEFAULT);
         depthStencilDesc.DepthEnable = TRUE;
@@ -611,8 +614,8 @@ bool Sample4::LoadContent()
         } deferredPipelineStateStream;
 
         ComPtr<ID3DBlob> vs, ps;
-        ThrowIfFailed(D3DReadFileToBlob((solution_dir_str + L"DeferredLighting_VS.cso").c_str(), &vs));
-        ThrowIfFailed(D3DReadFileToBlob((solution_dir_str + L"DeferredLighting_PS.cso").c_str(), &ps));
+        ThrowIfFailed(D3DReadFileToBlob((shaderBytecodeDir + L"\\DeferredLighting_VS.cso").c_str(), &vs));
+        ThrowIfFailed(D3DReadFileToBlob((shaderBytecodeDir + L"\\DeferredLighting_PS.cso").c_str(), &ps));
 
         deferredPipelineStateStream.pRootSignature = m_DeferredLightingRootSignature.GetRootSignature().Get();
         deferredPipelineStateStream.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
@@ -742,9 +745,6 @@ void Sample4::OnUpdate()
             static_cast<float>(std::cos(lightAnimTime + offset * i)) * radius,
             1.0f
         };
-        XMVECTOR positionWS = XMLoadFloat4(&l.PositionWS);
-        XMVECTOR positionVS = XMVector3TransformCoord(positionWS, viewMatrix);
-        XMStoreFloat4(&l.PositionVS, positionVS);
 
         l.Color = XMFLOAT4(LightColors[i]);
         l.Intensity = 1.0f;
@@ -762,14 +762,10 @@ void Sample4::OnUpdate()
             static_cast<float>(std::cos(lightAnimTime + offset * i + offset2)) * radius,
             1.0f
         };
-        XMVECTOR positionWS = XMLoadFloat4(&l.PositionWS);
-        XMVECTOR positionVS = XMVector3TransformCoord(positionWS, viewMatrix);
-        XMStoreFloat4(&l.PositionVS, positionVS);
 
+        XMVECTOR positionWS = XMLoadFloat4(&l.PositionWS);
         XMVECTOR directionWS = XMVector3Normalize(XMVectorSetW(XMVectorNegate(positionWS), 0));
-        XMVECTOR directionVS = XMVector3Normalize(XMVector3TransformNormal(directionWS, viewMatrix));
         XMStoreFloat4(&l.DirectionWS, directionWS);
-        XMStoreFloat4(&l.DirectionVS, directionVS);
 
         l.Color = XMFLOAT4(LightColors[numPointLights + i]);
         l.Intensity = 1.0f;
@@ -1006,7 +1002,7 @@ void XM_CALLCONV ComputeMatrices(FXMMATRIX model, CXMMATRIX view, CXMMATRIX view
 {
     mat.ModelMatrix = model;
     mat.ModelViewMatrix = model * view;
-    mat.InverseTransposeModelViewMatrix = XMMatrixTranspose(XMMatrixInverse(nullptr, mat.ModelViewMatrix));
+    mat.InverseTransposeModelMatrix = XMMatrixTranspose(XMMatrixInverse(nullptr, mat.ModelMatrix));
     mat.ModelViewProjectionMatrix = model * viewProjection;
 }
 
@@ -1054,7 +1050,7 @@ void Sample4::OnRender()
         m_SkyboxMesh->Draw(*commandList);
     }
 
-	// 3. Render the scene (FBX model + debug shapes) in HDR to an off-screen render target, using either forward or deferred rendering.
+	// 3. Render the scene (model + debug shapes) in HDR to an off-screen render target, using either forward or deferred rendering.
     {
         XMMATRIX viewMatrix = m_Camera.get_ViewMatrix();
         XMMATRIX viewProjectionMatrix = viewMatrix * m_Camera.get_ProjectionMatrix();
@@ -1095,7 +1091,7 @@ void Sample4::OnRender()
 
 void Sample4::RenderForward(std::shared_ptr<CommandList> commandList, DirectX::CXMMATRIX viewMatrix, DirectX::CXMMATRIX viewProjectionMatrix)
 {
-    // 1. Draw FBX model with multiple mesh parts and materials.
+    // 1. Draw model with multiple mesh parts and materials.
     commandList->SetPipelineState(m_HDRPipelineState);
     commandList->SetGraphicsRootSignature(m_HDRRootSignature);
 
@@ -1103,12 +1099,13 @@ void Sample4::RenderForward(std::shared_ptr<CommandList> commandList, DirectX::C
     LightProperties lightProperties;
     lightProperties.NumPointLights = static_cast<uint32_t>(m_PointLights.size());
     lightProperties.NumSpotLights = static_cast<uint32_t>(m_SpotLights.size());
+    XMStoreFloat3(&lightProperties.CameraPositionWS, m_Camera.get_Translation());
 
     commandList->SetGraphics32BitConstants(RootParameters::LightPropertiesCB, lightProperties);
     commandList->SetGraphicsDynamicStructuredBuffer(RootParameters::PointLights, m_PointLights);
     commandList->SetGraphicsDynamicStructuredBuffer(RootParameters::SpotLights, m_SpotLights);
 
-	// RENDER FBX MODEL
+	// RENDER MODEL
     {
         float scale = 1 / 10.0f;
 
@@ -1224,7 +1221,7 @@ void Sample4::RenderDeferred(std::shared_ptr<CommandList> commandList, DirectX::
     commandList->SetGraphicsRootSignature(m_GBufferRootSignature);
 
     // Render meshes into G-Buffer (same loop as forward, but no lights needed)
-    // RENDER FBX MODEL
+    // RENDER MODEL
     {
         float scale = 1 / 10.0f;
 
@@ -1288,13 +1285,15 @@ void Sample4::RenderDeferred(std::shared_ptr<CommandList> commandList, DirectX::
     commandList->SetPipelineState(m_DeferredLightingPSO);
     commandList->SetGraphicsRootSignature(m_DeferredLightingRootSignature);
 
-    XMMATRIX invProj = m_Camera.get_InverseProjectionMatrix();
+    XMMATRIX viewProj = viewMatrix * m_Camera.get_ProjectionMatrix();
+    XMMATRIX invViewProj = XMMatrixInverse(nullptr, viewProj);
     
     LightProperties lightProperties;
     lightProperties.NumPointLights = static_cast<uint32_t>(m_PointLights.size());
     lightProperties.NumSpotLights = static_cast<uint32_t>(m_SpotLights.size());
+    XMStoreFloat3(&lightProperties.CameraPositionWS, m_Camera.get_Translation());
 
-    commandList->SetGraphics32BitConstants(DeferredRootParams::InvProjCB_Deferred, invProj);
+    commandList->SetGraphics32BitConstants(DeferredRootParams::InvProjCB_Deferred, invViewProj);
     commandList->SetGraphics32BitConstants(DeferredRootParams::LightPropertiesCB_Deferred, lightProperties);
     commandList->SetGraphicsDynamicStructuredBuffer(DeferredRootParams::PointLights_Deferred, m_PointLights);
     commandList->SetGraphicsDynamicStructuredBuffer(DeferredRootParams::SpotLights_Deferred, m_SpotLights);

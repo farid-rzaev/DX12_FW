@@ -249,8 +249,14 @@ void Sample0::OnResize(ResizeEventArgs& e)
 
 bool Sample0::LoadContent()
 {
-	std::wstring shaderBlobPath = GetExePath();
-	assert(shaderBlobPath.size() != 0);
+	// Set solution dir as current working dirrectory
+	std::wstring exePath = GetExePath();
+	ThrowIfFailed(exePath.empty() == false, "Can't find the .exe path!");
+	// --
+	SetWorkingDirToSolutionDir(exePath);
+
+	std::wstring solutionDir = exePath;
+	std::wstring shaderBytecodeDir = solutionDir + L"Shaders\\" + PROJECT_NAME;
 
 	auto device = Application::Get().GetDevice();
 	auto commandQueue = Application::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COPY);
@@ -287,12 +293,12 @@ bool Sample0::LoadContent()
 
 	// Load the vertex shader.
 	ComPtr<ID3DBlob> vertexShaderBlob;
-	std::wstring blobPath = std::wstring(shaderBlobPath + L"VertexShader.cso");
+	std::wstring blobPath = std::wstring(shaderBytecodeDir + L"\\VertexShader.cso");
 	ThrowIfFailed(D3DReadFileToBlob(blobPath.c_str(), &vertexShaderBlob));
 
 	// Load the pixel shader.
 	ComPtr<ID3DBlob> pixelShaderBlob;
-	blobPath = std::wstring(shaderBlobPath + L"PixelShader.cso");
+	blobPath = std::wstring(shaderBytecodeDir + L"\\PixelShader.cso");
 	ThrowIfFailed(D3DReadFileToBlob(blobPath.c_str(), &pixelShaderBlob));
 
 	// Create the vertex input layout

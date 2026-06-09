@@ -1,7 +1,7 @@
 struct PixelShaderInput
 {
-    float4 PositionVS : POSITION;
-    float3 NormalVS   : NORMAL;
+    float4 PositionWS : POSITION;
+    float3 NormalWS   : NORMAL;
     float2 TexCoord   : TEXCOORD;
 };
 
@@ -25,26 +25,20 @@ struct PointLight
 {
     float4 PositionWS; // Light position in world space.
     //----------------------------------- (16 byte boundary)
-    float4 PositionVS; // Light position in view space.
-    //----------------------------------- (16 byte boundary)
     float4 Color;
     //----------------------------------- (16 byte boundary)
     float       Intensity;
     float       Attenuation;
     float2      Padding;                // Pad to 16 bytes
     //----------------------------------- (16 byte boundary)
-    // Total:                              16 * 4 = 64 bytes
+    // Total:                              16 * 3 = 48 bytes
 };
 
 struct SpotLight
 {
     float4 PositionWS; // Light position in world space.
     //----------------------------------- (16 byte boundary)
-    float4 PositionVS; // Light position in view space.
-    //----------------------------------- (16 byte boundary)
     float4 DirectionWS; // Light direction in world space.
-    //----------------------------------- (16 byte boundary)
-    float4 DirectionVS; // Light direction in view space.
     //----------------------------------- (16 byte boundary)
     float4 Color;
     //----------------------------------- (16 byte boundary)
@@ -53,11 +47,12 @@ struct SpotLight
     float       Attenuation;
     float       Padding;                // Pad to 16 bytes.
     //----------------------------------- (16 byte boundary)
-    // Total:                              16 * 6 = 96 bytes
+    // Total:                              16 * 4 = 64 bytes
 };
 
 struct LightProperties
 {
+    float3 CameraPositionWS;
     uint NumPointLights;
     uint NumSpotLights;
 };
@@ -96,7 +91,9 @@ float DoSpecular( float3 V, float3 N, float3 L )
     float3 R = normalize( reflect( -L, N ) );
     float RdotV = max( 0, dot( R, V ) );
 
-    return pow( RdotV, MaterialCB.SpecularPower );
+    // Using max(1.0f, ...) to guard against SpecularPower=ZERO.
+    // Cuz pow(x, 0) = 1 for any x > 0, but pow(0, 0) is undefined and can return NaN!!!
+    return pow(RdotV, max(1.0f, MaterialCB.SpecularPower));
 }
 
 float DoAttenuation( float attenuation, float distance )
@@ -115,7 +112,7 @@ float DoSpotCone( float3 spotDir, float3 L, float spotAngle )
 LightResult DoPointLight( PointLight light, float3 V, float3 P, float3 N )
 {
     LightResult result;
-    float3 L = ( light.PositionVS.xyz - P );
+    float3 L = ( light.PositionWS.xyz - P );
     float d = length( L );
     L = L / d;
 
@@ -130,13 +127,13 @@ LightResult DoPointLight( PointLight light, float3 V, float3 P, float3 N )
 LightResult DoSpotLight( SpotLight light, float3 V, float3 P, float3 N )
 {
     LightResult result;
-    float3 L = ( light.PositionVS.xyz - P );
+    float3 L = ( light.PositionWS.xyz - P );
     float d = length( L );
     L = L / d;
 
     float attenuation = DoAttenuation( light.Attenuation, d );
 
-    float spotIntensity = DoSpotCone( light.DirectionVS.xyz, L, light.SpotAngle );
+    float spotIntensity = DoSpotCone( light.DirectionWS.xyz, L, light.SpotAngle );
 
     result.Diffuse = DoDiffuse( N, L ) * attenuation * spotIntensity * light.Color * light.Intensity;
     result.Specular = DoSpecular( V, N, L ) * attenuation * spotIntensity * light.Color * light.Intensity;
@@ -149,7 +146,7 @@ LightResult DoLighting( float3 P, float3 N )
     uint i;
 
     // Lighting is performed in view space.
-    float3 V = normalize( -P );
+    float3 V = normalize(LightPropertiesCB.CameraPositionWS - P);
 
     LightResult totalResult = (LightResult)0;
 
@@ -174,7 +171,7 @@ LightResult DoLighting( float3 P, float3 N )
 
 float4 main( PixelShaderInput IN ) : SV_Target
 {
-    LightResult lit = DoLighting( IN.PositionVS.xyz, normalize( IN.NormalVS ) );
+    LightResult lit = DoLighting( IN.PositionWS.xyz, normalize( IN.NormalWS ) );
 
     float4 emissive = MaterialCB.Emissive;
     float4 ambient = MaterialCB.Ambient;

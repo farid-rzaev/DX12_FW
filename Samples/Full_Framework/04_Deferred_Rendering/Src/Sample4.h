@@ -83,7 +83,7 @@ private:
     std::unique_ptr<Mesh> m_SkyboxMesh;
 
     Texture m_DefaultTexture;
-    Texture m_GraceCathedralTexture;
+    Texture m_GraceCathedralPanoTexture;
     Texture m_GraceCathedralCubemap;
 
     // HDR Render target

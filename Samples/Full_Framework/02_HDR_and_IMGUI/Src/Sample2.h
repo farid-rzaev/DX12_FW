@@ -61,7 +61,7 @@ private:
     Texture m_DirectXTexture;
     Texture m_EarthTexture;
     Texture m_MonaLisaTexture;
-    Texture m_GraceCathedralTexture;
+    Texture m_GraceCathedralPanoTexture;
     Texture m_GraceCathedralCubemap;
 
     // HDR Render target

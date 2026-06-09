@@ -48,7 +48,10 @@ float DoSpecular(float3 V, float3 N, float3 L, float specularPower)
 {
     float3 R = normalize(reflect(-L, N));
     float RdotV = max(0, dot(R, V));
-    return pow(RdotV, specularPower);
+    
+    // Using max(1.0f, ...) to guard against SpecularPower=ZERO.
+    // Cuz pow(x, 0) = 1 for any x > 0, but pow(0, 0) is undefined and can return NaN!!!
+    return pow(RdotV, max(1.0f, specularPower));
 }
 
 float DoAttenuation(float attenuation, float distance)

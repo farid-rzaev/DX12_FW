@@ -38,12 +38,13 @@ struct Mat
 {
     XMMATRIX ModelMatrix;
     XMMATRIX ModelViewMatrix;
-    XMMATRIX InverseTransposeModelViewMatrix;
+    XMMATRIX InverseTransposeModelMatrix;
     XMMATRIX ModelViewProjectionMatrix;
 };
 
 struct LightProperties
 {
+    DirectX::XMFLOAT3 CameraPositionWS;
     uint32_t NumPointLights;
     uint32_t NumSpotLights;
 };
@@ -216,10 +217,13 @@ bool Sample2::LoadContent()
     auto  commandList   = commandQueue->GetCommandList();
 
     // Set solution dir as current working dirrectory
-    std::wstring exe_path_str = GetExePath();
-    ThrowIfFailed(exe_path_str.empty() == false, "Can't find the .exe path!");
+    std::wstring exePath = GetExePath();
+    ThrowIfFailed(exePath.empty() == false, "Can't find the .exe path!");
     // --
-    SetWorkingDirToSolutionDir(exe_path_str);
+    SetWorkingDirToSolutionDir(exePath);
+
+    std::wstring solutionDir = exePath;
+    std::wstring shaderBytecodeDir = solutionDir + L"Shaders\\" + PROJECT_NAME;
 
     // Create a Cube mesh
     m_CubeMesh = Mesh::CreateCube(*commandList);
@@ -235,18 +239,17 @@ bool Sample2::LoadContent()
     commandList->LoadTextureFromFile(m_DirectXTexture, L"Assets/Textures/Directx9.png");
     commandList->LoadTextureFromFile(m_EarthTexture, L"Assets/Textures/earth.dds");
     commandList->LoadTextureFromFile(m_MonaLisaTexture, L"Assets/Textures/Mona_Lisa.jpg");
-    commandList->LoadTextureFromFile(m_GraceCathedralTexture, L"Assets/Textures/grace-new.hdr");
-//    commandList->LoadTextureFromFile(m_GraceCathedralTexture, L"Assets/Textures/UV_Test_Pattern.png");
+    commandList->LoadTextureFromFile(m_GraceCathedralPanoTexture, L"Assets/Textures/grace-new.hdr");
 
     // Create a cubemap for the HDR panorama.
-    auto cubemapDesc = m_GraceCathedralTexture.GetD3D12ResourceDesc();
+    auto cubemapDesc = m_GraceCathedralPanoTexture.GetD3D12ResourceDesc();
     cubemapDesc.Width = cubemapDesc.Height = 1024;
     cubemapDesc.DepthOrArraySize = 6;
     cubemapDesc.MipLevels = 0;
 
     m_GraceCathedralCubemap = Texture(cubemapDesc, nullptr, TextureUsage::Albedo, L"Grace Cathedral Cubemap");
     // Convert the 2D panorama to a 3D cubemap.
-    commandList->PanoToCubemap(m_GraceCathedralCubemap, m_GraceCathedralTexture);
+    commandList->PanoToCubemap(m_GraceCathedralPanoTexture, m_GraceCathedralCubemap);
 
     // Create an HDR intermediate render target.
     DXGI_FORMAT HDRFormat = DXGI_FORMAT_R16G16B16A16_FLOAT;
@@ -295,8 +298,8 @@ bool Sample2::LoadContent()
         // Load the Skybox shaders.
         ComPtr<ID3DBlob> vs;
         ComPtr<ID3DBlob> ps;
-        ThrowIfFailed(D3DReadFileToBlob( (exe_path_str + L"\\Skybox_VS.cso").c_str(), &vs));
-        ThrowIfFailed(D3DReadFileToBlob( (exe_path_str + L"\\Skybox_PS.cso").c_str(), &ps));
+        ThrowIfFailed(D3DReadFileToBlob( (shaderBytecodeDir + L"\\Skybox_VS.cso").c_str(), &vs));
+        ThrowIfFailed(D3DReadFileToBlob( (shaderBytecodeDir + L"\\Skybox_PS.cso").c_str(), &ps));
 
         // Setup the input layout for the skybox vertex shader.
         D3D12_INPUT_ELEMENT_DESC inputLayout[1] = {
@@ -352,8 +355,8 @@ bool Sample2::LoadContent()
         // Load the HDR shaders.
         ComPtr<ID3DBlob> vs;
         ComPtr<ID3DBlob> ps;
-        ThrowIfFailed(D3DReadFileToBlob((exe_path_str + L"\\HDR_VS.cso").c_str(), &vs));
-        ThrowIfFailed(D3DReadFileToBlob((exe_path_str + L"\\HDR_PS.cso").c_str(), &ps));
+        ThrowIfFailed(D3DReadFileToBlob((shaderBytecodeDir + L"\\HDR_VS.cso").c_str(), &vs));
+        ThrowIfFailed(D3DReadFileToBlob((shaderBytecodeDir + L"\\HDR_PS.cso").c_str(), &ps));
 
         // Allow input layout and deny unnecessary access to certain pipeline stages.
         D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
@@ -424,8 +427,8 @@ bool Sample2::LoadContent()
         // Create the SDR PSO
         ComPtr<ID3DBlob> vs;
         ComPtr<ID3DBlob> ps;
-        ThrowIfFailed(D3DReadFileToBlob((exe_path_str + L"\\HDRtoSDR_VS.cso").c_str(), &vs));
-        ThrowIfFailed(D3DReadFileToBlob((exe_path_str + L"\\HDRtoSDR_PS.cso").c_str(), &ps));
+        ThrowIfFailed(D3DReadFileToBlob((shaderBytecodeDir + L"\\HDRtoSDR_VS.cso").c_str(), &vs));
+        ThrowIfFailed(D3DReadFileToBlob((shaderBytecodeDir + L"\\HDRtoSDR_PS.cso").c_str(), &ps));
 
         CD3DX12_RASTERIZER_DESC rasterizerDesc(D3D12_DEFAULT);
         rasterizerDesc.CullMode = D3D12_CULL_MODE_NONE;
@@ -561,8 +564,6 @@ void Sample2::OnUpdate()
             1.0f
         };
         XMVECTOR positionWS = XMLoadFloat4(&l.PositionWS);
-        XMVECTOR positionVS = XMVector3TransformCoord(positionWS, viewMatrix);
-        XMStoreFloat4(&l.PositionVS, positionVS);
 
         l.Color = XMFLOAT4(LightColors[i]);
         l.Intensity = 1.0f;
@@ -581,13 +582,9 @@ void Sample2::OnUpdate()
             1.0f
         };
         XMVECTOR positionWS = XMLoadFloat4(&l.PositionWS);
-        XMVECTOR positionVS = XMVector3TransformCoord(positionWS, viewMatrix);
-        XMStoreFloat4(&l.PositionVS, positionVS);
 
         XMVECTOR directionWS = XMVector3Normalize(XMVectorSetW(XMVectorNegate(positionWS), 0));
-        XMVECTOR directionVS = XMVector3Normalize(XMVector3TransformNormal(directionWS, viewMatrix));
         XMStoreFloat4(&l.DirectionWS, directionWS);
-        XMStoreFloat4(&l.DirectionVS, directionVS);
 
         l.Color = XMFLOAT4(LightColors[numPointLights + i]);
         l.Intensity = 1.0f;
@@ -812,7 +809,7 @@ void XM_CALLCONV ComputeMatrices(FXMMATRIX model, CXMMATRIX view, CXMMATRIX view
 {
     mat.ModelMatrix = model;
     mat.ModelViewMatrix = model * view;
-    mat.InverseTransposeModelViewMatrix = XMMatrixTranspose(XMMatrixInverse(nullptr, mat.ModelViewMatrix));
+    mat.InverseTransposeModelMatrix = XMMatrixTranspose(XMMatrixInverse(nullptr, mat.ModelMatrix));
     mat.ModelViewProjectionMatrix = model * viewProjection;
 }
 
@@ -868,6 +865,7 @@ void Sample2::OnRender()
     LightProperties lightProps;
     lightProps.NumPointLights = static_cast<uint32_t>(m_PointLights.size());
     lightProps.NumSpotLights = static_cast<uint32_t>(m_SpotLights.size());
+    XMStoreFloat3(&lightProps.CameraPositionWS, m_Camera.get_Translation());
 
     commandList->SetGraphics32BitConstants(RootParameters::LightPropertiesCB, lightProps);
     commandList->SetGraphicsDynamicStructuredBuffer(RootParameters::PointLights, m_PointLights);

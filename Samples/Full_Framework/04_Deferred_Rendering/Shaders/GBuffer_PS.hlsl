@@ -1,7 +1,7 @@
 struct GBufferPSInput
 {
-    float4 PositionVS : POSITION;
-    float3 NormalVS   : NORMAL;
+    float4 PositionWS : POSITION;
+    float3 NormalWS   : NORMAL;
     float2 TexCoord   : TEXCOORD;
 };
 
@@ -51,9 +51,9 @@ GBufferOutput main(GBufferPSInput IN)
     // Store albedo (diffuse color) and specular power
     output.Albedo = float4((MaterialCB.Diffuse * texColor).rgb, MaterialCB.SpecularPower / 256.0); // Normalize specular power to [0,1]
     
-    // Store view-space normal (pack from [-1,1] to [0,1])
-    float3 normalVS = normalize(IN.NormalVS);
-    output.Normal = float4(normalVS * 0.5 + 0.5, 1.0);
+    // Store world-space normal (pack from [-1,1] to [0,1])
+    float3 normalWS = normalize(IN.NormalWS);
+    output.Normal = float4(normalWS * 0.5 + 0.5, 1.0);
     
     return output;
 }

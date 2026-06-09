@@ -38,12 +38,13 @@ struct Mat
 {
     XMMATRIX ModelMatrix;
     XMMATRIX ModelViewMatrix;
-    XMMATRIX InverseTransposeModelViewMatrix;
+    XMMATRIX InverseTransposeModelMatrix;
     XMMATRIX ModelViewProjectionMatrix;
 };
 
 struct LightProperties
 {
+    DirectX::XMFLOAT3 CameraPositionWS;
     uint32_t NumPointLights;
     uint32_t NumSpotLights;
 };
@@ -198,12 +199,12 @@ bool Sample3::Initialize(const wchar_t* windowTitle, int width, int height, bool
 
     // --
 
-    XMVECTOR cameraPos = XMVectorSet(10, 10, -40, 1);
+    XMVECTOR cameraPos = XMVectorSet(10, 10, -20, 1);
     XMVECTOR cameraTarget = XMVectorSet(0, 5, 0, 1);
     XMVECTOR cameraUp = XMVectorSet(0, 1, 0, 0);
 
     m_Camera.set_LookAt(cameraPos, cameraTarget, cameraUp);
-    m_Camera.set_Projection(45.0f, width / (float)height, 0.1f, 100.0f);
+    m_Camera.set_Projection(45.0f, width / (float)height, 0.1f, 200.0f);
 
     return true;
 }
@@ -216,15 +217,18 @@ bool Sample3::LoadContent()
     auto  commandList   = commandQueue->GetCommandList();
 
     // Set solution dir as current working dirrectory
-    std::wstring exe_path_str = GetExePath();
-    ThrowIfFailed(exe_path_str.empty() == false, "Can't find the .exe path!");
+    std::wstring exePath = GetExePath();
+    ThrowIfFailed(exePath.empty() == false, "Can't find the .exe path!");
     // --
-    SetWorkingDirToSolutionDir(exe_path_str);
+    SetWorkingDirToSolutionDir(exePath);
+
+    std::wstring solutionDir = exePath;
+    std::wstring shaderBytecodeDir = solutionDir + L"Shaders\\" + PROJECT_NAME;
 
     // Load some textures
     commandList->LoadTextureFromFile(m_DefaultTexture, L"Assets/Textures/DefaultWhite.bmp");
     commandList->LoadTextureFromFile(m_DirectXTexture, L"Assets/Textures/Directx9.png");
-    commandList->LoadTextureFromFile(m_GraceCathedralTexture, L"Assets/Textures/grace-new.hdr");
+    commandList->LoadTextureFromFile(m_GraceCathedralPanoTexture, L"Assets/Textures/grace-new.hdr");
 
     // Create Meshes
     m_SphereMesh = Mesh::CreateSphere(*commandList);
@@ -233,8 +237,7 @@ bool Sample3::LoadContent()
     // Create an inverted (reverse winding order) cube so the insides are not clipped.
     m_SkyboxMesh = Mesh::CreateCube(*commandList, 1.0f, true);
 
-    m_LoadedMeshParts = AssimpLoader::Load(*commandList, L"Assets/Models/FBX/Sponza/Sponza.fbx", m_DefaultTexture);
-    //m_LoadedMeshParts = AssimpLoader::Load(*commandList, L"Assets/Models/FBX/sponza_2/sponza.sdkmesh", m_DefaultTexture);
+    m_LoadedMeshParts = AssimpLoader::Load(*commandList, L"Assets/Models/glTF/Sponza.gltf", m_DefaultTexture);
     
 	// [OPT_2] Sort the loaded mesh parts by their diffuse texture to minimize texture binding changes when rendering.
     std::sort(m_LoadedMeshParts.begin(), m_LoadedMeshParts.end(),
@@ -243,14 +246,14 @@ bool Sample3::LoadContent()
         });
 
     // Create a cubemap for the HDR panorama.
-    auto cubemapDesc = m_GraceCathedralTexture.GetD3D12ResourceDesc();
+    auto cubemapDesc = m_GraceCathedralPanoTexture.GetD3D12ResourceDesc();
     cubemapDesc.Width = cubemapDesc.Height = 1024;
     cubemapDesc.DepthOrArraySize = 6;
     cubemapDesc.MipLevels = 0;
 
     m_GraceCathedralCubemap = Texture(cubemapDesc, nullptr, TextureUsage::Albedo, L"Grace Cathedral Cubemap");
     // Convert the 2D panorama to a 3D cubemap.
-    commandList->PanoToCubemap(m_GraceCathedralCubemap, m_GraceCathedralTexture);
+    commandList->PanoToCubemap(m_GraceCathedralPanoTexture, m_GraceCathedralCubemap);
 
     // Create an HDR intermediate render target.
     DXGI_FORMAT HDRFormat = DXGI_FORMAT_R16G16B16A16_FLOAT;
@@ -299,8 +302,8 @@ bool Sample3::LoadContent()
         // Load the Skybox shaders.
         ComPtr<ID3DBlob> vs;
         ComPtr<ID3DBlob> ps;
-        ThrowIfFailed(D3DReadFileToBlob( (exe_path_str + L"\\Skybox_VS.cso").c_str(), &vs));
-        ThrowIfFailed(D3DReadFileToBlob( (exe_path_str + L"\\Skybox_PS.cso").c_str(), &ps));
+        ThrowIfFailed(D3DReadFileToBlob( (shaderBytecodeDir + L"\\Skybox_VS.cso").c_str(), &vs));
+        ThrowIfFailed(D3DReadFileToBlob( (shaderBytecodeDir + L"\\Skybox_PS.cso").c_str(), &ps));
 
         // Setup the input layout for the skybox vertex shader.
         D3D12_INPUT_ELEMENT_DESC inputLayout[1] = {
@@ -356,8 +359,8 @@ bool Sample3::LoadContent()
         // Load the HDR shaders.
         ComPtr<ID3DBlob> vs;
         ComPtr<ID3DBlob> ps;
-        ThrowIfFailed(D3DReadFileToBlob((exe_path_str + L"\\HDR_VS.cso").c_str(), &vs));
-        ThrowIfFailed(D3DReadFileToBlob((exe_path_str + L"\\HDR_PS.cso").c_str(), &ps));
+        ThrowIfFailed(D3DReadFileToBlob((shaderBytecodeDir + L"\\HDR_VS.cso").c_str(), &vs));
+        ThrowIfFailed(D3DReadFileToBlob((shaderBytecodeDir + L"\\HDR_PS.cso").c_str(), &ps));
 
         // Allow input layout and deny unnecessary access to certain pipeline stages.
         D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
@@ -428,8 +431,8 @@ bool Sample3::LoadContent()
         // Create the SDR PSO
         ComPtr<ID3DBlob> vs;
         ComPtr<ID3DBlob> ps;
-        ThrowIfFailed(D3DReadFileToBlob((exe_path_str + L"\\HDRtoSDR_VS.cso").c_str(), &vs));
-        ThrowIfFailed(D3DReadFileToBlob((exe_path_str + L"\\HDRtoSDR_PS.cso").c_str(), &ps));
+        ThrowIfFailed(D3DReadFileToBlob((shaderBytecodeDir + L"\\HDRtoSDR_VS.cso").c_str(), &vs));
+        ThrowIfFailed(D3DReadFileToBlob((shaderBytecodeDir + L"\\HDRtoSDR_PS.cso").c_str(), &ps));
 
         CD3DX12_RASTERIZER_DESC rasterizerDesc(D3D12_DEFAULT);
         rasterizerDesc.CullMode = D3D12_CULL_MODE_NONE;
@@ -565,8 +568,6 @@ void Sample3::OnUpdate()
             1.0f
         };
         XMVECTOR positionWS = XMLoadFloat4(&l.PositionWS);
-        XMVECTOR positionVS = XMVector3TransformCoord(positionWS, viewMatrix);
-        XMStoreFloat4(&l.PositionVS, positionVS);
 
         l.Color = XMFLOAT4(LightColors[i]);
         l.Intensity = 1.0f;
@@ -585,13 +586,9 @@ void Sample3::OnUpdate()
             1.0f
         };
         XMVECTOR positionWS = XMLoadFloat4(&l.PositionWS);
-        XMVECTOR positionVS = XMVector3TransformCoord(positionWS, viewMatrix);
-        XMStoreFloat4(&l.PositionVS, positionVS);
 
         XMVECTOR directionWS = XMVector3Normalize(XMVectorSetW(XMVectorNegate(positionWS), 0));
-        XMVECTOR directionVS = XMVector3Normalize(XMVector3TransformNormal(directionWS, viewMatrix));
         XMStoreFloat4(&l.DirectionWS, directionWS);
-        XMStoreFloat4(&l.DirectionVS, directionVS);
 
         l.Color = XMFLOAT4(LightColors[numPointLights + i]);
         l.Intensity = 1.0f;
@@ -816,7 +813,7 @@ void XM_CALLCONV ComputeMatrices(FXMMATRIX model, CXMMATRIX view, CXMMATRIX view
 {
     mat.ModelMatrix = model;
     mat.ModelViewMatrix = model * view;
-    mat.InverseTransposeModelViewMatrix = XMMatrixTranspose(XMMatrixInverse(nullptr, mat.ModelViewMatrix));
+    mat.InverseTransposeModelMatrix = XMMatrixTranspose(XMMatrixInverse(nullptr, mat.ModelMatrix));
     mat.ModelViewProjectionMatrix = model * viewProjection;
 }
 
@@ -864,7 +861,7 @@ void Sample3::OnRender()
         m_SkyboxMesh->Draw(*commandList);
     }
 
-    // 3. Draw FBX model with multiple mesh parts and materials.
+    // 3. Draw model with multiple mesh parts and materials.
     commandList->SetPipelineState(m_HDRPipelineState);
     commandList->SetGraphicsRootSignature(m_HDRRootSignature);
 
@@ -872,12 +869,12 @@ void Sample3::OnRender()
     LightProperties lightProperties;
     lightProperties.NumPointLights = static_cast<uint32_t>(m_PointLights.size());
     lightProperties.NumSpotLights = static_cast<uint32_t>(m_SpotLights.size());
+    XMStoreFloat3(&lightProperties.CameraPositionWS, m_Camera.get_Translation());
 
     commandList->SetGraphics32BitConstants(RootParameters::LightPropertiesCB, lightProperties);
     commandList->SetGraphicsDynamicStructuredBuffer(RootParameters::PointLights, m_PointLights);
     commandList->SetGraphicsDynamicStructuredBuffer(RootParameters::SpotLights, m_SpotLights);
-    // --
-    
+
     XMMATRIX translationMatrix = XMMatrixTranslation(-4.0f, 2.0f, -4.0f);
     XMMATRIX rotationMatrix = XMMatrixIdentity();
     XMMATRIX scaleMatrix = XMMatrixScaling(4.0f, 4.0f, 4.0f);
