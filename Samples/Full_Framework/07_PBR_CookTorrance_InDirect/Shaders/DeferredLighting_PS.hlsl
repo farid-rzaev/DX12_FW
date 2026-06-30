@@ -382,7 +382,11 @@ float4 main(float2 texCoord : TEXCOORD /*UV space*/) : SV_Target
     const float MAX_REFLECTION_LOD = 7.0;
     float3 prefilteredColor = SpecularPrefilterCube.SampleLevel(linearClampSampler, R, roughness * MAX_REFLECTION_LOD).rgb;
     
-    // BRDF LUT stores (A, B) for: specular = prefiltered * (F*A + B)
+    // BRDF LUT stores (A, B) for: specularIBL
+    // Correct phisically based formula for specularIBL = prefilteredColor * (F0 * A + B);
+    // But here we use non phisically based approximation: specularIBL = prefilteredColor * (F_ibl * A + B);
+    // The difference is an extra (1-F0)*(1-NdotV)^5 term in F_ibl instead of just F0. This double-counts the grazing-angle Fresnel.
+    // It makes IBL specular look brighter and more dramatic at grazing angles. For more details see IBL_BRDF_LUT_CS.hlsl - STEP_6.
     float2 envBRDF = BrdfLut.Sample(linearClampSampler, float2(NdotV, roughness)).rg;
     float3 indirectSpecularIBL = prefilteredColor * (F_ibl * envBRDF.x + envBRDF.y);
 #endif
