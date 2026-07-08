@@ -23,11 +23,11 @@ enum class LightingViewMode : uint32_t
     Normals,             // [RT1] World-space normals as color - catches normal bugs
     PBR,                 // [RT2] Roughness/Metalness/Emissive
     Depth,               // Linear or Raw depth
-    DiffuseOnly,         // Lighting: Diffuse  term only
-    SpecularOnly,        // Lighting: Specular term only
-    AmbientOnly,         // Lighting: Ambient  term only
-    IndirectDiffuseIBL,  // Lighting: Indirect Diffuse lighting from image-based lighting
-	IndirectSpecularIBL, // Lighting: Indirect Specular lighting from image-based lighting
+    DirectDiffuse,         // Lighting: Diffuse  term only
+    DirectSpecular,        // Lighting: Specular term only
+    IndirectDiffSpecIBL, // Lighting: IndirectDiffuseIBL + IndirectSpecularIBL from image-based lighting
+    IndirectDiffuseIBL,  // Lighting: Indirect Diffuse from image-based lighting
+	IndirectSpecularIBL, // Lighting: Indirect Specular from image-based lighting
     Count
 };
 

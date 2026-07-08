@@ -143,7 +143,7 @@ public:
      // Generate a cubemap texture from a panoramic (equirectangular) texture.
     void PanoToCubemap(const Texture& inPanoTexture, Texture& outCubemapTexture);
 
-    void EnvToIrradianceCubemap(const Texture& cubemapTexture, const Texture& panoTexture);
+    void EnvToIrradianceCubemap(const Texture& inCubemapTexture, const Texture& outIrradianceTexture);
     void EnvToSpecularPrefilterCubemap(const Texture& inCubemapTexture, const Texture& outSpecularPrefilterTexture);
     void BrdfLut(const Texture& outBrdfLutTexture);
 

@@ -944,7 +944,7 @@ void Sample7::OnGUI()
 
         {
             const char* modes[] = { "Final", "Albedo", "Normals", "PBR", "Depth",
-                                    "Diffuse Only", "Specular Only", "Ambient Only",
+                                    "DirectDiffuse", "DirectSpecular", "IndirectDiffuseIBL + IndirectSpecularIBL",
                                     "IndirectDiffuseIBL", "IndirectSpecularIBL"};
             int current = static_cast<int>(m_LightingViewMode);
 
@@ -954,7 +954,7 @@ void Sample7::OnGUI()
             }
 
             ImGui::SameLine();
-            ShowHelpMarker("Final - Normal lit output;\n Albedo - [RT0] Raw albedo;\n Normals - [RT1] World-space normals;\n PBR - [RT2] Roughness/Metalness/Emissive;\n Depth - Linear or Raw depth;\n DiffuseOnly - Lighting (diffuse  term only);\n SpecularOnly - Lighting (specular term only);\n AmbientOnly - Lighting (ambient  term only).");
+            ShowHelpMarker("Final - Normal lit output;\n Albedo - [RT0] Raw albedo;\n Normals - [RT1] World-space normals;\n PBR - [RT2] Roughness/Metalness/Emissive;\n Depth - Linear or Raw depth;\n DirectDiffuse;\n DirectSpecular;\n IndirectDiffuseIBL + IndirectSpecularIBL;\n IndirectDiffuseIBL;\n IndirectSpecularIBL.");
         }
 
         {

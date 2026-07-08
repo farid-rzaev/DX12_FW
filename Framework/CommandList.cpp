@@ -754,16 +754,17 @@ void CommandList::EnvToIrradianceCubemap(const Texture& inCubemapTexture, const 
 
         SetShaderResourceView(EnvToIrradianceCubemapRS::SrcCubemap, 0, inCubemapTexture, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, 0, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, &srvDesc);
 
-        //D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
-        //uavDesc.Format = Texture::GetUAVCompatableFormat(cubemapDesc.Format);
-        //uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
-        //uavDesc.Texture2DArray.FirstArraySlice = 0;
-        //uavDesc.Texture2DArray.ArraySize = 6;
+        D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+        uavDesc.Format = Texture::GetUAVCompatableFormat(outIrradianceTexture.GetD3D12ResourceDesc().Format);
+        uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
+        uavDesc.Texture2DArray.FirstArraySlice = 0;
+        uavDesc.Texture2DArray.ArraySize = 6;
+        uavDesc.Texture2DArray.MipSlice = 0;
 
         // pDesc = nullptr => D3D will guess defaults from resource: format and dimension (if NOT TYPELESS).
         // If the resource is Buffer:  UAV will cover the entire buffer. It will be treated as a typed buffer (not raw/structured unless explicitly defined). ["Use the whole buffer, interpreted using its format."]
         // If the resource is Texture: It will use - Mip level 0 (the highest resolution). If it’s an Array Texture: will use All array slices. ["Bind the top-level mip of the texture, across all slices."]
-        SetUnorderedAccessView(EnvToIrradianceCubemapRS::DstCubemap, 0, outIrradianceTexture, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+        SetUnorderedAccessView(EnvToIrradianceCubemapRS::DstCubemap, 0, outIrradianceTexture, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, 0, 0, &uavDesc);
 
 		// Output size = 32. Thread group size = 8. Dispatch(4, 4, 6) will generate a 32x32 cubemap face (with 6 faces) in a single dispatch.
         Dispatch(4, 4, 6);
@@ -867,9 +868,7 @@ void CommandList::BrdfLut(const Texture& outBrdfLutTexture)
 
         //D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
         //uavDesc.Format = Texture::GetUAVCompatableFormat(cubemapDesc.Format);
-        //uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
-        //uavDesc.Texture2DArray.FirstArraySlice = 0;
-        //uavDesc.Texture2DArray.ArraySize = 6;
+        //uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
 
         // pDesc = nullptr => D3D will guess defaults from resource: format and dimension (if NOT TYPELESS).
         // If the resource is Buffer:  UAV will cover the entire buffer. It will be treated as a typed buffer (not raw/structured unless explicitly defined). ["Use the whole buffer, interpreted using its format."]
@@ -879,7 +878,7 @@ void CommandList::BrdfLut(const Texture& outBrdfLutTexture)
         // Thread group size = 8, outBrdfLutTexture=512x512x1 => Dispatch(64, 64, 1) in a single dispatch.
         auto outTexureDesc = outBrdfLutTexture.GetD3D12ResourceDesc();
         uint32_t dispatchSize = std::max<uint32_t>(1u, Math::DivideByMultiple(outTexureDesc.Width, 8));
-        Dispatch(64, 64, 1);
+        Dispatch(dispatchSize, dispatchSize, 1);
     }
 }
 

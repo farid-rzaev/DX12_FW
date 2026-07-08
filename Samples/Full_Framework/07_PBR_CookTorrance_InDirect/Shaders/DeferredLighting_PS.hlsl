@@ -378,9 +378,13 @@ float4 main(float2 texCoord : TEXCOORD /*UV space*/) : SV_Target
     // R = reflection direction; sample blurred env map by roughness
     float3 R = reflect(-V, normalWS);
     
-    // 128×128 cubemap => 8 mips (0..7). Mip index = roughness * 7
-    const float MAX_REFLECTION_LOD = 7.0;
-    float3 prefilteredColor = SpecularPrefilterCube.SampleLevel(linearClampSampler, R, roughness * MAX_REFLECTION_LOD).rgb;
+    uint faceSize, mipCount;
+    SpecularPrefilterCube.GetDimensions(faceSize, mipCount);
+    float maxLod = float(mipCount) - 1.0;
+    float lod = roughness * maxLod;
+    
+    // 128×128 cubemap => 8 mips (0..7) => maxLod=7 => lod (Mip index) = roughness * 7
+    float3 prefilteredColor = SpecularPrefilterCube.SampleLevel(linearClampSampler, R, lod).rgb;
     
     // BRDF LUT stores (A, B) for: specularIBL
     // Correct phisically based formula for specularIBL = prefilteredColor * (F0 * A + B);
@@ -397,7 +401,7 @@ float4 main(float2 texCoord : TEXCOORD /*UV space*/) : SV_Target
  #if !defined(ACTIVATE_IBL)
     if (lightingViewMode == 7) return float4(ambient, 1.0);                                  // Lighting: ambient  term only
 #else
-    if (lightingViewMode == 7) return float4(indirectDiffuseIBL + indirectSpecularIBL, 1.0); // Lighting: Ambient  term only
+    if (lightingViewMode == 7) return float4(indirectDiffuseIBL + indirectSpecularIBL, 1.0); // Lighting: Indirect Diffuse + Indirect Specular from image-based lighting
     if (lightingViewMode == 8) return float4(indirectDiffuseIBL, 1.0);                       // Lighting: Indirect Diffuse lighting from image-based lighting
     if (lightingViewMode == 9) return float4(indirectSpecularIBL, 1.0);                      // Lighting: Indirect Specular lighting from image-based lighting
 #endif

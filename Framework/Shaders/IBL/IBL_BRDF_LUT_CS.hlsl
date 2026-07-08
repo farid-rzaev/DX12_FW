@@ -15,8 +15,8 @@
 //-----------------------------------------------------------------------------------------------------------------------------------
 // DETAILED_EPLANATION:
 //-----------------------------------------------------------------------------------------------------------------------------------
-// 1. Rendering equation:
-// L_o(v) = L_o(v) + INT_[hemisphere] {f_r(v,l) * L_i(l) * cos(Theta) dw }    <-  where L_o(v) = OutgoingRadiance; L_e(v) = EmitedRadiance; 
+// 1. Rendering equation (from my notion):
+// L_o(v) = L_e(v) + INT_[hemisphere] {f_r(v,l) * L_i(l) * cos(Theta) dw }    <-  where L_o(v) = OutgoingRadiance; L_e(v) = EmitedRadiance; 
 //                                                                                L_i(l) = IncomingRadiance; f_r(v,l) = BRDF
 //                                                                                L_i(l) * cos(Theta) dw = Irradiance
 // Rendering equation (simplified for SPECULAR IBL):
@@ -167,11 +167,12 @@
 //  Adding a second Fresnel boost at the macro NdotV angle is not derived from the math.
 //  -- 
 //  Why is it done this way anyway?
-//    It is a widespread approximation that came from learnopengl.com tutorials and other resources. Reasons it persists:
-//    It makes IBL specular look brighter and more dramatic at grazing angles, which many people prefer visually
-//    The error is subtle for mid-roughness materials at non-grazing angles
-//    It is a common copy-paste that spread through many codebases
-//  If you want to stay consistent with the derivation, use: F0 instead of F_ibl.
+//    It is a widespread approximation that came from learnopengl.com tutorials and other resources. 
+//    Reasons it persists:
+//     - It makes IBL specular look brighter and more dramatic at grazing angles, which many people prefer visually
+//     - The error is subtle for mid-roughness materials at non-grazing angles
+//     - It is a common copy-paste that spread through many codebases
+//  If one wants to stay consistent with the derivation, could just use: F0 instead of F_ibl.
 
 // -----------------------------------------------------------------------------------------------------------------------------------
 float GeometrySchlickGGX(float NdotV, float roughness)
