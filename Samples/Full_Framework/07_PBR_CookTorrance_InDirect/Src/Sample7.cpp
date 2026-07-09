@@ -284,64 +284,13 @@ bool Sample7::LoadContent()
         computeCommandList->PanoToCubemap(m_GraceCathedralPanoTexture, m_GraceCathedralCubemap);
     }
 
-	// ------------------   IBL Precomputation   ------------------
-
-    // Diffuse low-frequency (no sharp detail) ambient - hemisphere convolution 
+	// IBL Precomputation 
     {
-        // IrradianceCubemap(R16G16B16A16_FLOAT, 32x32, array 6, mips 1, UAV)
-        D3D12_RESOURCE_DESC irradianceCubemapDesc{};
-        irradianceCubemapDesc.Dimension             = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-        irradianceCubemapDesc.Height                = 32;
-        irradianceCubemapDesc.Width                 = 32;
-        irradianceCubemapDesc.DepthOrArraySize      = 6;
-        irradianceCubemapDesc.MipLevels             = 1;
-        irradianceCubemapDesc.Format                = DXGI_FORMAT_R16G16B16A16_FLOAT;
-        irradianceCubemapDesc.Flags                 = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-        irradianceCubemapDesc.SampleDesc.Count      = 1;
-        irradianceCubemapDesc.SampleDesc.Quality    = 0;
-        // --
-        m_IrradianceCubemap = Texture(irradianceCubemapDesc, nullptr, TextureUsage::RenderTarget, L"IBL - Irradiance Cubemap");
-
-        computeCommandList->EnvToIrradianceCubemap(m_GraceCathedralCubemap, m_IrradianceCubemap);
-    }
-
-    // Specular GGX prefilter across roughness / mips(keeps reflections, blur varies by roughness).
-    {
-        // m_SpecularPrefilterCubemap(R16G16B16A16_FLOAT, 128x128, array 6, full mips, UAV)
-        D3D12_RESOURCE_DESC specCubemapDesc = m_GraceCathedralCubemap.GetD3D12ResourceDesc();
-        specCubemapDesc.Width               = 128;
-        specCubemapDesc.Height              = 128;
-        specCubemapDesc.DepthOrArraySize    = 6;
-        specCubemapDesc.MipLevels           = 0;        // FULL mip chain
-        specCubemapDesc.Flags              |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-        // --
-        m_SpecularPrefilterCubemap = Texture(specCubemapDesc, nullptr, TextureUsage::RenderTarget, L"IBL - Specular Prefilter Cubemap");
-
-        computeCommandList->EnvToSpecularPrefilterCubemap(m_GraceCathedralCubemap, m_SpecularPrefilterCubemap);
-    }
-
-	// BRDF LUT for split-sum approximation of the specular IBL integral.
-    {
-        // m_BrdfLut(R16G16_FLOAT, 512x512, array 1, mips 1, UAV)
-        D3D12_RESOURCE_DESC brdfLUTDesc = {};
-        brdfLUTDesc.Dimension           = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-        brdfLUTDesc.Width               = 512;
-        brdfLUTDesc.Height              = 512;
-        brdfLUTDesc.DepthOrArraySize    = 1;
-        brdfLUTDesc.MipLevels           = 1;
-        brdfLUTDesc.Format              = DXGI_FORMAT_R16G16_FLOAT;
-        brdfLUTDesc.Flags               = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-        brdfLUTDesc.SampleDesc.Count    = 1;
-        brdfLUTDesc.SampleDesc.Quality  = 0;
-        // --
-        m_BrdfLut = Texture(brdfLUTDesc, nullptr, TextureUsage::RenderTarget, L"IBL - BRDF LUT");
-
-        computeCommandList->BrdfLut(m_BrdfLut);
+        BakeIBL(computeCommandList, m_GraceCathedralCubemap, m_IrradianceCubemap, m_SpecularPrefilterCubemap, m_BrdfLut);
     }
     
-    // -------------------------------------------------------------
+    // [Render Target] - create an HDR intermediate RT
 
-    // Create an HDR intermediate render target.
     DXGI_FORMAT HDRFormat = DXGI_FORMAT_R16G16B16A16_FLOAT;
     DXGI_FORMAT depthBufferFormat = DXGI_FORMAT_R32_TYPELESS;
 
@@ -374,7 +323,7 @@ bool Sample7::LoadContent()
     m_HDRRenderTarget.AttachTexture(AttachmentPoint::Color0, HDRTexture);
     m_HDRRenderTarget.AttachTextureShared(AttachmentPoint::DepthStencil, sharedDepthTexture);
 
-    // Create G-Buffer render target with multiple color attachments
+    // [Render Target] - create G-Buffer RT with multiple color attachments
     {
         DXGI_FORMAT gbufferFormats[NUM_GBUFFER_RTS] = {
             DXGI_FORMAT_R8G8B8A8_UNORM,     // Albedo(RGB) + AO(A)
@@ -409,7 +358,6 @@ bool Sample7::LoadContent()
         m_GBufferRT.AttachTextureShared(AttachmentPoint::DepthStencil, sharedDepthTexture);
     }
 
-
     D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
     featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
     if (FAILED(device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
@@ -417,19 +365,10 @@ bool Sample7::LoadContent()
         featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
     }
 
-    // Create a root signature and PSO for the skybox shaders.
+    // [SKYBOX] - create Root Signature and PSO
     {
-        // Load the Skybox shaders.
-        ComPtr<ID3DBlob> vs;
-        ComPtr<ID3DBlob> ps;
-        ThrowIfFailed(D3DReadFileToBlob( (shaderBytecodeDir + L"\\Skybox_VS.cso").c_str(), &vs));
-        ThrowIfFailed(D3DReadFileToBlob( (shaderBytecodeDir + L"\\Skybox_PS.cso").c_str(), &ps));
-
-        // Setup the input layout for the skybox vertex shader.
-        D3D12_INPUT_ELEMENT_DESC inputLayout[1] = {
-            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        };
-
+        // --- Root Signature ---
+        
         // Allow input layout and deny unnecessary access to certain pipeline stages.
         D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
             D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
@@ -450,7 +389,19 @@ bool Sample7::LoadContent()
 
         m_SkyboxSignature.SetRootSignatureDesc(rootSignatureDescription.Desc_1_1, featureData.HighestVersion);
 
-        // Setup the Skybox pipeline state.
+        // --- PSO ---
+
+        // Load the Skybox shaders.
+        ComPtr<ID3DBlob> vs;
+        ComPtr<ID3DBlob> ps;
+        ThrowIfFailed(D3DReadFileToBlob((shaderBytecodeDir + L"\\Skybox_VS.cso").c_str(), &vs));
+        ThrowIfFailed(D3DReadFileToBlob((shaderBytecodeDir + L"\\Skybox_PS.cso").c_str(), &ps));
+
+        // Setup the input layout for the skybox vertex shader.
+        D3D12_INPUT_ELEMENT_DESC inputLayout[1] = {
+            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        };
+
         struct SkyboxPipelineState
         {
             CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE pRootSignature;
@@ -474,8 +425,10 @@ bool Sample7::LoadContent()
         ThrowIfFailed(device->CreatePipelineState(&skyboxPipelineStateStreamDesc, IID_PPV_ARGS(&m_SkyboxPipelineState)));
     }
 
-    // Create the SDR Root Signature
+    // [HDRtoSDR] - create Root Signature and PSO
     {
+        // --- Root Signature ---
+
         CD3DX12_DESCRIPTOR_RANGE1 descriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
 
         CD3DX12_ROOT_PARAMETER1 rootParameters[2];
@@ -489,7 +442,8 @@ bool Sample7::LoadContent()
 
         m_SDRRootSignature.SetRootSignatureDesc(rootSignatureDescription.Desc_1_1, featureData.HighestVersion);
 
-        // Create the SDR PSO
+        // --- PSO ---
+
         ComPtr<ID3DBlob> vs;
         ComPtr<ID3DBlob> ps;
         ThrowIfFailed(D3DReadFileToBlob((shaderBytecodeDir + L"\\HDRtoSDR_VS.cso").c_str(), &vs));
@@ -521,9 +475,9 @@ bool Sample7::LoadContent()
         ThrowIfFailed(device->CreatePipelineState(&sdrPipelineStateStreamDesc, IID_PPV_ARGS(&m_SDRPipelineState)));
     }
 
-	// [G-Buffer] - Root Signature and PSO
+	// [G-Buffer] - create Root Signature and PSO
     {
-        // === G-Buffer Root Signature (same as HDR forward) ===
+        // --- Root Signature (same as HDR forward) ---
 
         CD3DX12_DESCRIPTOR_RANGE1 descriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 0);  // t0 = diffuse, t1 = roughness, t2 = metalness
         // --
@@ -547,7 +501,7 @@ bool Sample7::LoadContent()
 
         m_GBufferRootSignature.SetRootSignatureDesc(rootSignatureDescription.Desc_1_1, featureData.HighestVersion);
 
-        // === G-Buffer PSO ===
+        // --- PSO ---
 
         ComPtr<ID3DBlob> vs, ps;
         ThrowIfFailed(D3DReadFileToBlob((shaderBytecodeDir + L"\\GBuffer_VS.cso").c_str(), &vs));
@@ -585,9 +539,9 @@ bool Sample7::LoadContent()
         ThrowIfFailed(device->CreatePipelineState(&gbufferPipelineStateStreamDesc, IID_PPV_ARGS(&m_GBufferPSO)));
     }
 
-    // [Deferred Lighting] - Root Signature and PSO
+    // [Deferred Lighting] - create Root Signature and PSO
     {
-        // === Deferred Lighting Root Signature ===
+        // --- Root Signature ---
 
         CD3DX12_DESCRIPTOR_RANGE1 descriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 7 /*num_descriptors*/, 2 /*shader_register_number*/);
         // --
@@ -623,7 +577,7 @@ bool Sample7::LoadContent()
 
         m_DeferredLightingRootSignature.SetRootSignatureDesc(rootSignatureDescription.Desc_1_1, featureData.HighestVersion);
 
-        // === Deferred Lighting PSO ===
+        // --- PSO ---
 
         struct DeferredPipelineStateStream
         {

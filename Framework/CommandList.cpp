@@ -837,7 +837,7 @@ void CommandList::EnvToSpecularPrefilterCubemap(const Texture& inCubemapTexture,
 			uint32_t dispatchSize = std::max<uint32_t>(1u, Math::DivideByMultiple(faceSize, 8));
             Dispatch(dispatchSize, dispatchSize, 6);
 
-            // Not always strictly required on sequential dispatches, but adding  for clarity / GPU overlap edge cases.
+            // Not always strictly required on sequential dispatches, but adding for clarity / GPU overlap edge cases.
             UAVBarrier(outSpecularPrefilterTexture);
         }
     }
@@ -941,7 +941,7 @@ void CommandList::CopyTextureSubresource( Texture& texture, uint32_t firstSubres
 
         UpdateSubresources( m_d3d12CommandList.Get(), destinationResource.Get(), intermediateResource.Get(), 0, firstSubresource, numSubresources, subresourceData );
 
-        // Cache resources to make sure that they are not released released until the command list has finished executing on the command queue.
+        // Cache resources to make sure that they are not released until the command list has finished executing on the command queue.
         // Intermediate resource should not be flashed until the pixel data is finished copying to destination resource.
         // Thanks to ComPtr as it keeps the ref count for the resource >0, while it's not being referenced anywere except the m_TrackedObjects cache,
         // preventing it from being destoyed while the command list has not finished executing. After CL execution the m_TrackedObjects is reset

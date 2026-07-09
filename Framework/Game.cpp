@@ -48,6 +48,62 @@ bool Game::Initialize(const wchar_t* windowTitle, int width, int height, bool vS
 	return true;
 }
 
+void Game::BakeIBL(std::shared_ptr<CommandList> commandList, const Texture& inCubemapTexture,
+    Texture& outIrradianceTexture, Texture& outSpecularPrefilterTexture, Texture& outBrdfLutTexture)
+{
+    // Diffuse low-frequency (no sharp detail) ambient - hemisphere convolution 
+    {
+        // IrradianceCubemap(R16G16B16A16_FLOAT, 32x32, array 6, mips 1, UAV)
+        D3D12_RESOURCE_DESC irradianceCubemapDesc{};
+        irradianceCubemapDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+        irradianceCubemapDesc.Height = 32;
+        irradianceCubemapDesc.Width = 32;
+        irradianceCubemapDesc.DepthOrArraySize = 6;
+        irradianceCubemapDesc.MipLevels = 1;
+        irradianceCubemapDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+        irradianceCubemapDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+        irradianceCubemapDesc.SampleDesc.Count = 1;
+        irradianceCubemapDesc.SampleDesc.Quality = 0;
+        // --
+        outIrradianceTexture = Texture(irradianceCubemapDesc, nullptr, TextureUsage::RenderTarget, L"IBL - Irradiance Cubemap");
+
+        commandList->EnvToIrradianceCubemap(inCubemapTexture, outIrradianceTexture);
+    }
+
+    // Specular GGX prefilter across roughness / mips(keeps reflections, blur varies by roughness).
+    {
+        // m_SpecularPrefilterCubemap(R16G16B16A16_FLOAT, 128x128, array 6, full mips, UAV)
+        D3D12_RESOURCE_DESC specCubemapDesc = inCubemapTexture.GetD3D12ResourceDesc();
+        specCubemapDesc.Width = 128;
+        specCubemapDesc.Height = 128;
+        specCubemapDesc.DepthOrArraySize = 6;
+        specCubemapDesc.MipLevels = 0;        // FULL mip chain
+        specCubemapDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+        // --
+        outSpecularPrefilterTexture = Texture(specCubemapDesc, nullptr, TextureUsage::RenderTarget, L"IBL - Specular Prefilter Cubemap");
+
+        commandList->EnvToSpecularPrefilterCubemap(inCubemapTexture, outSpecularPrefilterTexture);
+    }
+
+    // BRDF LUT for split-sum approximation of the specular IBL integral.
+    {
+        // m_BrdfLut(R16G16_FLOAT, 512x512, array 1, mips 1, UAV)
+        D3D12_RESOURCE_DESC brdfLUTDesc = {};
+        brdfLUTDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+        brdfLUTDesc.Width = 512;
+        brdfLUTDesc.Height = 512;
+        brdfLUTDesc.DepthOrArraySize = 1;
+        brdfLUTDesc.MipLevels = 1;
+        brdfLUTDesc.Format = DXGI_FORMAT_R16G16_FLOAT;
+        brdfLUTDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+        brdfLUTDesc.SampleDesc.Count = 1;
+        brdfLUTDesc.SampleDesc.Quality = 0;
+        // --
+        outBrdfLutTexture = Texture(brdfLUTDesc, nullptr, TextureUsage::RenderTarget, L"IBL - BRDF LUT");
+
+        commandList->BrdfLut(outBrdfLutTexture);
+    }
+}
 
 // =====================================================================================
 //										Run

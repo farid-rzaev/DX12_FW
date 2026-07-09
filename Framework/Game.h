@@ -24,8 +24,11 @@ public:
 
 protected: 
 	// CONTENT
-	virtual bool  LoadContent()	  = 0;
+	virtual bool  LoadContent()	   = 0;
 	virtual void  UnloadContent()  = 0;
+	// --
+	virtual void  BakeIBL(std::shared_ptr<CommandList> commandList, const Texture& inCubemapTexture, 
+        Texture& outIrradianceTexture, Texture& outSpecularPrefilterTexture, Texture& outBrdfLutTexture);
 
 	double		  GetUpdateDeltaSeconds() { return m_UpdateClock.GetDeltaSeconds(); }
 	double		  GetUpdateTotalSeconds() { return m_UpdateClock.GetTotalSeconds(); }
