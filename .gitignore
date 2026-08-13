@@ -1,5 +1,6 @@
 /_Output
 .vs/
+imgui.ini
 *.opensdf
 *.sdf
 *.user
@@ -7,6 +8,4 @@
 *.VC.opendb
 *.orig
 *.VC.db
-imgui.ini
-
 *.local.json

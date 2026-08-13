@@ -38,6 +38,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "06_PBR_CookTorrance_Direct"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "07_PBR_CookTorrance_InDirect", "Samples\Full_Framework\07_PBR_CookTorrance_InDirect\07_PBR_CookTorrance_InDirect.vcxproj", "{2103A4E7-D39F-4B68-A80E-F25A9F2E537A}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "08_PBR_CookTorrance_SSAO", "Samples\Full_Framework\08_PBR_CookTorrance_SSAO\08_PBR_CookTorrance_SSAO.vcxproj", "{601A382C-1866-4941-8AC7-17B23CD104F3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -150,6 +152,14 @@ Global
 		{2103A4E7-D39F-4B68-A80E-F25A9F2E537A}.Release|x64.Build.0 = Release|x64
 		{2103A4E7-D39F-4B68-A80E-F25A9F2E537A}.Release|x86.ActiveCfg = Release|Win32
 		{2103A4E7-D39F-4B68-A80E-F25A9F2E537A}.Release|x86.Build.0 = Release|Win32
+		{601A382C-1866-4941-8AC7-17B23CD104F3}.Debug|x64.ActiveCfg = Debug|x64
+		{601A382C-1866-4941-8AC7-17B23CD104F3}.Debug|x64.Build.0 = Debug|x64
+		{601A382C-1866-4941-8AC7-17B23CD104F3}.Debug|x86.ActiveCfg = Debug|Win32
+		{601A382C-1866-4941-8AC7-17B23CD104F3}.Debug|x86.Build.0 = Debug|Win32
+		{601A382C-1866-4941-8AC7-17B23CD104F3}.Release|x64.ActiveCfg = Release|x64
+		{601A382C-1866-4941-8AC7-17B23CD104F3}.Release|x64.Build.0 = Release|x64
+		{601A382C-1866-4941-8AC7-17B23CD104F3}.Release|x86.ActiveCfg = Release|Win32
+		{601A382C-1866-4941-8AC7-17B23CD104F3}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -170,6 +180,7 @@ Global
 		{12831A9E-A0DB-4DEB-878E-5A8B6F6A594F} = {B89BA7C3-47EE-48A8-898E-375D0BBB4F29}
 		{BB5038F6-54FC-48C3-9851-365EF6A9C56D} = {B89BA7C3-47EE-48A8-898E-375D0BBB4F29}
 		{2103A4E7-D39F-4B68-A80E-F25A9F2E537A} = {B89BA7C3-47EE-48A8-898E-375D0BBB4F29}
+		{601A382C-1866-4941-8AC7-17B23CD104F3} = {B89BA7C3-47EE-48A8-898E-375D0BBB4F29}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {ACDB5BE7-3E35-45A9-8E7A-A65CDACEBA86}
