@@ -16,6 +16,10 @@ public:
     {
         void*                       CPU = nullptr;
         D3D12_GPU_VIRTUAL_ADDRESS   GPU;
+
+        // Page the allocation lives in, and its byte offset there (e.g. for buffer views into it).
+        ID3D12Resource*             Resource = nullptr;
+        size_t                      Offset   = 0;
     };
 
      // @param (pageSize) - The size to use to allocate new pages in GPU memory.

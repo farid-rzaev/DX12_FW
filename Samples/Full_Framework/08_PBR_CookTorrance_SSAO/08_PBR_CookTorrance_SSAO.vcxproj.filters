@@ -50,10 +50,16 @@
     <Filter Include="Shaders">
       <UniqueIdentifier>{ff099ca0-e21e-4ecc-a1ca-8bcb15eb2956}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Src\Stages">
+      <UniqueIdentifier>{3b8f5d21-6c4e-4a7f-9e2d-1a5c7b9e0f42}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Src\Sample8.h">
       <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Stages\SSAOStages.h">
+      <Filter>Src\Stages</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

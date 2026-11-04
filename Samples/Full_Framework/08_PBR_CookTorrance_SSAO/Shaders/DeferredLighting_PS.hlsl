@@ -145,6 +145,8 @@ TextureCube<float4> AmbientIrradianceCube                : register(t6);
 TextureCube<float4> SpecularPrefilterCube                : register(t7);
 Texture2D<float2> BrdfLut                                : register(t8);
 
+Texture2D<float> ScreenSpaceAO                           : register(t9);  // Blurred SSAO, 1 = unoccluded
+
 // Samplers
 SamplerState PointSampler                                : register(s0);
 SamplerState linearClampSampler                          : register(s1);  // for LUT
@@ -172,6 +174,9 @@ float4 main(float2 texCoord : TEXCOORD /*UV space*/) : SV_Target
     // Unpack normal from [0,1] to [-1,1]
     float3 normalWS = OctahedralDecode(normalPacked.rg);
     float3 albedo   = albedoAO.rgb;
+
+    // Occludes ambient / indirect diffuse only - direct lights and specular IBL are left untouched.
+    float ssao = ScreenSpaceAO.Sample(PointSampler, texCoord);
     
     uint lightingViewMode = LightPropertiesCB.LightingViewMode;
     // --
@@ -359,7 +364,7 @@ float4 main(float2 texCoord : TEXCOORD /*UV space*/) : SV_Target
     }
 
 #if !defined(ACTIVATE_IBL)
-    float3 ambient = float3(0.1, 0.1, 0.1); // Ambient light intensity (constant)
+    float3 ambient = float3(0.1, 0.1, 0.1) * ssao; // Ambient light intensity (constant)
 #else
     // --- IBL (indirect environment lighting) ---
     float NdotV = saturate(dot(normalWS, V));
@@ -372,7 +377,7 @@ float4 main(float2 texCoord : TEXCOORD /*UV space*/) : SV_Target
     // DIFFUSE IBL: pre-convolved irradiance along normal
     // Irradiance cubemap already stores hemisphere integral — do NOT divide by PI again
     float3 irradiance = AmbientIrradianceCube.Sample(linearClampSampler, normalWS).rgb;
-    float3 indirectDiffuseIBL = kD_ibl * albedo * irradiance;
+    float3 indirectDiffuseIBL = kD_ibl * albedo * irradiance * ssao;
     
     // SPECULAR IBL: split-sum approximation
     // R = reflection direction; sample blurred env map by roughness

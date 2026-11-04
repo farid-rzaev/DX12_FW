@@ -39,6 +39,8 @@ public: // STATIC
 	static Application& Get();
 
 public: // MAIN
+	// Device/queues without a window, for GPU tools and automated pipeline tests.
+	void InitializeHeadless(bool useWarp = true);
 	bool Initialize(const wchar_t* windowTitle, int width, int height, bool vSync = false);
 	int  Run();
 

@@ -142,6 +142,7 @@
     <ClCompile Include="Framework\PSOs\PanoToCubemapPSO.cpp" />
     <ClCompile Include="Framework\ResourceStateTracker.cpp" />
     <ClCompile Include="Framework\RootSignature.cpp" />
+    <ClCompile Include="Framework\Stages\PipelineStage.cpp" />
     <ClCompile Include="Framework\Window.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -192,6 +193,10 @@
     <ClInclude Include="Framework\PSOs\PanoToCubemapPSO.h" />
     <ClInclude Include="Framework\ResourceStateTracker.h" />
     <ClInclude Include="Framework\RootSignature.h" />
+    <ClInclude Include="Framework\Stages\PipelineStage.h" />
+    <ClInclude Include="Framework\Stages\StageDesc.h" />
+    <ClInclude Include="Framework\Stages\StageBindingState.h" />
+    <ClInclude Include="Framework\Stages\StageViews.h" />
     <ClInclude Include="Framework\Window.h" />
   </ItemGroup>
   <ItemGroup>

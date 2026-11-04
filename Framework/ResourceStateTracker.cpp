@@ -1,11 +1,29 @@
 #include "ResourceStateTracker.h"
 
+#include "Application.h"
 #include "CommandList.h"
 #include "Material/Resource.h"
 
 #include <Framework/3RD_Party/D3D/d3dx12.h>
 
+#include <algorithm>
 #include <assert.h>
+
+namespace
+{
+    UINT GetNumSubresources(ID3D12Resource* resource)
+    {
+        const D3D12_RESOURCE_DESC desc = resource->GetDesc();
+        if (desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
+        {
+            return 1;
+        }
+
+        const UINT arraySize  = desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D ? 1 : desc.DepthOrArraySize;
+        const UINT planeCount = std::max<UINT>(D3D12GetFormatPlaneCount(Application::Get().GetDevice().Get(), desc.Format), 1);
+        return desc.MipLevels * arraySize * planeCount;
+    }
+}
 
 // Static definitions.
 std::mutex ResourceStateTracker::ms_GlobalMutex;
@@ -35,17 +53,35 @@ void ResourceStateTracker::ResourceBarrier(const D3D12_RESOURCE_BARRIER& barrier
             if ( transitionBarrier.Subresource == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES &&
                  !resourceState.SubresourceState.empty() )
             {
-                // First transition all of the subresources if they are different than the StateAfter.
-                for ( auto subresourceState : resourceState.SubresourceState )
+                // Transition every subresource that is in a different state than StateAfter -
+                // including the ones without an individual state entry.
+                const UINT numSubresources = GetNumSubresources( transitionBarrier.pResource );
+                for ( UINT subresource = 0; subresource < numSubresources; ++subresource )
                 {
-                    if ( transitionBarrier.StateAfter != subresourceState.second )
+                    D3D12_RESOURCE_BARRIER newBarrier = barrier;
+                    newBarrier.Transition.Subresource = subresource;
+
+                    const auto subresourceIter = resourceState.SubresourceState.find( subresource );
+                    if ( subresourceIter == resourceState.SubresourceState.end() && !resourceState.IsStateKnown )
                     {
-                        D3D12_RESOURCE_BARRIER newBarrier = barrier;
-                        newBarrier.Transition.Subresource = subresourceState.first;
-                        newBarrier.Transition.StateBefore = subresourceState.second;
+                        // Not used on this command list yet - resolved against the global state before execution.
+                        m_PendingResourceBarriers.push_back( newBarrier );
+                        continue;
+                    }
+
+                    const D3D12_RESOURCE_STATES finalState = resourceState.GetSubresourceState( subresource );
+                    if ( transitionBarrier.StateAfter != finalState )
+                    {
+                        newBarrier.Transition.StateBefore = finalState;
                         m_ResourceBarriers.push_back( newBarrier );
                     }
                 }
+            }
+            else if ( !resourceState.IsStateKnown &&
+                      resourceState.SubresourceState.find( transitionBarrier.Subresource ) == resourceState.SubresourceState.end() )
+            {
+                // Other subresources were used on this command list, but this one wasn't yet.
+                m_PendingResourceBarriers.push_back( barrier );
             }
             else
             {
@@ -64,6 +100,12 @@ void ResourceStateTracker::ResourceBarrier(const D3D12_RESOURCE_BARRIER& barrier
             // Add a pending barrier. The pending barriers will be resolved
             // before the command list is executed on the command queue.
             m_PendingResourceBarriers.push_back(barrier);
+
+            // Only this subresource's state becomes known on this command list.
+            if ( transitionBarrier.Subresource != D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES )
+            {
+                m_FinalResourceState[transitionBarrier.pResource].IsStateKnown = false;
+            }
         }
 
         // Push the final known state (possibly replacing the previously known state for the subresource).
@@ -141,14 +183,16 @@ uint32_t ResourceStateTracker::FlushPendingResourceBarriers(CommandList& command
                 if ( pendingTransition.Subresource == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES &&
                      !resourceState.SubresourceState.empty() )
                 {
-                    // Transition all subresources
-                    for ( auto subresourceState : resourceState.SubresourceState )
+                    // Transition all subresources - including the ones without an individual state entry.
+                    const UINT numSubresources = GetNumSubresources( pendingTransition.pResource );
+                    for ( UINT subresource = 0; subresource < numSubresources; ++subresource )
                     {
-                        if ( pendingTransition.StateAfter != subresourceState.second )
+                        const D3D12_RESOURCE_STATES globalState = resourceState.GetSubresourceState( subresource );
+                        if ( pendingTransition.StateAfter != globalState )
                         {
                             D3D12_RESOURCE_BARRIER newBarrier = pendingBarrier;
-                            newBarrier.Transition.Subresource = subresourceState.first;
-                            newBarrier.Transition.StateBefore = subresourceState.second;
+                            newBarrier.Transition.Subresource = subresource;
+                            newBarrier.Transition.StateBefore = globalState;
                             resourceBarriers.push_back( newBarrier );
                         }
                     }
@@ -187,7 +231,19 @@ void ResourceStateTracker::CommitFinalResourceStates()
     // Commit final resource states to the global resource state array (map).
     for (const auto& resourceState : m_FinalResourceState)
     {
-        ms_GlobalResourceState[resourceState.first] = resourceState.second;
+        if (resourceState.second.IsStateKnown)
+        {
+            ms_GlobalResourceState[resourceState.first] = resourceState.second;
+        }
+        else
+        {
+            // Only some subresources were used - keep the global state of the others.
+            auto& globalState = ms_GlobalResourceState[resourceState.first];
+            for (const auto& subresourceState : resourceState.second.SubresourceState)
+            {
+                globalState.SetSubresourceState(subresourceState.first, subresourceState.second);
+            }
+        }
     }
 
     m_FinalResourceState.clear();

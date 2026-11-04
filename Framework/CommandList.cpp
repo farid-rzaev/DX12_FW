@@ -40,7 +40,9 @@
 #include <Framework/3RD_Party/Helpers.h>
 #include <DirectXMath.h>
 #include <External/DirectXTex/DirectXTex/DirectXTex.h>
+#include <algorithm>
 #include <filesystem>
+#include <stdexcept>
 
 std::map<std::wstring, ID3D12Resource* > CommandList::ms_TextureCache;
 std::mutex CommandList::ms_TextureCacheMutex;
@@ -960,6 +962,15 @@ void CommandList::SetGraphicsDynamicConstantBuffer( uint32_t rootParameterIndex,
     m_d3d12CommandList->SetGraphicsRootConstantBufferView( rootParameterIndex, heapAllococation.GPU );
 }
 
+void CommandList::SetComputeDynamicConstantBuffer( uint32_t rootParameterIndex, size_t sizeInBytes, const void* bufferData )
+{
+    // Constant buffers must be 256-byte aligned.
+    auto heapAllocation = m_UploadBuffer->Allocate( sizeInBytes, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT );
+    memcpy( heapAllocation.CPU, bufferData, sizeInBytes );
+
+    m_d3d12CommandList->SetComputeRootConstantBufferView( rootParameterIndex, heapAllocation.GPU );
+}
+
 void CommandList::SetGraphics32BitConstants( uint32_t rootParameterIndex, uint32_t numConstants, const void* constants )
 {
     m_d3d12CommandList->SetGraphicsRoot32BitConstants( rootParameterIndex, numConstants, constants, 0 );
@@ -1033,6 +1044,18 @@ void CommandList::SetGraphicsDynamicStructuredBuffer( uint32_t slot, size_t numE
 
     m_d3d12CommandList->SetGraphicsRootShaderResourceView( slot, heapAllocation.GPU );
 }
+
+void CommandList::SetComputeDynamicStructuredBuffer( uint32_t slot, size_t numElements, size_t elementSize, const void* bufferData )
+{
+    size_t bufferSize = numElements * elementSize;
+
+    auto heapAllocation = m_UploadBuffer->Allocate( bufferSize, elementSize );
+
+    memcpy( heapAllocation.CPU, bufferData, bufferSize );
+
+    m_d3d12CommandList->SetComputeRootShaderResourceView( slot, heapAllocation.GPU );
+}
+
 void CommandList::SetViewport(const D3D12_VIEWPORT& viewport)
 {
     SetViewports( {viewport} );
@@ -1059,6 +1082,8 @@ void CommandList::SetScissorRects(const std::vector<D3D12_RECT>& scissorRects)
 
 void CommandList::SetPipelineState(Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineState)
 {
+    ClearActiveStage();
+
     m_d3d12CommandList->SetPipelineState(pipelineState.Get());
 
     TrackResource(pipelineState);
@@ -1066,8 +1091,10 @@ void CommandList::SetPipelineState(Microsoft::WRL::ComPtr<ID3D12PipelineState> p
 
 void CommandList::SetGraphicsRootSignature( const RootSignature& rootSignature )
 {
+    ClearActiveStage();
+
     auto d3d12RootSignature = rootSignature.GetRootSignature().Get();
-    if ( m_RootSignature != d3d12RootSignature )
+    if ( m_RootSignature != d3d12RootSignature || m_RootSignatureIsCompute )
     {
         m_RootSignature = d3d12RootSignature;
 
@@ -1076,6 +1103,7 @@ void CommandList::SetGraphicsRootSignature( const RootSignature& rootSignature )
             m_DynamicDescriptorHeap[i]->ParseRootSignature( rootSignature );
         }
 
+        m_RootSignatureIsCompute = false;
         m_d3d12CommandList->SetGraphicsRootSignature(m_RootSignature);
 
         TrackResource(m_RootSignature);
@@ -1084,10 +1112,13 @@ void CommandList::SetGraphicsRootSignature( const RootSignature& rootSignature )
 
 void CommandList::SetComputeRootSignature( const RootSignature& rootSignature )
 {
+    ClearActiveStage();
+
     auto d3d12RootSignature = rootSignature.GetRootSignature().Get();
-    if ( m_RootSignature != d3d12RootSignature )
+    if ( m_RootSignature != d3d12RootSignature || !m_RootSignatureIsCompute )
     {
         m_RootSignature = d3d12RootSignature;
+        m_RootSignatureIsCompute = true;
 
         for ( int i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i )
         {
@@ -1191,6 +1222,7 @@ void CommandList::SetRenderTarget(const RenderTarget& renderTarget )
 
 void CommandList::Draw( uint32_t vertexCount, uint32_t instanceCount, uint32_t startVertex, uint32_t startInstance )
 {
+    ValidateStage(false);
     FlushResourceBarriers();
 
     for ( int i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i )
@@ -1203,6 +1235,7 @@ void CommandList::Draw( uint32_t vertexCount, uint32_t instanceCount, uint32_t s
 
 void CommandList::DrawIndexed( uint32_t indexCount, uint32_t instanceCount, uint32_t startIndex, int32_t baseVertex, uint32_t startInstance )
 {
+    ValidateStage(false);
     FlushResourceBarriers();
 
     for ( int i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i )
@@ -1215,6 +1248,7 @@ void CommandList::DrawIndexed( uint32_t indexCount, uint32_t instanceCount, uint
 
 void CommandList::Dispatch( uint32_t numGroupsX, uint32_t numGroupsY, uint32_t numGroupsZ )
 {
+    ValidateStage(true);
     FlushResourceBarriers();
 
     for ( int i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i )
@@ -1249,6 +1283,9 @@ void CommandList::Close()
 
 void CommandList::Reset()
 {
+    ClearActiveStage();
+    m_StageDescriptors.clear();
+
     ThrowIfFailed( m_d3d12CommandAllocator->Reset() );
     ThrowIfFailed( m_d3d12CommandList->Reset( m_d3d12CommandAllocator.Get(), nullptr ) );
 
@@ -1306,4 +1343,162 @@ void CommandList::BindDescriptorHeaps()
     }
 
     m_d3d12CommandList->SetDescriptorHeaps( numDescriptorHeaps, descriptorHeaps );
+}
+
+// ------------------------------------------------------------------------------------------------------
+//                                   PipelineStage binding validation
+// ------------------------------------------------------------------------------------------------------
+
+void CommandList::StartStage( const PipelineStage* stage, bool isCompute, const std::vector<StageBindingDesc>& bindingDescs )
+{
+    m_ActiveStage       = stage;
+    m_StageBindingDescs = &bindingDescs;
+    m_StageIsCompute    = isCompute;
+
+    // Every Bind (even of the same stage) starts with nothing bound.
+    m_StageBindings.assign( bindingDescs.size(), StageBinding() );
+}
+
+void CommandList::ClearActiveStage()
+{
+    m_ActiveStage       = nullptr;
+    m_StageBindingDescs = nullptr;
+    m_StageBindings.clear();
+}
+
+void CommandList::RecordStageResource( uint32_t bindingIndex, ID3D12Resource* resource, const StageSubresourceRange& subresources,
+                                       D3D12_RESOURCE_STATES state, bool isUploadHeap )
+{
+    StageBinding& binding = m_StageBindings.at( bindingIndex );
+    binding.Bound            = true;
+    binding.Resource         = resource;
+    binding.Subresources     = subresources;
+    binding.State            = state;
+    binding.FixedUploadState = isUploadHeap;
+
+    TrackResource( Microsoft::WRL::ComPtr<ID3D12Object>( resource ) );
+}
+
+void CommandList::AddStageAccess( uint32_t bindingIndex, ID3D12Resource* resource, UINT subresource, UINT numSubresources, D3D12_RESOURCE_STATES state )
+{
+    for ( StageSubresourceAccess& access : m_StageAccesses )
+    {
+        if ( access.Resource == resource && access.Subresource == subresource )
+        {
+            // Read states of several views combine; a UAV can't overlap any other view of the same subresource.
+            if ( ( access.State | state ) & D3D12_RESOURCE_STATE_UNORDERED_ACCESS )
+            {
+                throw std::runtime_error( "PipelineStage: overlapping writable views at '" + ( *m_StageBindingDescs )[bindingIndex].Name + "'." );
+            }
+
+            access.State = access.State | state;
+            return;
+        }
+    }
+
+    m_StageAccesses.push_back( { resource, subresource, numSubresources, state } );
+}
+
+void CommandList::ValidateStage( bool isCompute )
+{
+    // Manually configured pipeline - nothing to validate.
+    if ( !m_ActiveStage )
+    {
+        return;
+    }
+
+    if ( m_StageIsCompute != isCompute )
+    {
+        throw std::runtime_error( "PipelineStage: Draw/Dispatch does not match the active pipeline type." );
+    }
+
+    // Validate everything before queuing any barrier.
+    m_StageAccesses.clear();
+    m_StageUAVResources.clear();
+
+    for ( uint32_t bindingIndex = 0; bindingIndex < (uint32_t)m_StageBindings.size(); ++bindingIndex )
+    {
+        const StageBinding& binding = m_StageBindings[bindingIndex];
+
+        if ( !binding.Bound )
+        {
+            const StageBindingDesc& bindingDesc = ( *m_StageBindingDescs )[bindingIndex];
+            throw std::runtime_error( "PipelineStage: missing required binding '" + bindingDesc.Name +
+                                      "[" + std::to_string( bindingDesc.ArrayIndex ) + "]'." );
+        }
+
+        // CBVs have no resource; upload-heap resources stay in GENERIC_READ.
+        if ( !binding.Resource || binding.FixedUploadState )
+        {
+            continue;
+        }
+
+        const StageSubresourceRange& range           = binding.Subresources;
+        const UINT                   numSubresources = range.MipLevels * range.ArraySize;
+
+        for ( UINT slice = range.FirstSlice; slice < range.FirstSlice + range.SliceCount; ++slice )
+        {
+            for ( UINT mip = range.FirstMip; mip < range.FirstMip + range.MipCount; ++mip )
+            {
+                const UINT subresource = D3D12CalcSubresource( mip, slice, 0, range.MipLevels, range.ArraySize );
+                AddStageAccess( bindingIndex, binding.Resource, subresource, numSubresources, binding.State );
+            }
+        }
+
+        if ( binding.State == D3D12_RESOURCE_STATE_UNORDERED_ACCESS &&
+             std::find( m_StageUAVResources.begin(), m_StageUAVResources.end(), binding.Resource ) == m_StageUAVResources.end() )
+        {
+            m_StageUAVResources.push_back( binding.Resource );
+        }
+    }
+
+    // Conservative: a UAV barrier on every UAV use orders it after any previous write on this queue
+    // (including manual pipelines). Cross-queue dependencies still need fences.
+    for ( ID3D12Resource* resource : m_StageUAVResources )
+    {
+        m_ResourceStateTracker->ResourceBarrier( CD3DX12_RESOURCE_BARRIER::UAV( resource ) );
+    }
+
+    // Per resource: a single ALL_SUBRESOURCES transition when every subresource is used in one state
+    // (the common case, same as the manual SetShaderResourceView path), otherwise one per subresource.
+    for ( size_t i = 0; i < m_StageAccesses.size(); ++i )
+    {
+        const StageSubresourceAccess& first = m_StageAccesses[i];
+
+        bool isFirstOfResource = true;
+        for ( size_t j = 0; j < i && isFirstOfResource; ++j )
+        {
+            isFirstOfResource = m_StageAccesses[j].Resource != first.Resource;
+        }
+
+        if ( !isFirstOfResource )
+        {
+            continue;
+        }
+
+        UINT numAccessed = 0;
+        bool isSameState = true;
+        for ( size_t j = i; j < m_StageAccesses.size(); ++j )
+        {
+            if ( m_StageAccesses[j].Resource == first.Resource )
+            {
+                ++numAccessed;
+                isSameState = isSameState && m_StageAccesses[j].State == first.State;
+            }
+        }
+
+        if ( numAccessed == first.NumSubresources && isSameState )
+        {
+            m_ResourceStateTracker->TransitionResource( first.Resource, first.State );
+            continue;
+        }
+
+        for ( size_t j = i; j < m_StageAccesses.size(); ++j )
+        {
+            if ( m_StageAccesses[j].Resource == first.Resource )
+            {
+                m_ResourceStateTracker->TransitionResource( first.Resource, m_StageAccesses[j].State, m_StageAccesses[j].Subresource );
+            }
+        }
+    }
 }

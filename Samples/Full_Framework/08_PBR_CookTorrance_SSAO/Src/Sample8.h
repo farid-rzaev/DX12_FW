@@ -7,6 +7,7 @@
 #include <Framework/Material/Mesh.h>
 // --
 #include <Framework/RootSignature.h>
+#include <Framework/Stages/PipelineStage.h>
 
 #include <Framework/Gameplay/AssimpLoader.h>
 #include <Framework/Gameplay/Camera.h>
@@ -34,6 +35,9 @@ enum class LightingViewMode : uint32_t
 };
 
 const bool g_CaptureGPUTraceOnLoadAssets = false;
+
+// Must match SSAO_KERNEL_SIZE in SSAO_PS.hlsl (a mismatch fails the cbuffer size check on bind).
+const uint32_t SSAO_KERNEL_SIZE = 32;
 
 class Sample8 : public Game
 {
@@ -92,22 +96,25 @@ private: /* DEFERRED RENDERING */
 
 private: /* SSAO */
 
-    RenderTarget m_SSAORawRT;      // R8_UNORM Color0
-    RenderTarget m_SSAOBlurRT;     // R8_UNORM Color0 (ping for blur)
+    RenderTarget m_SSAORawRT;       // R8_UNORM Color0 - SSAO_PS output
+    RenderTarget m_SSAOBlurPingRT;  // R8_UNORM Color0 - horizontal blur output
+    RenderTarget m_SSAOBlurRT;      // R8_UNORM Color0 - vertical blur output (final AO)
 
-    RootSignature m_SSAORootSignature;
-    RootSignature m_SSAOBlurRootSignature;
-    
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SSAOPSO;
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SSAOBlurPSO;
-    
-    // 4x4 R32G32B32A32_FLOAT, tiled random vectors
+    PipelineStage m_SSAOStage;
+    PipelineStage m_SSAOBlurStage;
+    PipelineStage m_SSAODebugCopyStage;
+
+    // 4x4 R32G32B32A32_FLOAT, tiled random rotation vectors
     Texture m_SSAONoiseTexture;
-    
-    // optional tuning (ImGui later)
-    float m_SSAORadius = 0.5f;
-    float m_SSAOBias = 0.025f;
-    float m_SSAOPower = 2.0f;
+
+    // Tangent-space hemisphere sample offsets, generated once in LoadContent.
+    DirectX::XMFLOAT4 m_SSAOKernel[SSAO_KERNEL_SIZE];
+
+    // Runtime tuning (cbuffer values, not PSO state)
+    float m_SSAORadius    = 0.5f;
+    float m_SSAOBias      = 0.025f;
+    float m_SSAOPower     = 2.0f;
+    float m_SSAOIntensity = 1.0f;
 
 private:
     // Some geometry to render.
@@ -122,6 +129,9 @@ private:
 
     // HDR Render target
     RenderTarget m_HDRRenderTarget;
+    // Same HDR color texture, no depth: full-screen passes that sample G-buffer depth as an SRV
+    // can't also have it bound as DSV (SetRenderTarget would transition it back to DEPTH_WRITE).
+    RenderTarget m_HDRColorOnlyRT;
 
     // Root signatures
     RootSignature m_SkyboxSignature;

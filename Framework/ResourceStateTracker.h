@@ -121,6 +121,7 @@ private:
             if (subresource == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES)
             {
                 State = state;
+                IsStateKnown = true;
                 SubresourceState.clear();
             }
             else
@@ -147,6 +148,10 @@ private:
         // the state of all of the subresources.
         D3D12_RESOURCE_STATES State;
         std::map<UINT, D3D12_RESOURCE_STATES> SubresourceState;
+
+        // False when a command list has only used individual subresources of the resource so far:
+        // State is then meaningless, and the state of the other subresources is only known globally.
+        bool IsStateKnown = true;
     };
 
     using ResourceStateMap = std::unordered_map<ID3D12Resource*, ResourceState>;

@@ -1,4 +1,5 @@
 #include "Sample8.h"
+#include "Stages/SSAOStages.h"
 
 #include <Framework/Application.h>
 #include <Framework/CommandQueue.h>
@@ -20,6 +21,7 @@ using namespace Microsoft::WRL;
 using namespace DirectX;
 
 #include <algorithm> // For std::min and std::max.
+#include <random>
 #if defined(min)
 #undef min
 #endif
@@ -52,6 +54,36 @@ struct DeferredLightingCommon
     uint32_t NumPointLights;
     uint32_t NumSpotLights;
 	uint32_t _Padding[2]; // Pad to 16-byte boundary
+};
+
+// Mirrors cbuffer SSAOParams in SSAO_PS.hlsl.
+struct SSAOParams
+{
+    XMMATRIX InvProjection;
+    XMMATRIX View;
+    XMMATRIX Projection;
+
+    XMFLOAT2 NoiseScale;
+    float    Radius;
+    float    Bias;
+
+    float    Power;
+    float    Intensity;
+    XMFLOAT2 _Pad0;
+
+    XMFLOAT4 Kernel[SSAO_KERNEL_SIZE];
+};
+
+// Mirrors cbuffer BlurParams in SSAOBlur_PS.hlsl.
+struct SSAOBlurParams
+{
+    XMFLOAT2 TexelSize;
+    XMFLOAT2 Direction;
+
+    float SpatialSigma;
+    float DepthSigma;
+    float NormalSigma;
+    float _Pad0;
 };
 
 enum TonemapMethod : uint32_t
@@ -323,6 +355,8 @@ bool Sample8::LoadContent()
     m_HDRRenderTarget.AttachTexture(AttachmentPoint::Color0, HDRTexture);
     m_HDRRenderTarget.AttachTextureShared(AttachmentPoint::DepthStencil, sharedDepthTexture);
 
+    m_HDRColorOnlyRT.AttachTextureShared(AttachmentPoint::Color0, m_HDRRenderTarget.GetTextures()[AttachmentPoint::Color0]);
+
     // [Render Target] - create G-Buffer RT with multiple color attachments
     {
         DXGI_FORMAT gbufferFormats[NUM_GBUFFER_RTS] = {
@@ -356,6 +390,72 @@ bool Sample8::LoadContent()
         m_GBufferRT.AttachTexture(AttachmentPoint::Color1, gbufferRT1);
         m_GBufferRT.AttachTexture(AttachmentPoint::Color2, gbufferRT2);
         m_GBufferRT.AttachTextureShared(AttachmentPoint::DepthStencil, sharedDepthTexture);
+    }
+
+    // [Render Target] - SSAO raw + blur ping-pong targets (R8_UNORM, no depth)
+    {
+        auto aoDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8_UNORM, m_Width, m_Height, 1, 1);
+        aoDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+
+        D3D12_CLEAR_VALUE aoClearValue;
+        aoClearValue.Format   = DXGI_FORMAT_R8_UNORM;
+        aoClearValue.Color[0] = 1.0f;   // 1 = unoccluded
+        aoClearValue.Color[1] = 1.0f;
+        aoClearValue.Color[2] = 1.0f;
+        aoClearValue.Color[3] = 1.0f;
+
+        m_SSAORawRT.AttachTexture(AttachmentPoint::Color0, Texture(aoDesc, &aoClearValue, TextureUsage::RenderTarget, L"SSAO Raw"));
+        m_SSAOBlurPingRT.AttachTexture(AttachmentPoint::Color0, Texture(aoDesc, &aoClearValue, TextureUsage::RenderTarget, L"SSAO Blur Ping"));
+        m_SSAOBlurRT.AttachTexture(AttachmentPoint::Color0, Texture(aoDesc, &aoClearValue, TextureUsage::RenderTarget, L"SSAO Blurred"));
+    }
+
+    // [Texture] - 4x4 SSAO noise (random rotations in the tangent plane)
+    {
+        auto noiseDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R32G32B32A32_FLOAT, 4, 4, 1, 1);
+        m_SSAONoiseTexture = Texture(noiseDesc, nullptr, TextureUsage::Albedo, L"SSAO Noise");
+
+        // SSAO_PS decodes with *2-1, so store [0,1]; z = 0.5 decodes to 0 (tangent plane).
+        std::mt19937 rng(1337);
+        std::uniform_real_distribution<float> dist01(0.0f, 1.0f);
+
+        XMFLOAT4 noise[16];
+        for (auto& n : noise)
+        {
+            n = XMFLOAT4(dist01(rng), dist01(rng), 0.5f, 0.0f);
+        }
+
+        D3D12_SUBRESOURCE_DATA subresource;
+        subresource.pData      = noise;
+        subresource.RowPitch   = 4 * sizeof(XMFLOAT4);
+        subresource.SlicePitch = subresource.RowPitch * 4;
+
+        copyCommandList->CopyTextureSubresource(m_SSAONoiseTexture, 0, 1, &subresource);
+    }
+
+    // [SSAO] -   kernel in tangent space (+Z = surface normal)
+    {
+        std::mt19937 rng(42);
+        std::uniform_real_distribution<float> dist01(0.0f, 1.0f);
+
+        for (uint32_t i = 0; i < SSAO_KERNEL_SIZE; ++i)
+        {
+            XMVECTOR v = XMVectorSet(dist01(rng) * 2.0f - 1.0f,
+                                     dist01(rng) * 2.0f - 1.0f,
+                                     dist01(rng),
+                                     0.0f);
+
+            // Normalaize the vector to get a random direction on the UNIT hemisphere.
+            // dist01(rng) - scales the unit vector by a random distance between 0 and 1.
+            // We want samples distributed at varying distances from the surface, not just on the hemisphere's outer shell. 
+            // This creates a volume of samples to check for occlusion.
+            v = XMVector3Normalize(v) * dist01(rng);
+
+            // Cluster samples near the origin - occluders close to the surface matter most.
+            float scale = (float)i / SSAO_KERNEL_SIZE;
+            scale = 0.1f + scale * scale * 0.9f;
+
+            XMStoreFloat4(&m_SSAOKernel[i], v * scale);
+        }
     }
 
     D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
@@ -543,15 +643,15 @@ bool Sample8::LoadContent()
     {
         // --- Root Signature ---
 
-        CD3DX12_DESCRIPTOR_RANGE1 descriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 7 /*num_descriptors*/, 2 /*shader_register_number*/);
+        CD3DX12_DESCRIPTOR_RANGE1 descriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 8 /*num_descriptors*/, 2 /*shader_register_number*/);
         // --
         CD3DX12_ROOT_PARAMETER1 rootParameters[DeferredRootParams::NumRootParameters_Deferred];
         rootParameters[DeferredRootParams::DeferredLightingCommonCB_Deferred].InitAsConstants(sizeof(DeferredLightingCommon) / 4, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL); // b0
         rootParameters[DeferredRootParams::PointLights_Deferred].InitAsShaderResourceView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);        // t0
         rootParameters[DeferredRootParams::SpotLights_Deferred].InitAsShaderResourceView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);         // t1
-        rootParameters[DeferredRootParams::Textures_Deferred].InitAsDescriptorTable(1, &descriptorRange, D3D12_SHADER_VISIBILITY_PIXEL);                                // t2-t8 - DESCRIPTOR HEAP (see descriptorRange):
+        rootParameters[DeferredRootParams::Textures_Deferred].InitAsDescriptorTable(1, &descriptorRange, D3D12_SHADER_VISIBILITY_PIXEL);                                // t2-t9 - DESCRIPTOR HEAP (see descriptorRange):
                                                                                                                                                                         //   * t2-t5: GBuffer + depth, t6 - irradiance cube,
-                                                                                                                                                                        //   * t7 - specular prefilter cube, t8 - BRDF LUT
+                                                                                                                                                                        //   * t7 - specular prefilter cube, t8 - BRDF LUT, t9 - SSAO
 
         D3D12_STATIC_SAMPLER_DESC pointSampler = {};
         pointSampler.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
@@ -605,13 +705,20 @@ bool Sample8::LoadContent()
         depthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
         // --
         deferredPipelineStateStream.DepthStencil = depthStencilDesc;
-        deferredPipelineStateStream.DSVFormat  = m_HDRRenderTarget.GetDepthStencilFormat();    // HDR output
-        deferredPipelineStateStream.RTVFormats = m_HDRRenderTarget.GetRenderTargetFormats();   // HDR output
+        deferredPipelineStateStream.DSVFormat  = m_HDRColorOnlyRT.GetDepthStencilFormat();    // HDR output (no DSV)
+        deferredPipelineStateStream.RTVFormats = m_HDRColorOnlyRT.GetRenderTargetFormats();   // HDR output
 
         D3D12_PIPELINE_STATE_STREAM_DESC deferredPipelineStateStreamDesc = {
             sizeof(DeferredPipelineStateStream), &deferredPipelineStateStream
         };
         ThrowIfFailed(device->CreatePipelineState(&deferredPipelineStateStreamDesc, IID_PPV_ARGS(&m_DeferredLightingPSO)));
+    }
+
+    // [SSAO] - stages built from stage descs + shader reflection
+    {
+        m_SSAOStage.Create(shaderBytecodeDir, MakeSSAOStageDesc(m_SSAORawRT));
+        m_SSAOBlurStage.Create(shaderBytecodeDir, MakeSSAOBlurStageDesc(m_SSAOBlurRT));
+        m_SSAODebugCopyStage.Create(shaderBytecodeDir, MakeSSAODebugCopyStageDesc(m_HDRColorOnlyRT));
     }
 
     PixProfiler& profiler = Application::Get().GetPixProfiler();
@@ -640,7 +747,11 @@ void Sample8::RescaleRenderTargets(float scale)
     height = clamp<uint32_t>(height, 1, D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION);
 
     m_HDRRenderTarget.Resize(width, height);
+    m_HDRColorOnlyRT.Resize(width, height);   // texture already resized above; this just updates the RT size
     m_GBufferRT.Resize(width, height);
+    m_SSAORawRT.Resize(width, height);
+    m_SSAOBlurPingRT.Resize(width, height);
+    m_SSAOBlurRT.Resize(width, height);
 }
 
 void Sample8::OnResize(ResizeEventArgs& e)
@@ -831,6 +942,7 @@ void Sample8::OnGUI()
 {
     static bool showDemoWindow = false;
     static bool showOptions = true;
+    static bool showSSAOOptions = true;
 
     if (ImGui::BeginMainMenuBar())
     {
@@ -847,6 +959,7 @@ void Sample8::OnGUI()
         {
             ImGui::MenuItem("ImGui Demo", nullptr, &showDemoWindow);
             ImGui::MenuItem("Tonemapping", nullptr, &showOptions);
+            ImGui::MenuItem("SSAO", nullptr, &showSSAOOptions);
 
             ImGui::EndMenu();
         }
@@ -899,7 +1012,9 @@ void Sample8::OnGUI()
         {
             const char* modes[] = { "Final", "Albedo", "Normals", "PBR", "Depth",
                                     "DirectDiffuse", "DirectSpecular", "IndirectDiffuseIBL + IndirectSpecularIBL",
-                                    "IndirectDiffuseIBL", "IndirectSpecularIBL"};
+                                    "IndirectDiffuseIBL", "IndirectSpecularIBL",
+                                    "AO Raw", "AO Blurred"};
+            static_assert(_countof(modes) == static_cast<size_t>(LightingViewMode::Count), "View mode names out of sync with LightingViewMode");
             int current = static_cast<int>(m_LightingViewMode);
 
             if (ImGui::Combo("View Mode", &current, modes, static_cast<int>(LightingViewMode::Count)))
@@ -908,7 +1023,7 @@ void Sample8::OnGUI()
             }
 
             ImGui::SameLine();
-            ShowHelpMarker("Final - Normal lit output;\n Albedo - [RT0] Raw albedo;\n Normals - [RT1] World-space normals;\n PBR - [RT2] Roughness/Metalness/Emissive;\n Depth - Linear or Raw depth;\n DirectDiffuse;\n DirectSpecular;\n IndirectDiffuseIBL + IndirectSpecularIBL;\n IndirectDiffuseIBL;\n IndirectSpecularIBL.");
+            ShowHelpMarker("Final - Normal lit output;\n Albedo - [RT0] Raw albedo;\n Normals - [RT1] World-space normals;\n PBR - [RT2] Roughness/Metalness/Emissive;\n Depth - Linear or Raw depth;\n DirectDiffuse;\n DirectSpecular;\n IndirectDiffuseIBL + IndirectSpecularIBL;\n IndirectDiffuseIBL;\n IndirectSpecularIBL;\n AO Raw - SSAO before blur;\n AO Blurred - SSAO after bilateral blur.");
         }
 
         {
@@ -984,6 +1099,21 @@ void Sample8::OnGUI()
             g_TonemapParameters.TonemapMethod = method;
         }
 
+        ImGui::End();
+    }
+
+    if (showSSAOOptions)
+    {
+        ImGui::Begin("SSAO", &showSSAOOptions);
+        {
+            ImGui::SliderFloat("Radius", &m_SSAORadius, 0.05f, 3.0f);
+            ImGui::SameLine(); ShowHelpMarker("View-space radius of the sampling hemisphere.");
+            ImGui::SliderFloat("Bias", &m_SSAOBias, 0.0f, 0.2f);
+            ImGui::SameLine(); ShowHelpMarker("Depth bias against self-occlusion (acne) on flat surfaces.");
+            ImGui::SliderFloat("Power", &m_SSAOPower, 0.5f, 8.0f);
+            ImGui::SameLine(); ShowHelpMarker("Contrast curve applied to the final AO.");
+            ImGui::SliderFloat("Intensity", &m_SSAOIntensity, 0.0f, 2.0f);
+        }
         ImGui::End();
     }
 }
@@ -1178,12 +1308,104 @@ void Sample8::RenderDeferred(std::shared_ptr<CommandList> commandList, DirectX::
         }
     }
 
-    // === PASS 2: Deferred Lighting ===
+    // === PASS 2: SSAO (raw) ===
+    {
+        PIX_SCOPE_MARKER(profiler, commandList->GetGraphicsCommandList().Get(), L"SSAO");
+
+        commandList->SetRenderTarget(m_SSAORawRT);
+        commandList->SetViewport(m_SSAORawRT.GetViewport());
+        commandList->SetScissorRect(m_ScissorRect);
+
+        m_SSAOStage.Bind(*commandList);
+
+        const XMMATRIX projection = m_Camera.get_ProjectionMatrix();
+        const auto     aoSize     = m_SSAORawRT.GetSize();
+
+        SSAOParams ssaoParams;
+        ssaoParams.InvProjection = XMMatrixInverse(nullptr, projection);
+        ssaoParams.View          = viewMatrix;
+        ssaoParams.Projection    = projection;
+        ssaoParams.NoiseScale    = XMFLOAT2(aoSize.x / 4.0f, aoSize.y / 4.0f);   // noise texture is 4x4
+        ssaoParams.Radius        = m_SSAORadius;
+        ssaoParams.Bias          = m_SSAOBias;
+        ssaoParams.Power         = m_SSAOPower;
+        ssaoParams.Intensity     = m_SSAOIntensity;
+        ssaoParams._Pad0         = XMFLOAT2(0.0f, 0.0f);
+        memcpy(ssaoParams.Kernel, m_SSAOKernel, sizeof(m_SSAOKernel));
+
+        m_SSAOStage.SetCB(*commandList, "SSAOParams", ssaoParams);
+        m_SSAOStage.SetSRV(*commandList, "DepthTex",  *m_GBufferRT.GetTexture(AttachmentPoint::DepthStencil));
+        m_SSAOStage.SetSRV(*commandList, "NormalTex", *m_GBufferRT.GetTexture(AttachmentPoint::Color1));
+        m_SSAOStage.SetSRV(*commandList, "NoiseTex",  m_SSAONoiseTexture);
+
+        commandList->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        commandList->Draw(3);
+    }
+
+    // === PASS 3: SSAO bilateral blur (horizontal, then vertical) ===
+    {
+        PIX_SCOPE_MARKER(profiler, commandList->GetGraphicsCommandList().Get(), L"SSAO_BLUR");
+
+        const auto aoSize = m_SSAORawRT.GetSize();
+
+        SSAOBlurParams blurParams;
+        blurParams.TexelSize    = XMFLOAT2(1.0f / aoSize.x, 1.0f / aoSize.y);
+        blurParams.SpatialSigma = 2.0f;
+        blurParams.DepthSigma   = 0.02f;
+        blurParams.NormalSigma  = 32.0f;
+        blurParams._Pad0        = 0.0f;
+
+        m_SSAOBlurStage.Bind(*commandList);
+        commandList->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+        struct BlurPass { const RenderTarget& src; const RenderTarget& dst; XMFLOAT2 direction; };
+        const BlurPass passes[] = {
+            { m_SSAORawRT,      m_SSAOBlurPingRT, XMFLOAT2(1.0f, 0.0f) },
+            { m_SSAOBlurPingRT, m_SSAOBlurRT,     XMFLOAT2(0.0f, 1.0f) },
+        };
+
+        for (const BlurPass& pass : passes)
+        {
+            commandList->SetRenderTarget(pass.dst);
+            commandList->SetViewport(pass.dst.GetViewport());
+            commandList->SetScissorRect(m_ScissorRect);
+
+            blurParams.Direction = pass.direction;
+            m_SSAOBlurStage.SetCB(*commandList, "BlurParams", blurParams);
+            m_SSAOBlurStage.SetSRV(*commandList, "AOInput",   *pass.src.GetTexture(AttachmentPoint::Color0));
+            m_SSAOBlurStage.SetSRV(*commandList, "DepthTex",  *m_GBufferRT.GetTexture(AttachmentPoint::DepthStencil));
+            m_SSAOBlurStage.SetSRV(*commandList, "NormalTex", *m_GBufferRT.GetTexture(AttachmentPoint::Color1));
+
+            commandList->Draw(3);
+        }
+    }
+
+    // === DEBUG: AO_Raw / AO_Blurred - show AO as grayscale and skip lighting ===
+    if (m_LightingViewMode == LightingViewMode::AO_Raw || m_LightingViewMode == LightingViewMode::AO_Blurred)
+    {
+        PIX_SCOPE_MARKER(profiler, commandList->GetGraphicsCommandList().Get(), L"SSAO_DEBUG_VIEW");
+
+        commandList->SetRenderTarget(m_HDRColorOnlyRT);
+        commandList->SetViewport(m_HDRColorOnlyRT.GetViewport());
+        commandList->SetScissorRect(m_ScissorRect);
+
+        m_SSAODebugCopyStage.Bind(*commandList);
+
+        const RenderTarget& aoSource = (m_LightingViewMode == LightingViewMode::AO_Raw) ? m_SSAORawRT : m_SSAOBlurRT;
+        m_SSAODebugCopyStage.SetSRV(*commandList, "AOTex", *aoSource.GetTexture(AttachmentPoint::Color0));
+
+        commandList->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        commandList->Draw(3);
+
+        return;
+    }
+
+    // === PASS 4: Deferred Lighting ===
     {
         PIX_SCOPE_MARKER(profiler, commandList->GetGraphicsCommandList().Get(), L"DEFERRED_LIGHTING");
 
-        commandList->SetRenderTarget(m_HDRRenderTarget);
-        commandList->SetViewport(m_HDRRenderTarget.GetViewport());
+        commandList->SetRenderTarget(m_HDRColorOnlyRT);
+        commandList->SetViewport(m_HDRColorOnlyRT.GetViewport());
         commandList->SetScissorRect(m_ScissorRect);
 
         commandList->SetPipelineState(m_DeferredLightingPSO);
@@ -1224,6 +1446,9 @@ void Sample8::RenderDeferred(std::shared_ptr<CommandList> commandList, DirectX::
         commandList->SetShaderResourceView(DeferredRootParams::Textures_Deferred, 4, m_IrradianceCubemap, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, 0, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, &irrSrvDesc);
         commandList->SetShaderResourceView(DeferredRootParams::Textures_Deferred, 5, m_SpecularPrefilterCubemap, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, 0, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, &specSrvDesc);
         commandList->SetShaderResourceView(DeferredRootParams::Textures_Deferred, 6, m_BrdfLut, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+        // 9: Screen-space AO (blurred)
+        commandList->SetShaderResourceView(DeferredRootParams::Textures_Deferred, 7, *m_SSAOBlurRT.GetTexture(AttachmentPoint::Color0), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
         // Draw full-screen triangle
         commandList->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);

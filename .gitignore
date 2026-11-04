@@ -1,4 +1,5 @@
 /_Output
+.c*
 .vs/
 imgui.ini
 *.opensdf

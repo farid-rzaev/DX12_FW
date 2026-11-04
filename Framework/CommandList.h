@@ -2,7 +2,9 @@
 
 #include <Framework/3RD_Party/Defines.h>
 
+#include <Framework/DescriptorAllocation.h>
 #include <Framework/Material/TextureUsage.h>
+#include <Framework/Stages/StageBindingState.h>
 
 #include <d3d12.h>
 #include <wrl.h>
@@ -21,6 +23,7 @@ class DynamicDescriptorHeap;
 class GenerateMipsPSO;
 class IndexBuffer;
 class PanoToCubemapPSO;
+class PipelineStage;
 class EnvToIrradianceCubemapPSO;
 class EnvToSpecularPrefilterCubemapPSO;
 class BrdfLutPSO;
@@ -159,6 +162,15 @@ public:
         SetGraphicsDynamicConstantBuffer( rootParameterIndex, sizeof( T ), &data );
     }
 
+    // Set a dynamic constant buffer data to an inline descriptor in the compute root signature.
+    void SetComputeDynamicConstantBuffer( uint32_t rootParameterIndex, size_t sizeInBytes, const void* bufferData );
+
+    template<typename T>
+    void SetComputeDynamicConstantBuffer( uint32_t rootParameterIndex, const T& data )
+    {
+        SetComputeDynamicConstantBuffer( rootParameterIndex, sizeof( T ), &data );
+    }
+
     // Set a set of 32-bit constants on the graphics pipeline.
     void SetGraphics32BitConstants( uint32_t rootParameterIndex, uint32_t numConstants, const void* constants );
 
@@ -212,6 +224,15 @@ public:
     void SetGraphicsDynamicStructuredBuffer( uint32_t slot, const std::vector<T>& bufferData )
     {
         SetGraphicsDynamicStructuredBuffer( slot, bufferData.size(), sizeof( T ), bufferData.data() );
+    }
+
+    // Set dynamic structured buffer contents on the compute pipeline.
+    void SetComputeDynamicStructuredBuffer( uint32_t slot, size_t numElements, size_t elementSize, const void* bufferData );
+
+    template<typename T>
+    void SetComputeDynamicStructuredBuffer( uint32_t slot, const std::vector<T>& bufferData )
+    {
+        SetComputeDynamicStructuredBuffer( slot, bufferData.size(), sizeof( T ), bufferData.data() );
     }
 
     // Set viewports.
@@ -293,6 +314,9 @@ public:
 protected:
 
 private:
+    // PipelineStage drives binding validation through the Stage methods and members below.
+    friend class PipelineStage;
+
     void TrackResource(Microsoft::WRL::ComPtr<ID3D12Object> object);
     void TrackResource(const Resource& res);
 
@@ -304,6 +328,24 @@ private:
 
     // Binds the current descriptor heaps to the command list.
     void BindDescriptorHeaps();
+
+    // Make the stage active with all of its required bindings unbound. Called by PipelineStage::Bind.
+    // bindingDescs must outlive the recording (it is owned by the stage).
+    void StartStage( const PipelineStage* stage, bool isCompute, const std::vector<StageBindingDesc>& bindingDescs );
+
+    // Forget the active stage. Manual PSO/root signature changes and Reset do this.
+    void ClearActiveStage();
+
+    // Record the resource and the subresources/state a PipelineStage binding needs.
+    void RecordStageResource( uint32_t bindingIndex, ID3D12Resource* resource, const StageSubresourceRange& subresources,
+                              D3D12_RESOURCE_STATES state, bool isUploadHeap = false );
+
+    // Called by Draw/Dispatch: throw if a binding of the active stage is missing or two views of it
+    // conflict, then queue its transitions and UAV barriers. No-op for manually configured pipelines.
+    void ValidateStage( bool isCompute );
+
+    // Merge one subresource access into m_StageAccesses; throws if it overlaps a writable access.
+    void AddStageAccess( uint32_t bindingIndex, ID3D12Resource* resource, UINT subresource, UINT numSubresources, D3D12_RESOURCE_STATES state );
 
     using TrackedObjects = std::vector < Microsoft::WRL::ComPtr<ID3D12Object> >;
 
@@ -320,6 +362,8 @@ private:
     // Keep track of the currently bound root signatures to minimize root
     // signature changes.
     ID3D12RootSignature*                                m_RootSignature;
+    // The same root signature may be bound as graphics and as compute - both need their own Set call.
+    bool                                                m_RootSignatureIsCompute = false;
 
     // Resource created in an upload heap. Useful for drawing of dynamic geometry
     // or for uploading constant buffer data that changes every draw call.
@@ -354,6 +398,18 @@ private:
     // is stored. The referenced objects are released when the command list is 
     // reset.
     TrackedObjects                                      m_TrackedObjects;
+
+    // Currently bound PipelineStage (null for manually configured pipelines) and the state of its bindings.
+    const PipelineStage*                                m_ActiveStage       = nullptr;
+    const std::vector<StageBindingDesc>*                m_StageBindingDescs = nullptr;
+    bool                                                m_StageIsCompute    = false;
+    std::vector<StageBinding>                           m_StageBindings;
+    // Scratch storage for ValidateStage (kept to avoid allocations per draw).
+    std::vector<StageSubresourceAccess>                 m_StageAccesses;
+    std::vector<ID3D12Resource*>                        m_StageUAVResources;
+    // Descriptors no resource view cache provides (custom buffer views, upload buffers).
+    // Released on Reset, once the GPU is done with them.
+    std::vector<DescriptorAllocation>                   m_StageDescriptors;
 
     // Keep track of loaded textures to avoid loading the same texture multiple times.
     static std::map<std::wstring, ID3D12Resource*>      ms_TextureCache;

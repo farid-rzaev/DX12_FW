@@ -115,6 +115,9 @@
     <ClCompile Include="Framework\PSOs\IBL\BrdfLutPSO.cpp">
       <Filter>Src\PSOs\IBL</Filter>
     </ClCompile>
+    <ClCompile Include="Framework\Stages\PipelineStage.cpp">
+      <Filter>Src\Stages</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Framework\Application.h">
@@ -261,6 +264,18 @@
     <ClInclude Include="Framework\PSOs\IBL\BrdfLutPSO.h">
       <Filter>Src\PSOs\IBL</Filter>
     </ClInclude>
+    <ClInclude Include="Framework\Stages\PipelineStage.h">
+      <Filter>Src\Stages</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Stages\StageBindingState.h">
+      <Filter>Src\Stages</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Stages\StageViews.h">
+      <Filter>Src\Stages</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Stages\StageDesc.h">
+      <Filter>Src\Stages</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Src">
@@ -301,6 +316,9 @@
     </Filter>
     <Filter Include="Src\PSOs\IBL">
       <UniqueIdentifier>{0c563e68-19fe-41e8-96eb-ff1299a5d548}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Src\Stages">
+      <UniqueIdentifier>{1b58affb-8e26-424f-be08-99bca1e779d7}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

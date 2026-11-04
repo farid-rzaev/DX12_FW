@@ -83,6 +83,22 @@ Application::Application(HINSTANCE hInstance) :
 }
 
 
+void Application::InitializeHeadless(bool useWarp)
+{
+	EnableDebugLayer();
+
+	ComPtr<IDXGIAdapter4> dxgiAdapter4 = GetAdapter(useWarp);
+	ThrowIfFailed(dxgiAdapter4, "DXGI adapter enumeration failed.");
+
+	m_d3d12Device = CreateDevice(dxgiAdapter4);
+	ThrowIfFailed(m_d3d12Device, "Failed to create a device.");
+
+	m_DirectCommandQueue  = std::make_shared<CommandQueue> (D3D12_COMMAND_LIST_TYPE_DIRECT);
+	m_ComputeCommandQueue = std::make_shared<CommandQueue> (D3D12_COMMAND_LIST_TYPE_COMPUTE);
+	m_CopyCommandQueue    = std::make_shared<CommandQueue> (D3D12_COMMAND_LIST_TYPE_COPY);
+}
+
+
 bool Application::Initialize(const wchar_t* windowTitle, int width, int height, bool vSync)
 {
 	EnableDebugLayer();
