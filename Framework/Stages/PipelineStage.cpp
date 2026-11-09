@@ -54,11 +54,127 @@ namespace
         return blob;
     }
 
+    // One input-assembler input of the VS signature (system values excluded).
+    struct VertexInput
+    {
+        std::string                 SemanticName;   // copied - the reflection object owns the original
+        uint32_t                    SemanticIndex;
+        D3D_REGISTER_COMPONENT_TYPE ComponentType;
+        uint32_t                    ComponentCount;
+    };
+
     struct ShaderReflectionInfo
     {
-        bool     HasVertexInputs    = false;
-        uint32_t ThreadGroupSize[3] = { 1, 1, 1 };
+        std::vector<VertexInput> VertexInputs;
+        uint32_t                 ThreadGroupSize[3] = { 1, 1, 1 };
     };
+
+    struct FormatInfo
+    {
+        uint32_t                    ComponentCount;   // 0 = format not known to the validation below
+        D3D_REGISTER_COMPONENT_TYPE ComponentType;    // what the VS sees (UNORM/SNORM/FLOAT read as float)
+    };
+
+    FormatInfo VertexFormatInfo(DXGI_FORMAT format)
+    {
+        const auto F = D3D_REGISTER_COMPONENT_FLOAT32;
+        const auto U = D3D_REGISTER_COMPONENT_UINT32;
+        const auto S = D3D_REGISTER_COMPONENT_SINT32;
+
+        switch (format)
+        {
+        case DXGI_FORMAT_R32G32B32A32_FLOAT: return { 4, F };
+        case DXGI_FORMAT_R32G32B32A32_UINT:  return { 4, U };
+        case DXGI_FORMAT_R32G32B32A32_SINT:  return { 4, S };
+        case DXGI_FORMAT_R32G32B32_FLOAT:    return { 3, F };
+        case DXGI_FORMAT_R32G32B32_UINT:     return { 3, U };
+        case DXGI_FORMAT_R32G32B32_SINT:     return { 3, S };
+        case DXGI_FORMAT_R32G32_FLOAT:       return { 2, F };
+        case DXGI_FORMAT_R32G32_UINT:        return { 2, U };
+        case DXGI_FORMAT_R32G32_SINT:        return { 2, S };
+        case DXGI_FORMAT_R32_FLOAT:          return { 1, F };
+        case DXGI_FORMAT_R32_UINT:           return { 1, U };
+        case DXGI_FORMAT_R32_SINT:           return { 1, S };
+
+        case DXGI_FORMAT_R16G16B16A16_FLOAT:
+        case DXGI_FORMAT_R16G16B16A16_UNORM:
+        case DXGI_FORMAT_R16G16B16A16_SNORM: return { 4, F };
+        case DXGI_FORMAT_R16G16B16A16_UINT:  return { 4, U };
+        case DXGI_FORMAT_R16G16B16A16_SINT:  return { 4, S };
+        case DXGI_FORMAT_R16G16_FLOAT:
+        case DXGI_FORMAT_R16G16_UNORM:
+        case DXGI_FORMAT_R16G16_SNORM:       return { 2, F };
+        case DXGI_FORMAT_R16G16_UINT:        return { 2, U };
+        case DXGI_FORMAT_R16G16_SINT:        return { 2, S };
+        case DXGI_FORMAT_R16_FLOAT:
+        case DXGI_FORMAT_R16_UNORM:
+        case DXGI_FORMAT_R16_SNORM:          return { 1, F };
+        case DXGI_FORMAT_R16_UINT:           return { 1, U };
+        case DXGI_FORMAT_R16_SINT:           return { 1, S };
+
+        case DXGI_FORMAT_R8G8B8A8_UNORM:
+        case DXGI_FORMAT_R8G8B8A8_SNORM:
+        case DXGI_FORMAT_B8G8R8A8_UNORM:
+        case DXGI_FORMAT_R10G10B10A2_UNORM:  return { 4, F };
+        case DXGI_FORMAT_R8G8B8A8_UINT:
+        case DXGI_FORMAT_R10G10B10A2_UINT:   return { 4, U };
+        case DXGI_FORMAT_R8G8B8A8_SINT:      return { 4, S };
+        case DXGI_FORMAT_R11G11B10_FLOAT:    return { 3, F };
+        case DXGI_FORMAT_R8G8_UNORM:
+        case DXGI_FORMAT_R8G8_SNORM:         return { 2, F };
+        case DXGI_FORMAT_R8G8_UINT:          return { 2, U };
+        case DXGI_FORMAT_R8G8_SINT:          return { 2, S };
+        case DXGI_FORMAT_R8_UNORM:
+        case DXGI_FORMAT_R8_SNORM:           return { 1, F };
+        case DXGI_FORMAT_R8_UINT:            return { 1, U };
+        case DXGI_FORMAT_R8_SINT:            return { 1, S };
+
+        default:                             return { 0, D3D_REGISTER_COMPONENT_UNKNOWN };
+        }
+    }
+
+    // The desc owns the vertex buffer layout; the VS signature only says what the shader reads.
+    // Catches what D3D12 rejects with a bare E_INVALIDARG (missing semantic) and what it accepts
+    // silently (too few components get filled with 0/1, float vs integer reinterpretation).
+    void ValidateInputLayout(const std::string& stageName, const std::vector<VertexInput>& vertexInputs,
+                             const std::vector<D3D12_INPUT_ELEMENT_DESC>& inputLayout)
+    {
+        for (const VertexInput& input : vertexInputs)
+        {
+            const std::string inputName = input.SemanticName + std::to_string(input.SemanticIndex);
+
+            auto element = std::find_if(inputLayout.begin(), inputLayout.end(),
+                [&](const D3D12_INPUT_ELEMENT_DESC& e)
+                {
+                    return e.SemanticName && ToLower(e.SemanticName) == ToLower(input.SemanticName) &&
+                           e.SemanticIndex == input.SemanticIndex;
+                });
+
+            if (element == inputLayout.end())
+            {
+                throw std::runtime_error("PipelineStage '" + stageName + "': VS input '" + inputName + "' is missing from the input layout.");
+            }
+
+            const FormatInfo format = VertexFormatInfo(element->Format);
+            if (format.ComponentCount == 0)
+            {
+                continue;
+            }
+
+            if (format.ComponentCount < input.ComponentCount)
+            {
+                throw std::runtime_error("PipelineStage '" + stageName + "': input layout element '" + inputName + "' has " +
+                                         std::to_string(format.ComponentCount) + " components, the VS reads " +
+                                         std::to_string(input.ComponentCount) + ".");
+            }
+
+            if (format.ComponentType != input.ComponentType)
+            {
+                throw std::runtime_error("PipelineStage '" + stageName + "': input layout element '" + inputName +
+                                         "' has a different base type (float/uint/int) than the VS input.");
+            }
+        }
+    }
 
     // Recursive fingerprint of a reflected type (class, scalar type, dimensions, offset, members).
     std::string TypeLayout(ID3D12ShaderReflectionType* type)
@@ -150,7 +266,15 @@ namespace
             // System values (SV_VertexID, ...) don't come from the input assembler.
             if (signatureDesc.SystemValueType == D3D_NAME_UNDEFINED)
             {
-                info.HasVertexInputs = true;
+                // Mask covers the declared components (xyz for a float3), always starting at x.
+                uint32_t componentCount = 0;
+                for (BYTE mask = signatureDesc.Mask; mask; mask >>= 1)
+                {
+                    ++componentCount;
+                }
+
+                info.VertexInputs.push_back({ signatureDesc.SemanticName, signatureDesc.SemanticIndex,
+                                              signatureDesc.ComponentType, componentCount });
             }
         }
 
@@ -265,6 +389,28 @@ namespace
                                                                 D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
         return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
     }
+
+    // PSO topology TYPE for a command-list topology. Patch lists are rejected: stage descs have no HS/DS.
+    D3D12_PRIMITIVE_TOPOLOGY_TYPE TopologyTypeFor(D3D_PRIMITIVE_TOPOLOGY topology)
+    {
+        switch (topology)
+        {
+        case D3D_PRIMITIVE_TOPOLOGY_POINTLIST:
+            return D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
+        case D3D_PRIMITIVE_TOPOLOGY_LINELIST:
+        case D3D_PRIMITIVE_TOPOLOGY_LINESTRIP:
+        case D3D_PRIMITIVE_TOPOLOGY_LINELIST_ADJ:
+        case D3D_PRIMITIVE_TOPOLOGY_LINESTRIP_ADJ:
+            return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+        case D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST:
+        case D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP:
+        case D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ:
+        case D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP_ADJ:
+            return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+        default:
+            throw std::runtime_error("PipelineStage: unsupported primitive topology " + std::to_string((int)topology) + ".");
+        }
+    }
 }
 
 // =====================================================================================
@@ -277,8 +423,10 @@ void PipelineStage::Create(const std::wstring& shaderBytecodeDir, const Graphics
     m_PipelineState.Reset();
     m_Name      = desc.Name;
     m_IsCompute = false;
+    m_Topology  = desc.Topology;
 
     ThrowIfFailed(!desc.VS.empty(), "PipelineStage: graphics stage requires a VS.");
+    const D3D12_PRIMITIVE_TOPOLOGY_TYPE topologyType = TopologyTypeFor(desc.Topology);
     ThrowIfFailed(desc.PS.empty() || !desc.RTVFormats.empty(),
                   "PipelineStage: RTVFormats are empty - call GraphicsStageDesc::SetOutputs or set them explicitly.");
     ThrowIfFailed(desc.RTVFormats.size() <= D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT, "PipelineStage: too many RTVFormats.");
@@ -293,21 +441,29 @@ void PipelineStage::Create(const std::wstring& shaderBytecodeDir, const Graphics
         ReflectShader(ps.Get(), D3D12_SHADER_VISIBILITY_PIXEL, resources);
     }
 
-    // TODO: reflect the VS input signature into an input layout for mesh passes.
-    if (vsInfo.HasVertexInputs)
+    const bool hasInputLayout = !desc.InputLayout.empty();
+    if (!vsInfo.VertexInputs.empty() && !hasInputLayout)
     {
         throw std::runtime_error("PipelineStage '" + Narrow(m_Name) +
-                                 "': VS has vertex attributes; input-layout stages are not supported yet.");
+                                 "': VS has vertex inputs but the desc has no InputLayout (use GraphicsStageDesc::SetInputLayout).");
+    }
+    ValidateInputLayout(Narrow(m_Name), vsInfo.VertexInputs, desc.InputLayout);
+    m_HasVertexInputs = !vsInfo.VertexInputs.empty();
+
+    D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags = D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+                                                    D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+                                                    D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
+    if (hasInputLayout)
+    {
+        rootSignatureFlags |= D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
     }
 
-    BuildRootSignature(resources, desc.StaticSamplers,
-                       D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
-                       D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
-                       D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS);
+    BuildRootSignature(resources, desc.StaticSamplers, rootSignatureFlags);
 
     struct PipelineStateStream
     {
         CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE        pRootSignature;
+        CD3DX12_PIPELINE_STATE_STREAM_INPUT_LAYOUT          InputLayout;
         CD3DX12_PIPELINE_STATE_STREAM_PRIMITIVE_TOPOLOGY    PrimitiveTopologyType;
         CD3DX12_PIPELINE_STATE_STREAM_VS                    VS;
         CD3DX12_PIPELINE_STATE_STREAM_PS                    PS;
@@ -332,7 +488,8 @@ void PipelineStage::Create(const std::wstring& shaderBytecodeDir, const Graphics
     }
 
     stream.pRootSignature        = m_RootSignature.GetRootSignature().Get();
-    stream.PrimitiveTopologyType = desc.Topology;
+    stream.InputLayout           = { hasInputLayout ? desc.InputLayout.data() : nullptr, (UINT)desc.InputLayout.size() };
+    stream.PrimitiveTopologyType = topologyType;
     stream.VS                    = CD3DX12_SHADER_BYTECODE(vs.Get());
     stream.PS                    = ps ? CD3DX12_SHADER_BYTECODE(ps.Get()) : CD3DX12_SHADER_BYTECODE(nullptr, 0);
     stream.Samples               = desc.Samples;
@@ -351,17 +508,34 @@ void PipelineStage::Create(const std::wstring& shaderBytecodeDir, const Graphics
 
 void PipelineStage::Create(const std::wstring& shaderBytecodeDir, const ComputeStageDesc& desc)
 {
+    ThrowIfFailed(!desc.CS.empty(), "PipelineStage: compute stage requires a CS bytecode filename.");
+
+    CreateCompute(desc, LoadShader(shaderBytecodeDir, desc.CS).Get());
+}
+
+void PipelineStage::Create(const ComputeStageDesc& desc)
+{
+    ThrowIfFailed(desc.CSBytecode.pShaderBytecode && desc.CSBytecode.BytecodeLength,
+                  "PipelineStage: compute stage requires CSBytecode.");
+
+    // Reflection and PSO creation take a blob; copy the header array into one.
+    ComPtr<ID3DBlob> cs;
+    ThrowIfFailed(D3DCreateBlob(desc.CSBytecode.BytecodeLength, &cs));
+    memcpy(cs->GetBufferPointer(), desc.CSBytecode.pShaderBytecode, desc.CSBytecode.BytecodeLength);
+
+    CreateCompute(desc, cs.Get());
+}
+
+void PipelineStage::CreateCompute(const ComputeStageDesc& desc, ID3DBlob* cs)
+{
     // A failed rebuild must not leave the old PSO paired with new slot metadata.
     m_PipelineState.Reset();
     m_Name      = desc.Name;
-    m_IsCompute = true;
-
-    ThrowIfFailed(!desc.CS.empty(), "PipelineStage: compute stage requires a CS.");
-
-    ComPtr<ID3DBlob> cs = LoadShader(shaderBytecodeDir, desc.CS);
+    m_IsCompute       = true;
+    m_HasVertexInputs = false;
 
     std::vector<ReflectedResource> resources;
-    const ShaderReflectionInfo csInfo = ReflectShader(cs.Get(), D3D12_SHADER_VISIBILITY_ALL, resources);
+    const ShaderReflectionInfo csInfo = ReflectShader(cs, D3D12_SHADER_VISIBILITY_ALL, resources);
     std::copy(std::begin(csInfo.ThreadGroupSize), std::end(csInfo.ThreadGroupSize), m_ThreadGroupSize);
 
     BuildRootSignature(resources, desc.StaticSamplers, D3D12_ROOT_SIGNATURE_FLAG_NONE);
@@ -373,7 +547,7 @@ void PipelineStage::Create(const std::wstring& shaderBytecodeDir, const ComputeS
     } stream;
 
     stream.pRootSignature = m_RootSignature.GetRootSignature().Get();
-    stream.CS             = CD3DX12_SHADER_BYTECODE(cs.Get());
+    stream.CS             = CD3DX12_SHADER_BYTECODE(cs);
 
     auto device = Application::Get().GetDevice();
 
@@ -516,6 +690,7 @@ void PipelineStage::Bind(CommandList& commandList) const
     else
     {
         commandList.SetGraphicsRootSignature(m_RootSignature);
+        commandList.SetPrimitiveTopology(m_Topology);
     }
 
     // Set*RootSignature skips parsing when the root signature didn't change. Re-parse anyway, so
@@ -710,6 +885,42 @@ bool PipelineStage::TrySetUAV(CommandList& commandList, const char* name, const 
     return true;
 }
 
+void PipelineStage::SetNullUAV(CommandList& commandList, const char* name, uint32_t arrayIndex) const
+{
+    RequireActive(commandList);
+    const Slot& slot = *FindSlot(name, SlotKind::TableUAV);
+
+    if (arrayIndex >= slot.ArraySize)
+    {
+        throw std::runtime_error("PipelineStage: invalid UAV array index for '" + std::string(name) + "'.");
+    }
+
+    // A null descriptor still needs a valid typed view; any texture format works since nothing is accessed.
+    D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+    uavDesc.ViewDimension = StageViews::UAVDimensionFor(slot.Dimension);
+    uavDesc.Format        = DXGI_FORMAT_R8G8B8A8_UNORM;
+
+    switch (uavDesc.ViewDimension)
+    {
+    case D3D12_UAV_DIMENSION_TEXTURE1DARRAY: uavDesc.Texture1DArray.ArraySize = 1; break;
+    case D3D12_UAV_DIMENSION_TEXTURE2DARRAY: uavDesc.Texture2DArray.ArraySize = 1; break;
+    case D3D12_UAV_DIMENSION_TEXTURE3D:      uavDesc.Texture3D.WSize          = 1; break;
+    case D3D12_UAV_DIMENSION_BUFFER:
+        throw std::runtime_error("PipelineStage: SetNullUAV supports texture UAVs only ('" + std::string(name) + "').");
+    default:
+        break;
+    }
+
+    const D3D12_CPU_DESCRIPTOR_HANDLE descriptor = CreateTransientUAV(commandList, nullptr, uavDesc);
+    commandList.m_DynamicDescriptorHeap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->StageDescriptors(slot.RootIndex, arrayIndex, 1, descriptor);
+
+    // Bound without a resource, like a CBV: ValidateStage skips its barriers and overlap checks.
+    // Reset first - a previous SetUAV on this slot (earlier dispatch) must not linger.
+    StageBinding& binding = commandList.m_StageBindings.at(slot.BindingIndex + arrayIndex);
+    binding       = StageBinding();
+    binding.Bound = true;
+}
+
 void PipelineStage::UploadAndSetSRVImpl(CommandList& commandList, const char* name,
                                         size_t numElements, size_t elementSize, const void* data) const
 {
@@ -792,4 +1003,16 @@ void PipelineStage::DispatchThreads(CommandList& commandList, uint32_t threadsX,
     commandList.Dispatch(Math::DivideByMultiple(threadsX, m_ThreadGroupSize[0]),
                          Math::DivideByMultiple(threadsY, m_ThreadGroupSize[1]),
                          Math::DivideByMultiple(threadsZ, m_ThreadGroupSize[2]));
+}
+
+void PipelineStage::DrawFullscreenTriangle(CommandList& commandList) const
+{
+    RequireActive(commandList);
+    if (m_IsCompute || m_HasVertexInputs)
+    {
+        throw std::runtime_error("PipelineStage '" + Narrow(m_Name) +
+                                 "': DrawFullscreenTriangle requires a graphics stage whose VS has no vertex inputs (SV_VertexID only).");
+    }
+
+    commandList.Draw(3);
 }

@@ -11,8 +11,10 @@
 //
 // Only state that CANNOT be deduced from shader reflection lives here:
 //   - which shaders to use
+//   - vertex buffer layout (the VS input signature has no formats, offsets or slots)
 //   - output formats + sample settings (an SV_Target type says nothing about the texture format)
 //   - depth / blend / raster policy
+//   - primitive topology (how the VS output is assembled - a contract with the VS / vertex data)
 //   - optional explicit static samplers
 //
 // Reflection supplies bindings and group sizes; bound views supply resource-access ranges.
@@ -41,7 +43,14 @@ struct GraphicsStageDesc
     std::wstring VS;
     std::wstring PS;     // may be empty for depth-only stages
 
-    D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    // Set on the command list by PipelineStage::Bind. The PSO's topology TYPE is derived from it,
+    // so the two can't mismatch. Mesh::Draw still sets its own topology after Bind.
+    D3D_PRIMITIVE_TOPOLOGY Topology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+    // Vertex buffer layout for mesh passes; empty for passes driven by SV_VertexID.
+    // Validated against the reflected VS input signature. Semantic name strings are not
+    // copied, so they must outlive the stage (static vertex-type tables do).
+    std::vector<D3D12_INPUT_ELEMENT_DESC> InputLayout;
 
     std::vector<DXGI_FORMAT> RTVFormats;
     DXGI_SAMPLE_DESC         Samples    = { 1, 0 };
@@ -52,6 +61,12 @@ struct GraphicsStageDesc
     CD3DX12_RASTERIZER_DESC  Rasterizer = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 
     std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplers;
+
+    // Take the input layout from the vertex type the stage draws, e.g. Mesh::GetInputLayout().
+    void SetInputLayout(const D3D12_INPUT_LAYOUT_DESC& layout)
+    {
+        InputLayout.assign(layout.pInputElementDescs, layout.pInputElementDescs + layout.NumElements);
+    }
 
     // Take RTV/DSV formats and sample settings from the render target the stage draws into.
     void SetOutputs(const RenderTarget& renderTarget)
@@ -83,7 +98,13 @@ struct GraphicsStageDesc
 struct ComputeStageDesc
 {
     std::wstring Name;   // debug name for PIX / errors
-    std::wstring CS;     // compiled shader bytecode filename
 
+    // Either a compiled shader bytecode filename (PipelineStage::Create(dir, desc)) or bytecode
+    // compiled into a header, e.g. { g_GenerateMips_CS, sizeof(g_GenerateMips_CS) } (PipelineStage::Create(desc)).
+    std::wstring          CS;
+    D3D12_SHADER_BYTECODE CSBytecode = {};
+
+    // Bytecode is used instead of a filename if CSBytecode.pShaderBytecode != nullptr. The filename is used to locate the shader reflection data, which is not embedded in the bytecode.
+    // Rn only used for framework compute stages that are compiled into the framework binary, e.g. GenerateMips called from CommandList::GenerateMips_UAV. 
     std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplers;
 };

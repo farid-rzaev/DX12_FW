@@ -10,7 +10,7 @@
     <FxCompile Include="Shaders\DeferredLighting_PS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="Shaders\DeferredLighting_VS.hlsl">
+    <FxCompile Include="Shaders\FullscreenTriangle_VS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\GBuffer_PS.hlsl">
@@ -20,9 +20,6 @@
       <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\HDRtoSDR_PS.hlsl">
-      <Filter>Shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="Shaders\HDRtoSDR_VS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\SSAO_PS.hlsl">
@@ -57,6 +54,12 @@
   <ItemGroup>
     <ClInclude Include="Src\Sample8.h">
       <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Stages\DeferredStages.h">
+      <Filter>Src\Stages</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Stages\FullscreenStage.h">
+      <Filter>Src\Stages</Filter>
     </ClInclude>
     <ClInclude Include="Src\Stages\SSAOStages.h">
       <Filter>Src\Stages</Filter>

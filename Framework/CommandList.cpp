@@ -27,12 +27,15 @@
 // Root Signature
 #include <Framework/RootSignature.h>
 
-// PSO
-#include <Framework/PSOs/GenerateMipsPSO.h>
-#include <Framework/PSOs/PanoToCubemapPSO.h>
-#include <Framework/PSOs/IBL/EnvToIrradianceCubemapPSO.h>
-#include <Framework/PSOs/IBL/EnvToSpecularPrefilterCubemapPSO.h>
-#include <Framework/PSOs/IBL/BrdfLutPSO.h>
+// Pipeline stages
+#include <Framework/Stages/PipelineStage.h>
+
+// Compiled framework compute shaders - "_Output/Bin/$(Platform)/$(Configuration)/$(ProjectName)/Shaders/*.h"
+#include <GenerateMips_CS.h>            // g_GenerateMips_CS
+#include <PanoToCubemap_CS.h>           // g_PanoToCubemap_CS
+#include <IBL_IrradianceConv_CS.h>      // g_IBL_IrradianceConv_CS
+#include <IBL_SpecularPrefilter_CS.h>   // g_IBL_SpecularPrefilter_CS
+#include <IBL_BRDF_LUT_CS.h>            // g_IBL_BRDF_LUT_CS
 
 // ------------------------------------------------------------------------------------------------------
 
@@ -43,6 +46,53 @@
 #include <algorithm>
 #include <filesystem>
 #include <stdexcept>
+
+namespace
+{
+    // Constant buffers of the framework compute shaders. SetCB checks sizeof() against the HLSL
+    // cbuffer size, which is rounded up to 16 bytes - hence alignas(16).
+    struct alignas( 16 ) GenerateMipsCB
+    {
+        uint32_t SrcMipLevel;           // Mip level within the SrcMip view (the view starts at the source mip, so 0)
+        uint32_t NumMipLevels;          // Number of OutMips to write: [1-4]
+        uint32_t SrcDimension;          // Width and height of the source texture are even or odd.
+        uint32_t IsSRGB;                // Must apply gamma correction to sRGB textures.
+        DirectX::XMFLOAT2 TexelSize;    // 1.0 / OutMip1.Dimensions
+    };
+
+    struct alignas( 16 ) PanoToCubemapCB
+    {
+        uint32_t CubemapSize;           // Size of the cubemap face in pixels at the current mipmap level.
+        uint32_t FirstMip;              // The first mip level to generate.
+        uint32_t NumMips;               // The number of mips to generate.
+    };
+
+    struct alignas( 16 ) EnvToIrradianceCubemapCB
+    {
+        uint32_t OutputSize;
+    };
+
+    struct alignas( 16 ) EnvToSpecularPrefilterCubemapCB
+    {
+        uint32_t OutputSize;
+        float    Roughness;
+    };
+
+    // Lazily build a framework compute stage from bytecode compiled into a header.
+    PipelineStage& GetComputeStage( std::unique_ptr<PipelineStage>& stage, const wchar_t* name, D3D12_SHADER_BYTECODE bytecode )
+    {
+        if ( !stage )
+        {
+            ComputeStageDesc desc;
+            desc.Name       = name;
+            desc.CSBytecode = bytecode;
+
+            stage = std::make_unique<PipelineStage>();
+            stage->Create( desc );
+        }
+        return *stage;
+    }
+}
 
 std::map<std::wstring, ID3D12Resource* > CommandList::ms_TextureCache;
 std::mutex CommandList::ms_TextureCacheMutex;
@@ -524,26 +574,24 @@ void CommandList::GenerateMips_UAV( Texture& texture, DXGI_FORMAT format )
     PixProfiler& profiler = m_Application.GetPixProfiler();
     PIX_SCOPE_MARKER(profiler, m_d3d12CommandList.Get(), L"GenerateMips_UAV");
     {
-        if ( !m_GenerateMipsPSO )
-        {
-            m_GenerateMipsPSO = std::make_unique<GenerateMipsPSO>();
-        }
+        const PipelineStage& stage = GetComputeStage( m_GenerateMipsStage, L"GenerateMips", { g_GenerateMips_CS, sizeof( g_GenerateMips_CS ) } );
+        stage.Bind( *this );
 
-        m_d3d12CommandList->SetPipelineState( m_GenerateMipsPSO->GetPipelineState().Get() );
-        SetComputeRootSignature( m_GenerateMipsPSO->GetRootSignature() );
-
-        GenerateMipsCB generateMipsCB;
+        GenerateMipsCB generateMipsCB = {};
         generateMipsCB.IsSRGB = Texture::IsSRGBFormat(format);
 
         auto resource = texture.GetD3D12Resource();
         auto resourceDesc = resource->GetDesc();
 
-        // Create an SRV that uses the format of the original texture.
+        // SRV in the format of the original texture, viewing ONLY the source mip: the stage tracks
+        // bindings per subresource, and the destination mips are bound as UAVs in the same dispatch.
         D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
         srvDesc.Format = format;
         srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
         srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;  // Only 2D textures are supported (this was checked in the calling function).
-        srvDesc.Texture2D.MipLevels = resourceDesc.MipLevels;
+        srvDesc.Texture2D.MipLevels = 1;
+
+        static const char* const outMipNames[4] = { "OutMip1", "OutMip2", "OutMip3", "OutMip4" };
 
         for ( uint32_t srcMip = 0; srcMip < resourceDesc.MipLevels - 1u; )
         {
@@ -579,31 +627,34 @@ void CommandList::GenerateMips_UAV( Texture& texture, DXGI_FORMAT format )
             dstWidth = std::max<DWORD>( 1, dstWidth );
             dstHeight = std::max<DWORD>( 1, dstHeight );
 
-            generateMipsCB.SrcMipLevel = srcMip;
+            generateMipsCB.SrcMipLevel = 0;     // relative to the single-mip SRV below
             generateMipsCB.NumMipLevels = mipCount;
             generateMipsCB.TexelSize.x = 1.0f / (float)dstWidth;
             generateMipsCB.TexelSize.y = 1.0f / (float)dstHeight;
 
-            SetCompute32BitConstants( GenerateMips::GenerateMipsCB, generateMipsCB );
+            stage.SetCB( *this, "GenerateMipsCB", generateMipsCB );
 
-            SetShaderResourceView( GenerateMips::SrcMip, 0, texture, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, srcMip, 1, &srvDesc );
+            srvDesc.Texture2D.MostDetailedMip = srcMip;
+            stage.SetSRV( *this, "SrcMip", texture, &srvDesc );
 
-            for ( uint32_t mip = 0; mip < mipCount; ++mip )
+            for ( uint32_t mip = 0; mip < 4; ++mip )
             {
-                D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
-                uavDesc.Format = resourceDesc.Format;
-                uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
-                uavDesc.Texture2D.MipSlice = srcMip + mip + 1;
+                if ( mip < mipCount )
+                {
+                    D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+                    uavDesc.Format = resourceDesc.Format;
+                    uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+                    uavDesc.Texture2D.MipSlice = srcMip + mip + 1;
 
-                SetUnorderedAccessView(GenerateMips::OutMip, mip, texture, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, srcMip + mip + 1, 1, &uavDesc );
+                    stage.SetUAV( *this, outMipNames[mip], texture, &uavDesc );
+                }
+                else
+                {
+                    // The shader declares 4 outputs but writes only NumMipLevels of them this pass.
+                    stage.SetNullUAV( *this, outMipNames[mip] );
+                }
             }
 
-            // Pad any unused mip levels with a default UAV. Doing this keeps the DX12 runtime happy.
-            if ( mipCount < 4 )
-            {
-                m_DynamicDescriptorHeap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->StageDescriptors( GenerateMips::OutMip, mipCount, 4 - mipCount, m_GenerateMipsPSO->GetDefaultUAV() );
-            }
-        
             Dispatch( Math::DivideByMultiple(dstWidth, 8), Math::DivideByMultiple(dstHeight, 8) );
 
             UAVBarrier( texture );
@@ -628,11 +679,6 @@ void CommandList::PanoToCubemap(const Texture& inPanoTexture, Texture& outCubema
     PixProfiler& profiler = m_Application.GetPixProfiler();
     PIX_SCOPE_MARKER(profiler, m_d3d12CommandList.Get(), L"PanoToCubemap");
     {
-        if (!m_PanoToCubemapPSO)
-        {
-            m_PanoToCubemapPSO = std::make_unique<PanoToCubemapPSO>();
-        }
-
         auto device = m_Application.GetDevice();
 
         auto cubemapResource = outCubemapTexture.GetD3D12Resource();
@@ -670,10 +716,10 @@ void CommandList::PanoToCubemap(const Texture& inPanoTexture, Texture& outCubema
             CopyResource(stagingTexture, outCubemapTexture);
         }
 
-        TransitionBarrier(stagingTexture, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+        const PipelineStage& stage = GetComputeStage( m_PanoToCubemapStage, L"PanoToCubemap", { g_PanoToCubemap_CS, sizeof( g_PanoToCubemap_CS ) } );
+        stage.Bind( *this );
 
-        m_d3d12CommandList->SetPipelineState(m_PanoToCubemapPSO->GetPipelineState().Get());
-        SetComputeRootSignature(m_PanoToCubemapPSO->GetRootSignature());
+        static const char* const dstMipNames[5] = { "DstMip1", "DstMip2", "DstMip3", "DstMip4", "DstMip5" };
 
         PanoToCubemapCB panoToCubemapCB {};
 
@@ -692,20 +738,22 @@ void CommandList::PanoToCubemap(const Texture& inPanoTexture, Texture& outCubema
             panoToCubemapCB.CubemapSize = std::max<uint32_t>( static_cast<uint32_t>( cubemapDesc.Width ), cubemapDesc.Height) >> mipSlice;
             panoToCubemapCB.NumMips = numMips;
 
-            SetCompute32BitConstants(PanoToCubemapRS::PanoToCubemapCB, panoToCubemapCB);
+            stage.SetCB(*this, "PanoToCubemapCB", panoToCubemapCB);
 
-            SetShaderResourceView(PanoToCubemapRS::SrcTexture, 0, inPanoTexture, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+            stage.SetSRV(*this, "SrcTexture", inPanoTexture);
 
-            for ( uint32_t mip = 0; mip < numMips; ++mip )
+            for ( uint32_t mip = 0; mip < 5; ++mip )
             {
-                uavDesc.Texture2DArray.MipSlice = mipSlice + mip;
-                SetUnorderedAccessView(PanoToCubemapRS::DstMips, mip, stagingTexture, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, 0, 0, &uavDesc);
-            }
-
-            if (numMips < 5)
-            {
-                // Pad unused mips. This keeps DX12 runtime happy.
-                m_DynamicDescriptorHeap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->StageDescriptors(PanoToCubemapRS::DstMips, panoToCubemapCB.NumMips, 5 - numMips, m_PanoToCubemapPSO->GetDefaultUAV());
+                if ( mip < numMips )
+                {
+                    uavDesc.Texture2DArray.MipSlice = mipSlice + mip;
+                    stage.SetUAV(*this, dstMipNames[mip], stagingTexture, &uavDesc);
+                }
+                else
+                {
+                    // The shader declares 5 outputs but writes only NumMips of them this pass.
+                    stage.SetNullUAV(*this, dstMipNames[mip]);
+                }
             }
 
             Dispatch(Math::DivideByMultiple(panoToCubemapCB.CubemapSize, 16), Math::DivideByMultiple(panoToCubemapCB.CubemapSize, 16), 6 );
@@ -735,26 +783,16 @@ void CommandList::EnvToIrradianceCubemap(const Texture& inCubemapTexture, const 
     PixProfiler& profiler = m_Application.GetPixProfiler();
     PIX_SCOPE_MARKER(profiler, m_d3d12CommandList.Get(), L"EnvToIrradianceCubemap");
     {
-        if (!m_EnvToIrradianceCubemapPSO)
-        {
-            m_EnvToIrradianceCubemapPSO = std::make_unique<EnvToIrradianceCubemapPSO>();
-        }
-
-        m_d3d12CommandList->SetPipelineState(m_EnvToIrradianceCubemapPSO->GetPipelineState().Get());
-        SetComputeRootSignature(m_EnvToIrradianceCubemapPSO->GetRootSignature());
+        const PipelineStage& stage = GetComputeStage( m_EnvToIrradianceCubemapStage, L"EnvToIrradianceCubemap", { g_IBL_IrradianceConv_CS, sizeof( g_IBL_IrradianceConv_CS ) } );
+        stage.Bind( *this );
 
         EnvToIrradianceCubemapCB envToIrradianceCubemapCB {};
         envToIrradianceCubemapCB.OutputSize = 32;
 
-        SetCompute32BitConstants(EnvToIrradianceCubemapRS::EnvToIrradianceCubemapCB, envToIrradianceCubemapCB);
+        stage.SetCB(*this, "IblIrradianceCB", envToIrradianceCubemapCB);
 
-        D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-        srvDesc.Format                  = inCubemapTexture.GetD3D12ResourceDesc().Format;
-        srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-        srvDesc.ViewDimension           = D3D12_SRV_DIMENSION_TEXTURECUBE;
-        srvDesc.TextureCube.MipLevels   = (UINT)-1;                         // Use all mips.
-
-        SetShaderResourceView(EnvToIrradianceCubemapRS::SrcCubemap, 0, inCubemapTexture, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, 0, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, &srvDesc);
+        // Default view: a cube view over all mips, in the resource format.
+        stage.SetSRV(*this, "SourceCubemap", inCubemapTexture);
 
         D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
         uavDesc.Format = Texture::GetUAVCompatableFormat(outIrradianceTexture.GetD3D12ResourceDesc().Format);
@@ -766,7 +804,7 @@ void CommandList::EnvToIrradianceCubemap(const Texture& inCubemapTexture, const 
         // pDesc = nullptr => D3D will guess defaults from resource: format and dimension (if NOT TYPELESS).
         // If the resource is Buffer:  UAV will cover the entire buffer. It will be treated as a typed buffer (not raw/structured unless explicitly defined). ["Use the whole buffer, interpreted using its format."]
         // If the resource is Texture: It will use - Mip level 0 (the highest resolution). If it’s an Array Texture: will use All array slices. ["Bind the top-level mip of the texture, across all slices."]
-        SetUnorderedAccessView(EnvToIrradianceCubemapRS::DstCubemap, 0, outIrradianceTexture, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, 0, 0, &uavDesc);
+        stage.SetUAV(*this, "OutputIrradiance", outIrradianceTexture, &uavDesc);
 
 		// Output size = 32. Thread group size = 8. Dispatch(4, 4, 6) will generate a 32x32 cubemap face (with 6 faces) in a single dispatch.
         Dispatch(4, 4, 6);
@@ -788,18 +826,13 @@ void CommandList::EnvToSpecularPrefilterCubemap(const Texture& inCubemapTexture,
     PixProfiler& profiler = m_Application.GetPixProfiler();
     PIX_SCOPE_MARKER(profiler, m_d3d12CommandList.Get(), L"EnvToSpecularPrefilterCubemap");
     {
-        if (!m_EnvToSpecularPrefilterCubemapPSO)
-        {
-            m_EnvToSpecularPrefilterCubemapPSO = std::make_unique<EnvToSpecularPrefilterCubemapPSO>();
-        }
-
-        m_d3d12CommandList->SetPipelineState(m_EnvToSpecularPrefilterCubemapPSO->GetPipelineState().Get());
-        SetComputeRootSignature(m_EnvToSpecularPrefilterCubemapPSO->GetRootSignature());
-
         auto pCubemapResource = outSpecularPrefilterTexture.GetD3D12Resource();
         if (!pCubemapResource) return;
 
         CD3DX12_RESOURCE_DESC cubemapDesc(pCubemapResource->GetDesc());
+
+        const PipelineStage& stage = GetComputeStage( m_EnvToSpecularPrefilterCubemapStage, L"EnvToSpecularPrefilterCubemap", { g_IBL_SpecularPrefilter_CS, sizeof( g_IBL_SpecularPrefilter_CS ) } );
+        stage.Bind( *this );
 
 		uint16_t numMips = cubemapDesc.MipLevels;
         uint32_t outCubemapWidth = (uint32_t) cubemapDesc.Width;
@@ -822,18 +855,13 @@ void CommandList::EnvToSpecularPrefilterCubemap(const Texture& inCubemapTexture,
             envToSpecularPrefilterCubemapCB.OutputSize  = faceSize;
             envToSpecularPrefilterCubemapCB.Roughness   = roughness;
 
-            SetCompute32BitConstants(EnvToSpecularPrefilterCubemapRS::EnvToSpecularPrefilterCubemapCB, envToSpecularPrefilterCubemapCB);
+            stage.SetCB(*this, "IblSpecularCB", envToSpecularPrefilterCubemapCB);
 
-            D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-            srvDesc.Format = inCubemapTexture.GetD3D12ResourceDesc().Format;
-            srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-            srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
-            srvDesc.TextureCube.MipLevels = (UINT)-1;                         // Use all mips.
-            // --
-            SetShaderResourceView(EnvToSpecularPrefilterCubemapRS::SrcCubemap, 0, inCubemapTexture, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, 0, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, &srvDesc);
+            // Default view: a cube view over all mips, in the resource format.
+            stage.SetSRV(*this, "SourceCubemap", inCubemapTexture);
 
 			uavDesc.Texture2DArray.MipSlice = mipSlice;
-            SetUnorderedAccessView(EnvToSpecularPrefilterCubemapRS::DstCubemap, 0, outSpecularPrefilterTexture, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, 0, 0, &uavDesc);
+            stage.SetUAV(*this, "OutputMip", outSpecularPrefilterTexture, &uavDesc);
             
             // DivideByMultiple is an analog of ceiling()
 			uint32_t dispatchSize = std::max<uint32_t>(1u, Math::DivideByMultiple(faceSize, 8));
@@ -860,22 +888,11 @@ void CommandList::BrdfLut(const Texture& outBrdfLutTexture)
     PixProfiler& profiler = m_Application.GetPixProfiler();
     PIX_SCOPE_MARKER(profiler, m_d3d12CommandList.Get(), L"BRDF LUT");
     {
-        if (!m_BrdfLutPSO)
-        {
-            m_BrdfLutPSO = std::make_unique<BrdfLutPSO>();
-        }
+        const PipelineStage& stage = GetComputeStage( m_BrdfLutStage, L"BrdfLut", { g_IBL_BRDF_LUT_CS, sizeof( g_IBL_BRDF_LUT_CS ) } );
+        stage.Bind( *this );
 
-        m_d3d12CommandList->SetPipelineState(m_BrdfLutPSO->GetPipelineState().Get());
-        SetComputeRootSignature(m_BrdfLutPSO->GetRootSignature());
-
-        //D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
-        //uavDesc.Format = Texture::GetUAVCompatableFormat(cubemapDesc.Format);
-        //uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
-
-        // pDesc = nullptr => D3D will guess defaults from resource: format and dimension (if NOT TYPELESS).
-        // If the resource is Buffer:  UAV will cover the entire buffer. It will be treated as a typed buffer (not raw/structured unless explicitly defined). ["Use the whole buffer, interpreted using its format."]
-        // If the resource is Texture: It will use - Mip level 0 (the highest resolution). If it’s an Array Texture: will use All array slices. ["Bind the top-level mip of the texture, across all slices."]
-        SetUnorderedAccessView(BrdfLutRS::DstTexture, 0, outBrdfLutTexture, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+        // Default view: mip 0 of the texture, in the resource format.
+        stage.SetUAV(*this, "OutBRDFLUT", outBrdfLutTexture);
 
         // Thread group size = 8, outBrdfLutTexture=512x512x1 => Dispatch(64, 64, 1) in a single dispatch.
         auto outTexureDesc = outBrdfLutTexture.GetD3D12ResourceDesc();

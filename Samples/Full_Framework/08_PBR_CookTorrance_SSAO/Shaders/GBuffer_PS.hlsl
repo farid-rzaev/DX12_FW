@@ -37,7 +37,7 @@ Texture2D                   DiffuseTexture          : register(t0);
 Texture2D                   RoughnessTexture        : register(t1);
 Texture2D                   MetalnessTexture        : register(t2);
 
-SamplerState                LinearRepeatSampler     : register(s0);
+SamplerState                LinearWrapSampler       : register(s0);
 
 // Expects a world-space 3d normalized unit sphere normal in [-1,1] as an input.
 // Packs a normalized unit sphere normal (3d in [-1,1]) into two values (2d in [0,1]) that fit in [R10G10]
@@ -67,7 +67,7 @@ GBufferOutput main(GBufferPSInput IN)
 {
     GBufferOutput output;
     
-    float4 diffuse = DiffuseTexture.Sample(LinearRepeatSampler, IN.TexCoord);
+    float4 diffuse = DiffuseTexture.Sample(LinearWrapSampler, IN.TexCoord);
     
     // Alpha test
     // --
@@ -82,8 +82,8 @@ GBufferOutput main(GBufferPSInput IN)
     float2 octNormal = OctahedralEncode(normalWS); // pack 3d to 2d for storage in [R10G10]
     
     // Prefer metalness texture slot; falls back to roughness texture if you only bind one ORM (Occlusion, Roughness, Metalness) map
-    float3 orm = MetalnessTexture.Sample(LinearRepeatSampler, IN.TexCoord).rgb;
-    //float roughness = RoughnessTexture.Sample(LinearRepeatSampler, IN.TexCoord).r * MaterialCB.Roughness;
+    float3 orm = MetalnessTexture.Sample(LinearWrapSampler, IN.TexCoord).rgb;
+    //float roughness = RoughnessTexture.Sample(LinearWrapSampler, IN.TexCoord).r * MaterialCB.Roughness;
     
     float roughness = orm.g * MaterialCB.Roughness; // G = roughness
     float metalness = orm.b * MaterialCB.Metalness; // B = metalness

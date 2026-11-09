@@ -6,7 +6,6 @@
 #include <Framework/Material/RenderTarget.h>
 #include <Framework/Material/Mesh.h>
 // --
-#include <Framework/RootSignature.h>
 #include <Framework/Stages/PipelineStage.h>
 
 #include <Framework/Gameplay/AssimpLoader.h>
@@ -86,13 +85,8 @@ private: /* DEFERRED RENDERING */
     static const int NUM_GBUFFER_RTS = 3;   // GBuff RTs: RT0=AlbedoAO, RT1=Normal, RT2=Roughness,Metalness,EmissiveMask
 	RenderTarget m_GBufferRT;               // Will hold multiple Color attachment Textures and a Depth buffer for the G-Buffer pass.
 
-    // Root signatures for deferred path
-    RootSignature m_GBufferRootSignature;
-    RootSignature m_DeferredLightingRootSignature;
-
-    // Pipeline state objects for deferred
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> m_GBufferPSO;
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> m_DeferredLightingPSO;
+    PipelineStage m_GBufferStage;
+    PipelineStage m_DeferredLightingStage;
 
 private: /* SSAO */
 
@@ -133,15 +127,9 @@ private:
     // can't also have it bound as DSV (SetRenderTarget would transition it back to DEPTH_WRITE).
     RenderTarget m_HDRColorOnlyRT;
 
-    // Root signatures
-    RootSignature m_SkyboxSignature;
-    RootSignature m_SDRRootSignature;
-
-    // Pipeline state object.
-    // Skybox PSO
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SkyboxPipelineState;
-    // HDR -> SDR tone mapping PSO.
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SDRPipelineState;
+    PipelineStage m_SkyboxStage;
+    // HDR -> SDR tone mapping into the window's render target.
+    PipelineStage m_TonemapStage;
 
     D3D12_RECT m_ScissorRect;
 

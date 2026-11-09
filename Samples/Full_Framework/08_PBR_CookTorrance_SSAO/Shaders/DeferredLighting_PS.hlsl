@@ -148,7 +148,7 @@ Texture2D<float2> BrdfLut                                : register(t8);
 Texture2D<float> ScreenSpaceAO                           : register(t9);  // Blurred SSAO, 1 = unoccluded
 
 // Samplers
-SamplerState PointSampler                                : register(s0);
+SamplerState PointClampSampler                           : register(s0);
 SamplerState linearClampSampler                          : register(s1);  // for LUT
 
 // --------------------------------------------------------------------------------
@@ -157,7 +157,7 @@ SamplerState linearClampSampler                          : register(s1);  // for
 
 float4 main(float2 texCoord : TEXCOORD /*UV space*/) : SV_Target
 {    
-    float hwDepth = Depth.Sample(PointSampler, texCoord);
+    float hwDepth = Depth.Sample(PointClampSampler, texCoord);
 
     // Early out for skybox pixels (depth buffer cleared to 1.0)
     if (hwDepth >= 1.0) discard;
@@ -167,16 +167,16 @@ float4 main(float2 texCoord : TEXCOORD /*UV space*/) : SV_Target
     float4 viewPos = mul(LightPropertiesCB.InverseViewProjectionMatrix, clipPos);
     float3 positionWS = viewPos.xyz / viewPos.w;
     
-    float4 albedoAO     = GBufferAlbedo.Sample(PointSampler, texCoord);
-    float4 normalPacked = GBufferNormal.Sample(PointSampler, texCoord);
-    float4 pbrData      = GBufferPBR.Sample(PointSampler, texCoord);
+    float4 albedoAO     = GBufferAlbedo.Sample(PointClampSampler, texCoord);
+    float4 normalPacked = GBufferNormal.Sample(PointClampSampler, texCoord);
+    float4 pbrData      = GBufferPBR.Sample(PointClampSampler, texCoord);
     
     // Unpack normal from [0,1] to [-1,1]
     float3 normalWS = OctahedralDecode(normalPacked.rg);
     float3 albedo   = albedoAO.rgb;
 
     // Occludes ambient / indirect diffuse only - direct lights and specular IBL are left untouched.
-    float ssao = ScreenSpaceAO.Sample(PointSampler, texCoord);
+    float ssao = ScreenSpaceAO.Sample(PointClampSampler, texCoord);
     
     uint lightingViewMode = LightPropertiesCB.LightingViewMode;
     // --

@@ -28,7 +28,7 @@ struct ComputeShaderInput
 
 cbuffer GenerateMipsCB : register( b0 )
 {
-    uint SrcMipLevel;	// Texture level of source mip
+    uint SrcMipLevel;	// Mip level is within the SrcMip view (C++ binds a view of only the source mip to read, not all availible mips. That is needed cuz other mips will be used for UAVs, so reads should be restricted)
     uint NumMipLevels;	// Number of OutMips to write: [1-4]
     uint SrcDimension;  // Width and height of the source texture are even or odd.
     bool IsSRGB;        // Must apply gamma correction to sRGB textures.
@@ -44,19 +44,9 @@ RWTexture2D<float4> OutMip2 : register( u1 );
 RWTexture2D<float4> OutMip3 : register( u2 );
 RWTexture2D<float4> OutMip4 : register( u3 );
 
-// Linear clamp sampler.
+// Linear clamp sampler (preset name - PipelineStage creates the static sampler).
 SamplerState LinearClampSampler : register( s0 );
 
-#define GenerateMips_RootSignature \
-    "RootFlags(0), " \
-    "RootConstants(b0, num32BitConstants = 6), " \
-    "DescriptorTable( SRV(t0, numDescriptors = 1) )," \
-    "DescriptorTable( UAV(u0, numDescriptors = 4) )," \
-    "StaticSampler(s0," \
-        "addressU = TEXTURE_ADDRESS_CLAMP," \
-        "addressV = TEXTURE_ADDRESS_CLAMP," \
-        "addressW = TEXTURE_ADDRESS_CLAMP," \
-        "filter = FILTER_MIN_MAG_MIP_LINEAR)"
 
 // The reason for separating channels is to reduce bank conflicts in the
 // local data memory controller.  A large stride will cause more threads
@@ -105,7 +95,6 @@ float4 PackColor(float4 x)
     }
 }
 
-[RootSignature( GenerateMips_RootSignature )]
 [numthreads( BLOCK_SIZE, BLOCK_SIZE, 1 )]
 void main( ComputeShaderInput IN )
 {

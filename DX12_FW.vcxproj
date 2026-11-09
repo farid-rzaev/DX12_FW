@@ -135,11 +135,6 @@
     <ClCompile Include="Framework\Material\Texture.cpp" />
     <ClCompile Include="Framework\Material\UploadBuffer.cpp" />
     <ClCompile Include="Framework\Material\VertexBuffer.cpp" />
-    <ClCompile Include="Framework\PSOs\GenerateMipsPSO.cpp" />
-    <ClCompile Include="Framework\PSOs\IBL\BrdfLutPSO.cpp" />
-    <ClCompile Include="Framework\PSOs\IBL\EnvToIrradianceCubemapPSO.cpp" />
-    <ClCompile Include="Framework\PSOs\IBL\EnvToSpecularPrefilterCubemapPSO.cpp" />
-    <ClCompile Include="Framework\PSOs\PanoToCubemapPSO.cpp" />
     <ClCompile Include="Framework\ResourceStateTracker.cpp" />
     <ClCompile Include="Framework\RootSignature.cpp" />
     <ClCompile Include="Framework\Stages\PipelineStage.cpp" />
@@ -186,11 +181,6 @@
     <ClInclude Include="Framework\Material\TextureUsage.h" />
     <ClInclude Include="Framework\Material\UploadBuffer.h" />
     <ClInclude Include="Framework\Material\VertexBuffer.h" />
-    <ClInclude Include="Framework\PSOs\GenerateMipsPSO.h" />
-    <ClInclude Include="Framework\PSOs\IBL\BrdfLutPSO.h" />
-    <ClInclude Include="Framework\PSOs\IBL\EnvToIrradianceCubemapPSO.h" />
-    <ClInclude Include="Framework\PSOs\IBL\EnvToSpecularPrefilterCubemapPSO.h" />
-    <ClInclude Include="Framework\PSOs\PanoToCubemapPSO.h" />
     <ClInclude Include="Framework\ResourceStateTracker.h" />
     <ClInclude Include="Framework\RootSignature.h" />
     <ClInclude Include="Framework\Stages\PipelineStage.h" />

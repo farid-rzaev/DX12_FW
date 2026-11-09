@@ -1,4 +1,5 @@
 #include "Sample8.h"
+#include "Stages/DeferredStages.h"
 #include "Stages/SSAOStages.h"
 
 #include <Framework/Application.h>
@@ -133,37 +134,6 @@ struct TonemapParameters
     // Note E/F = Toe angle.
     float LinearWhite;
     float Gamma;
-};
-
-// An enum for root signature parameters.
-// I'm not using scoped enums to avoid the explicit cast that would be required
-// to use these as root indices in the root signature.
-enum RootParameters
-{
-    MatricesCB,         // ConstantBuffer<Mat> MatCB : register(b0);                            <- vs
-    MaterialCB,         // ConstantBuffer<Material> MaterialCB : register( b0, space1 );        <- ps
-    LightPropertiesCB,  // ConstantBuffer<LightProperties> LightPropertiesCB : register( b1 );  <- ps
-    PointLights,        // StructuredBuffer<PointLight> PointLights : register( t0 );           <- ps
-    SpotLights,         // StructuredBuffer<SpotLight> SpotLights : register( t1 );             <- ps
-    Textures,           // Texture2D DiffuseTexture : register( t2 );                           <- ps
-    NumRootParameters
-};
-
-enum GbufferRootParams
-{
-    MatricesCB_GBuffer,         // ConstantBuffer<Mat> MatCB : register(b0);                            <- vs
-    MaterialCB_GBuffer,         // ConstantBuffer<Material> MaterialCB : register( b0, space1 );        <- ps
-    Textures_GBuffer,           // Texture2D DiffuseTexture : register( t0 );                           <- ps
-    NumRootParameters_Gbuffer
-};
-
-enum DeferredRootParams
-{
-    DeferredLightingCommonCB_Deferred,  // b0                                                           <- ps
-    PointLights_Deferred,               // t0                                                           <- ps
-    SpotLights_Deferred,                // t1                                                           <- ps
-    Textures_Deferred,                  // t2-t5: G-Buffer textures, t6-t8: IBL textures                <- ps
-    NumRootParameters_Deferred
 };
 
 
@@ -458,260 +428,12 @@ bool Sample8::LoadContent()
         }
     }
 
-    D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
-    featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
-    if (FAILED(device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
+    // [SKYBOX / G-BUFFER / LIGHTING / TONEMAP] - stages built from stage descs + shader reflection
     {
-        featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
-    }
-
-    // [SKYBOX] - create Root Signature and PSO
-    {
-        // --- Root Signature ---
-        
-        // Allow input layout and deny unnecessary access to certain pipeline stages.
-        D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
-            D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
-            D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
-            D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
-            D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
-
-        CD3DX12_DESCRIPTOR_RANGE1 descriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
-
-        CD3DX12_ROOT_PARAMETER1 rootParameters[2];
-        rootParameters[0].InitAsConstants(sizeof(DirectX::XMMATRIX) / 4, 0, 0, D3D12_SHADER_VISIBILITY_VERTEX);
-        rootParameters[1].InitAsDescriptorTable(1, &descriptorRange, D3D12_SHADER_VISIBILITY_PIXEL);
-
-        CD3DX12_STATIC_SAMPLER_DESC linearClampSampler(0, D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
-
-        CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDescription;
-        rootSignatureDescription.Init_1_1(2, rootParameters, 1, &linearClampSampler, rootSignatureFlags);
-
-        m_SkyboxSignature.SetRootSignatureDesc(rootSignatureDescription.Desc_1_1, featureData.HighestVersion);
-
-        // --- PSO ---
-
-        // Load the Skybox shaders.
-        ComPtr<ID3DBlob> vs;
-        ComPtr<ID3DBlob> ps;
-        ThrowIfFailed(D3DReadFileToBlob((shaderBytecodeDir + L"\\Skybox_VS.cso").c_str(), &vs));
-        ThrowIfFailed(D3DReadFileToBlob((shaderBytecodeDir + L"\\Skybox_PS.cso").c_str(), &ps));
-
-        // Setup the input layout for the skybox vertex shader.
-        D3D12_INPUT_ELEMENT_DESC inputLayout[1] = {
-            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        };
-
-        struct SkyboxPipelineState
-        {
-            CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE pRootSignature;
-            CD3DX12_PIPELINE_STATE_STREAM_INPUT_LAYOUT InputLayout;
-            CD3DX12_PIPELINE_STATE_STREAM_PRIMITIVE_TOPOLOGY PrimitiveTopologyType;
-            CD3DX12_PIPELINE_STATE_STREAM_VS VS;
-            CD3DX12_PIPELINE_STATE_STREAM_PS PS;
-            CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS RTVFormats;
-        } skyboxPipelineStateStream;
-
-        skyboxPipelineStateStream.pRootSignature = m_SkyboxSignature.GetRootSignature().Get();
-        skyboxPipelineStateStream.InputLayout = { inputLayout, 1 };
-        skyboxPipelineStateStream.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-        skyboxPipelineStateStream.VS = CD3DX12_SHADER_BYTECODE(vs.Get());
-        skyboxPipelineStateStream.PS = CD3DX12_SHADER_BYTECODE(ps.Get());
-        skyboxPipelineStateStream.RTVFormats = m_HDRRenderTarget.GetRenderTargetFormats();
-
-        D3D12_PIPELINE_STATE_STREAM_DESC skyboxPipelineStateStreamDesc = {
-            sizeof(SkyboxPipelineState), &skyboxPipelineStateStream
-        };
-        ThrowIfFailed(device->CreatePipelineState(&skyboxPipelineStateStreamDesc, IID_PPV_ARGS(&m_SkyboxPipelineState)));
-    }
-
-    // [HDRtoSDR] - create Root Signature and PSO
-    {
-        // --- Root Signature ---
-
-        CD3DX12_DESCRIPTOR_RANGE1 descriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
-
-        CD3DX12_ROOT_PARAMETER1 rootParameters[2];
-        rootParameters[0].InitAsConstants(sizeof(TonemapParameters) / 4, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL);
-        rootParameters[1].InitAsDescriptorTable(1, &descriptorRange, D3D12_SHADER_VISIBILITY_PIXEL);
-
-        CD3DX12_STATIC_SAMPLER_DESC linearClampsSampler(0, D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
-
-        CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDescription;
-        rootSignatureDescription.Init_1_1(2, rootParameters, 1, &linearClampsSampler );
-
-        m_SDRRootSignature.SetRootSignatureDesc(rootSignatureDescription.Desc_1_1, featureData.HighestVersion);
-
-        // --- PSO ---
-
-        ComPtr<ID3DBlob> vs;
-        ComPtr<ID3DBlob> ps;
-        ThrowIfFailed(D3DReadFileToBlob((shaderBytecodeDir + L"\\HDRtoSDR_VS.cso").c_str(), &vs));
-        ThrowIfFailed(D3DReadFileToBlob((shaderBytecodeDir + L"\\HDRtoSDR_PS.cso").c_str(), &ps));
-
-        CD3DX12_RASTERIZER_DESC rasterizerDesc(D3D12_DEFAULT);
-        rasterizerDesc.CullMode = D3D12_CULL_MODE_NONE;
-
-        struct SDRPipelineStateStream
-        {
-            CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE pRootSignature;
-            CD3DX12_PIPELINE_STATE_STREAM_PRIMITIVE_TOPOLOGY PrimitiveTopologyType;
-            CD3DX12_PIPELINE_STATE_STREAM_VS VS;
-            CD3DX12_PIPELINE_STATE_STREAM_PS PS;
-            CD3DX12_PIPELINE_STATE_STREAM_RASTERIZER Rasterizer;
-            CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS RTVFormats;
-        } sdrPipelineStateStream;
-
-        sdrPipelineStateStream.pRootSignature = m_SDRRootSignature.GetRootSignature().Get();
-        sdrPipelineStateStream.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-        sdrPipelineStateStream.VS = CD3DX12_SHADER_BYTECODE(vs.Get());
-        sdrPipelineStateStream.PS = CD3DX12_SHADER_BYTECODE(ps.Get());
-        sdrPipelineStateStream.Rasterizer = rasterizerDesc;
-        sdrPipelineStateStream.RTVFormats = app.GetRenderTarget().GetRenderTargetFormats();
-
-        D3D12_PIPELINE_STATE_STREAM_DESC sdrPipelineStateStreamDesc = {
-            sizeof(SDRPipelineStateStream), &sdrPipelineStateStream
-        };
-        ThrowIfFailed(device->CreatePipelineState(&sdrPipelineStateStreamDesc, IID_PPV_ARGS(&m_SDRPipelineState)));
-    }
-
-	// [G-Buffer] - create Root Signature and PSO
-    {
-        // --- Root Signature (same as HDR forward) ---
-
-        CD3DX12_DESCRIPTOR_RANGE1 descriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 0);  // t0 = diffuse, t1 = roughness, t2 = metalness
-        // --
-        CD3DX12_ROOT_PARAMETER1 rootParameters[GbufferRootParams::NumRootParameters_Gbuffer];
-        rootParameters[GbufferRootParams::MatricesCB_GBuffer].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_VERTEX);  // b0, SPACE0 - VERTEX shader
-        rootParameters[GbufferRootParams::MaterialCB_GBuffer].InitAsConstantBufferView(0, 1, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);   // b0, SPACE1 - PIXEL  shader
-        rootParameters[GbufferRootParams::Textures_GBuffer].InitAsDescriptorTable(1, &descriptorRange, D3D12_SHADER_VISIBILITY_PIXEL);                          // t0, t1, t2 - DESCRIPTOR HEAP see descriptorRange
-        
-
-        CD3DX12_STATIC_SAMPLER_DESC linearRepeatSampler(0, D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR);                                                         // s0 
-
-        // Allow input layout and deny unnecessary access to certain pipeline stages.
-        D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
-            D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
-            D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
-            D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
-            D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
-
-        CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDescription;
-        rootSignatureDescription.Init_1_1(GbufferRootParams::NumRootParameters_Gbuffer, rootParameters, 1, &linearRepeatSampler, rootSignatureFlags);
-
-        m_GBufferRootSignature.SetRootSignatureDesc(rootSignatureDescription.Desc_1_1, featureData.HighestVersion);
-
-        // --- PSO ---
-
-        ComPtr<ID3DBlob> vs, ps;
-        ThrowIfFailed(D3DReadFileToBlob((shaderBytecodeDir + L"\\GBuffer_VS.cso").c_str(), &vs));
-        ThrowIfFailed(D3DReadFileToBlob((shaderBytecodeDir + L"\\GBuffer_PS.cso").c_str(), &ps));
-
-        CD3DX12_DEPTH_STENCIL_DESC1 depthStencilDesc(D3D12_DEFAULT);
-        depthStencilDesc.DepthEnable = TRUE;
-        depthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-        depthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
-
-        struct PipelineStateStream
-        {
-            CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE pRootSignature;
-            CD3DX12_PIPELINE_STATE_STREAM_INPUT_LAYOUT InputLayout;
-            CD3DX12_PIPELINE_STATE_STREAM_PRIMITIVE_TOPOLOGY PrimitiveTopologyType;
-            CD3DX12_PIPELINE_STATE_STREAM_VS VS;
-            CD3DX12_PIPELINE_STATE_STREAM_PS PS;
-            CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL1 DepthStencil;
-            CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL_FORMAT DSVFormat;
-            CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS RTVFormats;
-        } gbufferPipelineStateStream;
-
-        gbufferPipelineStateStream.pRootSignature = m_GBufferRootSignature.GetRootSignature().Get();
-        gbufferPipelineStateStream.InputLayout = { VertexPositionNormalTexture::InputElements, VertexPositionNormalTexture::InputElementCount };
-        gbufferPipelineStateStream.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-        gbufferPipelineStateStream.VS = CD3DX12_SHADER_BYTECODE(vs.Get());
-        gbufferPipelineStateStream.PS = CD3DX12_SHADER_BYTECODE(ps.Get());
-        gbufferPipelineStateStream.DepthStencil = depthStencilDesc;
-        gbufferPipelineStateStream.DSVFormat  = m_GBufferRT.GetDepthStencilFormat();
-        gbufferPipelineStateStream.RTVFormats = m_GBufferRT.GetRenderTargetFormats();
-
-        D3D12_PIPELINE_STATE_STREAM_DESC gbufferPipelineStateStreamDesc = {
-            sizeof(PipelineStateStream), &gbufferPipelineStateStream
-        };
-        ThrowIfFailed(device->CreatePipelineState(&gbufferPipelineStateStreamDesc, IID_PPV_ARGS(&m_GBufferPSO)));
-    }
-
-    // [Deferred Lighting] - create Root Signature and PSO
-    {
-        // --- Root Signature ---
-
-        CD3DX12_DESCRIPTOR_RANGE1 descriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 8 /*num_descriptors*/, 2 /*shader_register_number*/);
-        // --
-        CD3DX12_ROOT_PARAMETER1 rootParameters[DeferredRootParams::NumRootParameters_Deferred];
-        rootParameters[DeferredRootParams::DeferredLightingCommonCB_Deferred].InitAsConstants(sizeof(DeferredLightingCommon) / 4, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL); // b0
-        rootParameters[DeferredRootParams::PointLights_Deferred].InitAsShaderResourceView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);        // t0
-        rootParameters[DeferredRootParams::SpotLights_Deferred].InitAsShaderResourceView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);         // t1
-        rootParameters[DeferredRootParams::Textures_Deferred].InitAsDescriptorTable(1, &descriptorRange, D3D12_SHADER_VISIBILITY_PIXEL);                                // t2-t9 - DESCRIPTOR HEAP (see descriptorRange):
-                                                                                                                                                                        //   * t2-t5: GBuffer + depth, t6 - irradiance cube,
-                                                                                                                                                                        //   * t7 - specular prefilter cube, t8 - BRDF LUT, t9 - SSAO
-
-        D3D12_STATIC_SAMPLER_DESC pointSampler = {};
-        pointSampler.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-        pointSampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-        pointSampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-        pointSampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-        pointSampler.ShaderRegister = 0;                                                                                                                                                                        // s0
-        pointSampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-		CD3DX12_STATIC_SAMPLER_DESC linearClampSampler(1, D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP);    // s1
-
-        D3D12_STATIC_SAMPLER_DESC samplers[2] = {pointSampler, linearClampSampler};
-
-        // Allow input layout and deny unnecessary access to certain pipeline stages.
-        D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
-            D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
-            D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
-            D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
-            D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
-
-        CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDescription;
-        rootSignatureDescription.Init_1_1(DeferredRootParams::NumRootParameters_Deferred, rootParameters, 2, samplers, rootSignatureFlags);
-
-        m_DeferredLightingRootSignature.SetRootSignatureDesc(rootSignatureDescription.Desc_1_1, featureData.HighestVersion);
-
-        // --- PSO ---
-
-        struct DeferredPipelineStateStream
-        {
-            CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE pRootSignature;
-            CD3DX12_PIPELINE_STATE_STREAM_PRIMITIVE_TOPOLOGY PrimitiveTopologyType;
-            CD3DX12_PIPELINE_STATE_STREAM_VS VS;
-            CD3DX12_PIPELINE_STATE_STREAM_PS PS;
-            CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL1 DepthStencil;
-            CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL_FORMAT DSVFormat;
-            CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS RTVFormats;
-        } deferredPipelineStateStream;
-
-        ComPtr<ID3DBlob> vs, ps;
-        ThrowIfFailed(D3DReadFileToBlob((shaderBytecodeDir + L"\\DeferredLighting_VS.cso").c_str(), &vs));
-        ThrowIfFailed(D3DReadFileToBlob((shaderBytecodeDir + L"\\DeferredLighting_PS.cso").c_str(), &ps));
-
-        deferredPipelineStateStream.pRootSignature = m_DeferredLightingRootSignature.GetRootSignature().Get();
-        deferredPipelineStateStream.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-        deferredPipelineStateStream.VS = CD3DX12_SHADER_BYTECODE(vs.Get());
-        deferredPipelineStateStream.PS = CD3DX12_SHADER_BYTECODE(ps.Get());
-
-        CD3DX12_DEPTH_STENCIL_DESC1 depthStencilDesc(D3D12_DEFAULT);
-        depthStencilDesc.DepthEnable = FALSE;
-        depthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
-        depthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
-        // --
-        deferredPipelineStateStream.DepthStencil = depthStencilDesc;
-        deferredPipelineStateStream.DSVFormat  = m_HDRColorOnlyRT.GetDepthStencilFormat();    // HDR output (no DSV)
-        deferredPipelineStateStream.RTVFormats = m_HDRColorOnlyRT.GetRenderTargetFormats();   // HDR output
-
-        D3D12_PIPELINE_STATE_STREAM_DESC deferredPipelineStateStreamDesc = {
-            sizeof(DeferredPipelineStateStream), &deferredPipelineStateStream
-        };
-        ThrowIfFailed(device->CreatePipelineState(&deferredPipelineStateStreamDesc, IID_PPV_ARGS(&m_DeferredLightingPSO)));
+        m_SkyboxStage.Create(shaderBytecodeDir, MakeSkyboxStageDesc(m_HDRRenderTarget));
+        m_GBufferStage.Create(shaderBytecodeDir, MakeGBufferStageDesc(m_GBufferRT));
+        m_DeferredLightingStage.Create(shaderBytecodeDir, MakeDeferredLightingStageDesc(m_HDRColorOnlyRT));
+        m_TonemapStage.Create(shaderBytecodeDir, MakeTonemapStageDesc(app.GetRenderTarget()));
     }
 
     // [SSAO] - stages built from stage descs + shader reflection
@@ -1157,21 +879,11 @@ void Sample8::OnRender()
         // The view matrix should only consider the camera's rotation, but not the translation.
         auto viewMatrix = XMMatrixTranspose(XMMatrixRotationQuaternion(m_Camera.get_Rotation()));
         auto projMatrix = m_Camera.get_ProjectionMatrix();
-        auto viewProjMatrix = viewMatrix * projMatrix;
+        XMMATRIX viewProjMatrix = viewMatrix * projMatrix;
 
-        commandList->SetPipelineState(m_SkyboxPipelineState);
-        commandList->SetGraphicsRootSignature(m_SkyboxSignature);
-
-        commandList->SetGraphics32BitConstants(0, viewProjMatrix);
-
-        D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-        srvDesc.Format = m_GraceCathedralCubemap.GetD3D12ResourceDesc().Format;
-        srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-        srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
-        srvDesc.TextureCube.MipLevels = (UINT)-1; // Use all mips.
-
-        // TODO: Need a better way to bind a cubemap.
-        commandList->SetShaderResourceView(1, 0, m_GraceCathedralCubemap, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, 0, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, &srvDesc);
+        m_SkyboxStage.Bind(*commandList);
+        m_SkyboxStage.SetCB(*commandList, "MatCB", viewProjMatrix);
+        m_SkyboxStage.SetSRV(*commandList, "SkyboxTexture", m_GraceCathedralCubemap);   // default view: cube, all mips
 
         m_SkyboxMesh->Draw(*commandList);
     }
@@ -1191,13 +903,12 @@ void Sample8::OnRender()
         commandList->SetRenderTarget(app.GetRenderTarget());
         commandList->SetViewport(app.GetRenderTarget().GetViewport());
         commandList->SetScissorRect(m_ScissorRect);
-        commandList->SetPipelineState(m_SDRPipelineState);
-        commandList->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        commandList->SetGraphicsRootSignature(m_SDRRootSignature);
-        commandList->SetGraphics32BitConstants(0, g_TonemapParameters);
-        commandList->SetShaderResourceView(1, 0, *m_HDRRenderTarget.GetTexture(Color0), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
-        commandList->Draw(3);
+        m_TonemapStage.Bind(*commandList);
+        m_TonemapStage.SetCB(*commandList, "TonemapParametersCB", g_TonemapParameters);
+        m_TonemapStage.SetSRV(*commandList, "HDRTexture", *m_HDRRenderTarget.GetTexture(Color0));
+
+        m_TonemapStage.DrawFullscreenTriangle(*commandList);
     }
 
 	// 5. Execute the command list.
@@ -1230,9 +941,8 @@ void Sample8::RenderDeferred(std::shared_ptr<CommandList> commandList, DirectX::
         commandList->ClearTexture(*m_GBufferRT.GetTexture(AttachmentPoint::Color2), clearColor);
         commandList->ClearDepthStencilTexture(*m_GBufferRT.GetTexture(AttachmentPoint::DepthStencil), D3D12_CLEAR_FLAG_DEPTH);
 
-        // Set G-Buffer PSO
-        commandList->SetPipelineState(m_GBufferPSO);
-        commandList->SetGraphicsRootSignature(m_GBufferRootSignature);
+        // Bindings persist across draws, so per-part resources are only set when they change.
+        m_GBufferStage.Bind(*commandList);
 
         // Render meshes into G-Buffer (same loop as forward, but no lights needed)
         // RENDER MODEL
@@ -1247,7 +957,7 @@ void Sample8::RenderDeferred(std::shared_ptr<CommandList> commandList, DirectX::
             Mat matrices;
             ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
             // --
-            commandList->SetGraphicsDynamicConstantBuffer(GbufferRootParams::MatricesCB_GBuffer, matrices);
+            m_GBufferStage.SetCB(*commandList, "MatCB", matrices);
 
             // Returns the frustum in view (camera) space
             // --
@@ -1281,25 +991,26 @@ void Sample8::RenderDeferred(std::shared_ptr<CommandList> commandList, DirectX::
 
                 if (&part.material != currentMaterial)
                 {
-                    commandList->SetGraphicsDynamicConstantBuffer(GbufferRootParams::MaterialCB_GBuffer, part.material);
+                    m_GBufferStage.SetCB(*commandList, "MaterialCB", part.material);
                     currentMaterial = &part.material;
                 }
 
                 if (&part.diffuseTexture != currentDiffuse)
                 {
-                    commandList->SetShaderResourceView(GbufferRootParams::Textures_GBuffer, 0, part.diffuseTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+                    m_GBufferStage.SetSRV(*commandList, "DiffuseTexture", part.diffuseTexture);
                     currentDiffuse = &part.diffuseTexture;
                 }
 
                 if (&part.roughnessTexture != currentRoughness)
                 {
-                    commandList->SetShaderResourceView(GbufferRootParams::Textures_GBuffer, 1, part.roughnessTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+                    // Usinng TrySetSRV as - GBuffer_PS reads roughness from the ORM (metalness) texture, so the compiler strips RoughnessTexture cuz it's not used in the shader.
+                    m_GBufferStage.TrySetSRV(*commandList, "RoughnessTexture", part.roughnessTexture);
                     currentRoughness = &part.roughnessTexture;
                 }
 
                 if (&part.metalnessTexture != currentMetalness)
                 {
-                    commandList->SetShaderResourceView(GbufferRootParams::Textures_GBuffer, 2, part.metalnessTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+                    m_GBufferStage.SetSRV(*commandList, "MetalnessTexture", part.metalnessTexture);
                     currentMetalness = &part.metalnessTexture;
                 }
 
@@ -1338,8 +1049,7 @@ void Sample8::RenderDeferred(std::shared_ptr<CommandList> commandList, DirectX::
         m_SSAOStage.SetSRV(*commandList, "NormalTex", *m_GBufferRT.GetTexture(AttachmentPoint::Color1));
         m_SSAOStage.SetSRV(*commandList, "NoiseTex",  m_SSAONoiseTexture);
 
-        commandList->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        commandList->Draw(3);
+        m_SSAOStage.DrawFullscreenTriangle(*commandList);
     }
 
     // === PASS 3: SSAO bilateral blur (horizontal, then vertical) ===
@@ -1356,7 +1066,6 @@ void Sample8::RenderDeferred(std::shared_ptr<CommandList> commandList, DirectX::
         blurParams._Pad0        = 0.0f;
 
         m_SSAOBlurStage.Bind(*commandList);
-        commandList->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
         struct BlurPass { const RenderTarget& src; const RenderTarget& dst; XMFLOAT2 direction; };
         const BlurPass passes[] = {
@@ -1376,7 +1085,7 @@ void Sample8::RenderDeferred(std::shared_ptr<CommandList> commandList, DirectX::
             m_SSAOBlurStage.SetSRV(*commandList, "DepthTex",  *m_GBufferRT.GetTexture(AttachmentPoint::DepthStencil));
             m_SSAOBlurStage.SetSRV(*commandList, "NormalTex", *m_GBufferRT.GetTexture(AttachmentPoint::Color1));
 
-            commandList->Draw(3);
+            m_SSAOBlurStage.DrawFullscreenTriangle(*commandList);
         }
     }
 
@@ -1394,8 +1103,7 @@ void Sample8::RenderDeferred(std::shared_ptr<CommandList> commandList, DirectX::
         const RenderTarget& aoSource = (m_LightingViewMode == LightingViewMode::AO_Raw) ? m_SSAORawRT : m_SSAOBlurRT;
         m_SSAODebugCopyStage.SetSRV(*commandList, "AOTex", *aoSource.GetTexture(AttachmentPoint::Color0));
 
-        commandList->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        commandList->Draw(3);
+        m_SSAODebugCopyStage.DrawFullscreenTriangle(*commandList);
 
         return;
     }
@@ -1408,8 +1116,7 @@ void Sample8::RenderDeferred(std::shared_ptr<CommandList> commandList, DirectX::
         commandList->SetViewport(m_HDRColorOnlyRT.GetViewport());
         commandList->SetScissorRect(m_ScissorRect);
 
-        commandList->SetPipelineState(m_DeferredLightingPSO);
-        commandList->SetGraphicsRootSignature(m_DeferredLightingRootSignature);
+        m_DeferredLightingStage.Bind(*commandList);
 
         DeferredLightingCommon deferredLightingCommon;
         deferredLightingCommon.NumPointLights = static_cast<uint32_t>(m_PointLights.size());
@@ -1419,40 +1126,27 @@ void Sample8::RenderDeferred(std::shared_ptr<CommandList> commandList, DirectX::
         deferredLightingCommon.LightingViewMode = static_cast<uint32_t>(m_LightingViewMode);
 
         // CBs:
-        commandList->SetGraphics32BitConstants(DeferredRootParams::DeferredLightingCommonCB_Deferred, deferredLightingCommon);
+        m_DeferredLightingStage.SetCB(*commandList, "LightPropertiesCB", deferredLightingCommon);
 
-        // SRVs:
-        // 0-1: Light buffers
-        commandList->SetGraphicsDynamicStructuredBuffer(DeferredRootParams::PointLights_Deferred, m_PointLights);
-        commandList->SetGraphicsDynamicStructuredBuffer(DeferredRootParams::SpotLights_Deferred, m_SpotLights);
+        // Light buffers
+        m_DeferredLightingStage.UploadAndSetSRV(*commandList, "PointLights", m_PointLights);
+        m_DeferredLightingStage.UploadAndSetSRV(*commandList, "SpotLights", m_SpotLights);
 
-        // 2-5: G-Buffer textures
-        commandList->SetShaderResourceView(DeferredRootParams::Textures_Deferred, 0, *m_GBufferRT.GetTexture(AttachmentPoint::Color0), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);         // G-Buffer: AlbedoAO
-        commandList->SetShaderResourceView(DeferredRootParams::Textures_Deferred, 1, *m_GBufferRT.GetTexture(AttachmentPoint::Color1), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);         // G-Buffer: Normal
-        commandList->SetShaderResourceView(DeferredRootParams::Textures_Deferred, 2, *m_GBufferRT.GetTexture(AttachmentPoint::Color2), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);         // G-Buffer: PBR
-        commandList->SetShaderResourceView(DeferredRootParams::Textures_Deferred, 3, *m_GBufferRT.GetTexture(AttachmentPoint::DepthStencil), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);   // G-Buffer: Depth
+        // G-Buffer textures
+        m_DeferredLightingStage.SetSRV(*commandList, "GBufferAlbedo", *m_GBufferRT.GetTexture(AttachmentPoint::Color0));
+        m_DeferredLightingStage.SetSRV(*commandList, "GBufferNormal", *m_GBufferRT.GetTexture(AttachmentPoint::Color1));
+        m_DeferredLightingStage.SetSRV(*commandList, "GBufferPBR",    *m_GBufferRT.GetTexture(AttachmentPoint::Color2));
+        m_DeferredLightingStage.SetSRV(*commandList, "Depth",         *m_GBufferRT.GetTexture(AttachmentPoint::DepthStencil));
 
-        // 6-8: IBL textures
-        D3D12_SHADER_RESOURCE_VIEW_DESC irrSrvDesc = {};
-        irrSrvDesc.Format = m_IrradianceCubemap.GetD3D12ResourceDesc().Format;
-        irrSrvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-        irrSrvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
-        irrSrvDesc.TextureCube.MipLevels = 1;   // irradiance has 1 mip
-        
-        D3D12_SHADER_RESOURCE_VIEW_DESC specSrvDesc = irrSrvDesc;
-        specSrvDesc.Format = m_SpecularPrefilterCubemap.GetD3D12ResourceDesc().Format;
-        specSrvDesc.TextureCube.MipLevels = (UINT)-1;   // all mips
+        // IBL textures (default views: cubes with all mips - irradiance has 1, the prefilter needs all)
+        m_DeferredLightingStage.SetSRV(*commandList, "AmbientIrradianceCube", m_IrradianceCubemap);
+        m_DeferredLightingStage.SetSRV(*commandList, "SpecularPrefilterCube", m_SpecularPrefilterCubemap);
+        m_DeferredLightingStage.SetSRV(*commandList, "BrdfLut",               m_BrdfLut);
 
-        commandList->SetShaderResourceView(DeferredRootParams::Textures_Deferred, 4, m_IrradianceCubemap, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, 0, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, &irrSrvDesc);
-        commandList->SetShaderResourceView(DeferredRootParams::Textures_Deferred, 5, m_SpecularPrefilterCubemap, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, 0, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, &specSrvDesc);
-        commandList->SetShaderResourceView(DeferredRootParams::Textures_Deferred, 6, m_BrdfLut, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        // Screen-space AO (blurred)
+        m_DeferredLightingStage.SetSRV(*commandList, "ScreenSpaceAO", *m_SSAOBlurRT.GetTexture(AttachmentPoint::Color0));
 
-        // 9: Screen-space AO (blurred)
-        commandList->SetShaderResourceView(DeferredRootParams::Textures_Deferred, 7, *m_SSAOBlurRT.GetTexture(AttachmentPoint::Color0), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-
-        // Draw full-screen triangle
-        commandList->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        commandList->Draw(3);
+        m_DeferredLightingStage.DrawFullscreenTriangle(*commandList);
     }
 }
 

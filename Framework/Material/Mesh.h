@@ -49,6 +49,12 @@ public:
 
     void Draw(CommandList& commandList);
 
+    // Input layout of the vertex buffers every Mesh is built with (VertexPositionNormalTexture).
+    static D3D12_INPUT_LAYOUT_DESC GetInputLayout()
+    {
+        return { VertexPositionNormalTexture::InputElements, VertexPositionNormalTexture::InputElementCount };
+    }
+
     static std::unique_ptr<Mesh> CreateFromData(CommandList& commandList, VertexCollection& vertices, IndexCollection& indices, bool rhcoords = false);
 
     static std::unique_ptr<Mesh> CreateCube(CommandList& commandList, float size = 1, bool rhcoords = false);

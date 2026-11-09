@@ -20,13 +20,8 @@ class Buffer;
 class ByteAddressBuffer;
 class ConstantBuffer;
 class DynamicDescriptorHeap;
-class GenerateMipsPSO;
 class IndexBuffer;
-class PanoToCubemapPSO;
 class PipelineStage;
-class EnvToIrradianceCubemapPSO;
-class EnvToSpecularPrefilterCubemapPSO;
-class BrdfLutPSO;
 class RenderTarget;
 class Resource;
 class ResourceStateTracker;
@@ -383,14 +378,12 @@ private:
     // heaps if they are different than the currently bound descriptor heaps.
     ID3D12DescriptorHeap*                               m_DescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
 
-	// Pipeline state object for Mip map generation.
-	std::unique_ptr<GenerateMipsPSO>                    m_GenerateMipsPSO;
-    // Pipeline state object for converting panorama (equirectangular) to cubemaps
-    std::unique_ptr<PanoToCubemapPSO>                   m_PanoToCubemapPSO;
-    // Pipeline state object for converting Environment Cubemap into Irradiance Cubemap.
-    std::unique_ptr<EnvToIrradianceCubemapPSO>          m_EnvToIrradianceCubemapPSO;
-    std::unique_ptr<EnvToSpecularPrefilterCubemapPSO>   m_EnvToSpecularPrefilterCubemapPSO;
-    std::unique_ptr<BrdfLutPSO>                         m_BrdfLutPSO;
+    // Framework compute stages (built from bytecode headers + reflection on first use).
+    std::unique_ptr<PipelineStage>                      m_GenerateMipsStage;                  // Mip map generation.
+    std::unique_ptr<PipelineStage>                      m_PanoToCubemapStage;                 // Panorama (equirectangular) -> cubemap.
+    std::unique_ptr<PipelineStage>                      m_EnvToIrradianceCubemapStage;        // Environment cubemap -> irradiance cubemap.
+    std::unique_ptr<PipelineStage>                      m_EnvToSpecularPrefilterCubemapStage; // Environment cubemap -> specular prefilter cubemap.
+    std::unique_ptr<PipelineStage>                      m_BrdfLutStage;                       // Split-sum BRDF LUT.
 
     // Objects that are being tracked by a command list that is "in-flight" on 
     // the command-queue and cannot be deleted. To ensure objects are not deleted 

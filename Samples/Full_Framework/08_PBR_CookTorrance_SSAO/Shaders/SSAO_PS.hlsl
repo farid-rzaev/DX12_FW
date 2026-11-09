@@ -1,5 +1,5 @@
 // File: Shaders/SSAO_PS.hlsl
-// SM 5.1 pixel shader, fullscreen triangle input from DeferredLighting_VS.hlsl
+// SM 5.1 pixel shader, fullscreen triangle input from FullscreenTriangle_VS.hlsl
 
 struct PSIn
 {

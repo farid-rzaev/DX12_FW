@@ -67,12 +67,6 @@
     <ClCompile Include="Framework\RootSignature.cpp">
       <Filter>Src</Filter>
     </ClCompile>
-    <ClCompile Include="Framework\PSOs\GenerateMipsPSO.cpp">
-      <Filter>Src\PSOs</Filter>
-    </ClCompile>
-    <ClCompile Include="Framework\PSOs\PanoToCubemapPSO.cpp">
-      <Filter>Src\PSOs</Filter>
-    </ClCompile>
     <ClCompile Include="Framework\3RD_Party\IMGUI\imgui.cpp">
       <Filter>Src\3RD_Party\IMGUI</Filter>
     </ClCompile>
@@ -105,15 +99,6 @@
     </ClCompile>
     <ClCompile Include="Framework\Events\PixProfiler.cpp">
       <Filter>Src\Events</Filter>
-    </ClCompile>
-    <ClCompile Include="Framework\PSOs\IBL\EnvToIrradianceCubemapPSO.cpp">
-      <Filter>Src\PSOs\IBL</Filter>
-    </ClCompile>
-    <ClCompile Include="Framework\PSOs\IBL\EnvToSpecularPrefilterCubemapPSO.cpp">
-      <Filter>Src\PSOs\IBL</Filter>
-    </ClCompile>
-    <ClCompile Include="Framework\PSOs\IBL\BrdfLutPSO.cpp">
-      <Filter>Src\PSOs\IBL</Filter>
     </ClCompile>
     <ClCompile Include="Framework\Stages\PipelineStage.cpp">
       <Filter>Src\Stages</Filter>
@@ -192,12 +177,6 @@
     <ClInclude Include="Framework\RootSignature.h">
       <Filter>Src</Filter>
     </ClInclude>
-    <ClInclude Include="Framework\PSOs\GenerateMipsPSO.h">
-      <Filter>Src\PSOs</Filter>
-    </ClInclude>
-    <ClInclude Include="Framework\PSOs\PanoToCubemapPSO.h">
-      <Filter>Src\PSOs</Filter>
-    </ClInclude>
     <ClInclude Include="Framework\3RD_Party\D3D\d3dx12.h">
       <Filter>Src\3RD_Party\D3D</Filter>
     </ClInclude>
@@ -255,15 +234,6 @@
     <ClInclude Include="Framework\Events\PixProfiler.h">
       <Filter>Src\Events</Filter>
     </ClInclude>
-    <ClInclude Include="Framework\PSOs\IBL\EnvToIrradianceCubemapPSO.h">
-      <Filter>Src\PSOs\IBL</Filter>
-    </ClInclude>
-    <ClInclude Include="Framework\PSOs\IBL\EnvToSpecularPrefilterCubemapPSO.h">
-      <Filter>Src\PSOs\IBL</Filter>
-    </ClInclude>
-    <ClInclude Include="Framework\PSOs\IBL\BrdfLutPSO.h">
-      <Filter>Src\PSOs\IBL</Filter>
-    </ClInclude>
     <ClInclude Include="Framework\Stages\PipelineStage.h">
       <Filter>Src\Stages</Filter>
     </ClInclude>
@@ -286,9 +256,6 @@
     </Filter>
     <Filter Include="Src\Material">
       <UniqueIdentifier>{812ee144-1c5a-4fb5-b93f-4975743f1e10}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Src\PSOs">
-      <UniqueIdentifier>{5c84f5b2-4d6a-471d-91cb-4283fb15730a}</UniqueIdentifier>
     </Filter>
     <Filter Include="Src\Shaders">
       <UniqueIdentifier>{09e57aad-85e5-4d9a-ad83-77b7c45dae5f}</UniqueIdentifier>
@@ -313,9 +280,6 @@
     </Filter>
     <Filter Include="Src\Shaders\IBL">
       <UniqueIdentifier>{0fd855c5-7ca0-43d5-8565-5b19e8585731}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Src\PSOs\IBL">
-      <UniqueIdentifier>{0c563e68-19fe-41e8-96eb-ff1299a5d548}</UniqueIdentifier>
     </Filter>
     <Filter Include="Src\Stages">
       <UniqueIdentifier>{1b58affb-8e26-424f-be08-99bca1e779d7}</UniqueIdentifier>
