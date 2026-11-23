@@ -15,6 +15,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstring>
 #include <stdexcept>
 
 using Microsoft::WRL::ComPtr;
@@ -622,7 +623,7 @@ void PipelineStage::BuildRootSignature(const std::vector<ReflectedResource>& res
 
         const Slot slot = { kind, (uint32_t)rootParameters.size(), resource.BindCount, resource.ByteSize,
                             resource.Dimension, resource.Visibility, (uint32_t)m_BindingDescs.size() };
-        m_Slots.emplace(resource.Name, slot);
+        m_Slots.emplace_back(resource.Name, slot);
 
         for (UINT i = 0; i < resource.BindCount; ++i)
         {
@@ -705,24 +706,37 @@ void PipelineStage::Bind(CommandList& commandList) const
 
 bool PipelineStage::HasBinding(const char* name) const
 {
-    return m_Slots.find(name) != m_Slots.end();
+    return LookupSlot(name) != nullptr;
+}
+
+const PipelineStage::Slot* PipelineStage::LookupSlot(const char* name) const
+{
+    for (const auto& entry : m_Slots)
+    {
+        if (strcmp(entry.first.c_str(), name) == 0)
+        {
+            return &entry.second;
+        }
+    }
+
+    return nullptr;
 }
 
 const PipelineStage::Slot* PipelineStage::FindSlot(const char* name, SlotKind expected) const
 {
-    auto iter = m_Slots.find(name);
-    if (iter == m_Slots.end())
+    const Slot* slot = LookupSlot(name);
+    if (!slot)
     {
         throw std::runtime_error("PipelineStage '" + Narrow(m_Name) + "': unknown binding '" + name +
                                  "'. Use TrySet* for resources the shader may not declare.");
     }
 
-    if (iter->second.Kind != expected)
+    if (slot->Kind != expected)
     {
         throw std::runtime_error("PipelineStage '" + Narrow(m_Name) + "': wrong Set* call for '" + name + "'.");
     }
 
-    return &iter->second;
+    return slot;
 }
 
 void PipelineStage::RequireActive(const CommandList& commandList) const
@@ -919,6 +933,7 @@ void PipelineStage::SetNullUAV(CommandList& commandList, const char* name, uint3
     StageBinding& binding = commandList.m_StageBindings.at(slot.BindingIndex + arrayIndex);
     binding       = StageBinding();
     binding.Bound = true;
+    commandList.m_StageDirty = true;
 }
 
 void PipelineStage::UploadAndSetSRVImpl(CommandList& commandList, const char* name,

@@ -8,7 +8,7 @@
 #include <wrl.h>
 
 #include <string>
-#include <unordered_map>
+#include <utility>
 #include <vector>
 
 class CommandList;
@@ -145,6 +145,9 @@ private:
 
     bool HasBinding(const char* name) const;
 
+    // Null for names the shaders don't declare.
+    const Slot* LookupSlot(const char* name) const;
+
     // Throws for unknown names and for the wrong binding kind.
     const Slot* FindSlot(const char* name, SlotKind expected) const;
 
@@ -168,6 +171,8 @@ private:
     bool                                        m_HasVertexInputs    = false;   // reflected VS input signature (graphics only)
     RootSignature                               m_RootSignature;
     Microsoft::WRL::ComPtr<ID3D12PipelineState> m_PipelineState;
-    std::unordered_map<std::string, Slot>       m_Slots;
+    // Looked up by name on every Set* call. A stage has a handful of slots, so a linear scan
+    // with strcmp beats hashing and - unlike a std::string-keyed map - never allocates.
+    std::vector<std::pair<std::string, Slot>>   m_Slots;
     std::vector<StageBindingDesc>               m_BindingDescs;   // one per resource array element
 };

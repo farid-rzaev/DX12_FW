@@ -22,7 +22,9 @@ using namespace Microsoft::WRL;
 using namespace DirectX;
 
 #include <algorithm> // For std::min and std::max.
+#include <cstring>   // For memcmp.
 #include <random>
+#include <tuple>
 #if defined(min)
 #undef min
 #endif
@@ -266,10 +268,19 @@ bool Sample8::LoadContent()
     {
         m_LoadedMeshParts = AssimpLoader::Load(*copyCommandList, L"Assets/Models/glTF/Sponza.gltf", m_DefaultTexture);
 
-        // [OPT_2] Sort the loaded mesh parts by their diffuse texture to minimize texture binding changes when rendering.
+        // [OPT_2] Sort the loaded mesh parts by their textures to minimize texture binding changes when rendering.
+        // Every part owns its own Texture object, so compare the underlying D3D12 resources (shared through
+        // the texture cache when two parts use the same file) - not the addresses of the Texture objects.
+        auto textureKey = [](const LoadedMeshPart& part)
+        {
+            return std::make_tuple(reinterpret_cast<uintptr_t>(part.diffuseTexture.GetD3D12Resource().Get()),
+                                   reinterpret_cast<uintptr_t>(part.metalnessTexture.GetD3D12Resource().Get()),
+                                   reinterpret_cast<uintptr_t>(part.roughnessTexture.GetD3D12Resource().Get()));
+        };
         std::sort(m_LoadedMeshParts.begin(), m_LoadedMeshParts.end(),
-            [](const LoadedMeshPart& a, const LoadedMeshPart& b) {
-                return &a.diffuseTexture < &b.diffuseTexture;
+            [&textureKey](const LoadedMeshPart& a, const LoadedMeshPart& b) 
+            {
+                return textureKey(a) < textureKey(b);
             });
     }
 
@@ -971,11 +982,13 @@ void Sample8::RenderDeferred(std::shared_ptr<CommandList> commandList, DirectX::
             XMMATRIX inverseView = XMMatrixInverse(nullptr, viewMatrix);
             cameraFrustum.Transform(cameraFrustum, inverseView);
 
-            Material* currentMaterial = nullptr;
+            // What is bound right now. Every part owns its own Material / Texture objects, so "same" means
+            // same contents (material) or same underlying D3D12 resource (textures) - not same object address.
+            const Material* currentMaterial = nullptr;
 
-            Texture* currentDiffuse = nullptr;
-            Texture* currentRoughness = nullptr;
-            Texture* currentMetalness = nullptr;
+            ID3D12Resource* currentDiffuse = nullptr;
+            ID3D12Resource* currentRoughness = nullptr;
+            ID3D12Resource* currentMetalness = nullptr;
 
             for (auto& part : m_LoadedMeshParts)
             {
@@ -989,29 +1002,33 @@ void Sample8::RenderDeferred(std::shared_ptr<CommandList> commandList, DirectX::
 
                 // [OPT_2] Only change material and textures if different
 
-                if (&part.material != currentMaterial)
+                if (!currentMaterial || memcmp(&part.material, currentMaterial, sizeof(Material)) != 0)
                 {
                     m_GBufferStage.SetCB(*commandList, "MaterialCB", part.material);
                     currentMaterial = &part.material;
                 }
 
-                if (&part.diffuseTexture != currentDiffuse)
+                ID3D12Resource* const diffuse   = part.diffuseTexture.GetD3D12Resource().Get();
+                ID3D12Resource* const roughness = part.roughnessTexture.GetD3D12Resource().Get();
+                ID3D12Resource* const metalness = part.metalnessTexture.GetD3D12Resource().Get();
+
+                if (diffuse != currentDiffuse)
                 {
                     m_GBufferStage.SetSRV(*commandList, "DiffuseTexture", part.diffuseTexture);
-                    currentDiffuse = &part.diffuseTexture;
+                    currentDiffuse = diffuse;
                 }
 
-                if (&part.roughnessTexture != currentRoughness)
+                if (roughness != currentRoughness)
                 {
                     // Usinng TrySetSRV as - GBuffer_PS reads roughness from the ORM (metalness) texture, so the compiler strips RoughnessTexture cuz it's not used in the shader.
                     m_GBufferStage.TrySetSRV(*commandList, "RoughnessTexture", part.roughnessTexture);
-                    currentRoughness = &part.roughnessTexture;
+                    currentRoughness = roughness;
                 }
 
-                if (&part.metalnessTexture != currentMetalness)
+                if (metalness != currentMetalness)
                 {
                     m_GBufferStage.SetSRV(*commandList, "MetalnessTexture", part.metalnessTexture);
-                    currentMetalness = &part.metalnessTexture;
+                    currentMetalness = metalness;
                 }
 
                 part.mesh->Draw(*commandList);

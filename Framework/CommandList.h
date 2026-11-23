@@ -337,7 +337,12 @@ private:
 
     // Called by Draw/Dispatch: throw if a binding of the active stage is missing or two views of it
     // conflict, then queue its transitions and UAV barriers. No-op for manually configured pipelines.
+    // Skipped while nothing it depends on changed since the last successful run (m_StageDirty).
     void ValidateStage( bool isCompute );
+
+    // A barrier issued outside ValidateStage: if it touches a resource bound to the active stage,
+    // the next Draw/Dispatch must validate (and re-transition) again.
+    void InvalidateStageIfBound( ID3D12Resource* resource );
 
     // Merge one subresource access into m_StageAccesses; throws if it overlaps a writable access.
     void AddStageAccess( uint32_t bindingIndex, ID3D12Resource* resource, UINT subresource, UINT numSubresources, D3D12_RESOURCE_STATES state );
@@ -397,8 +402,13 @@ private:
     const std::vector<StageBindingDesc>*                m_StageBindingDescs = nullptr;
     bool                                                m_StageIsCompute    = false;
     std::vector<StageBinding>                           m_StageBindings;
+    // True when the next Draw/Dispatch has to run ValidateStage: after Bind, after a resource binding
+    // changed, after an outside barrier on a bound resource, and always while a UAV is bound
+    // (every UAV use gets a UAV barrier).
+    bool                                                m_StageDirty        = true;
     // Scratch storage for ValidateStage (kept to avoid allocations per draw).
-    std::vector<StageSubresourceAccess>                 m_StageAccesses;
+    std::vector<StageSubresourceAccess>                 m_StageAccesses;        // resources with partial views, per subresource
+    std::vector<StageSubresourceAccess>                 m_StageWholeAccesses;   // resources bound whole, one entry each
     std::vector<ID3D12Resource*>                        m_StageUAVResources;
     // Descriptors no resource view cache provides (custom buffer views, upload buffers).
     // Released on Reset, once the GPU is done with them.

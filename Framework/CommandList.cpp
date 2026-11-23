@@ -128,6 +128,8 @@ void CommandList::TransitionBarrier(Microsoft::WRL::ComPtr<ID3D12Resource> resou
         // The "before" state is not important. It will be resolved by the resource state tracker.
         auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(resource.Get(), D3D12_RESOURCE_STATE_COMMON, stateAfter, subresource);
         m_ResourceStateTracker->ResourceBarrier(barrier);
+
+        InvalidateStageIfBound(resource.Get());
     }
 
     if (flushBarriers)
@@ -163,6 +165,9 @@ void CommandList::AliasingBarrier(Microsoft::WRL::ComPtr<ID3D12Resource> beforeR
     auto barrier = CD3DX12_RESOURCE_BARRIER::Aliasing(beforeResource.Get(), afterResource.Get());
 
     m_ResourceStateTracker->ResourceBarrier(barrier);
+
+    InvalidateStageIfBound(beforeResource.Get());
+    InvalidateStageIfBound(afterResource.Get());
 
     if (flushBarriers)
     {
@@ -261,6 +266,7 @@ void CommandList::CopyBuffer( Buffer& buffer, size_t numElements, size_t element
             subresourceData.SlicePitch = subresourceData.RowPitch;
 
             m_ResourceStateTracker->TransitionResource(d3d12Resource.Get(), D3D12_RESOURCE_STATE_COPY_DEST);
+            InvalidateStageIfBound(d3d12Resource.Get());
             FlushResourceBarriers();
 
             UpdateSubresources( m_d3d12CommandList.Get(), d3d12Resource.Get(),
@@ -1374,6 +1380,7 @@ void CommandList::StartStage( const PipelineStage* stage, bool isCompute, const 
 
     // Every Bind (even of the same stage) starts with nothing bound.
     m_StageBindings.assign( bindingDescs.size(), StageBinding() );
+    m_StageDirty = true;
 }
 
 void CommandList::ClearActiveStage()
@@ -1387,13 +1394,44 @@ void CommandList::RecordStageResource( uint32_t bindingIndex, ID3D12Resource* re
                                        D3D12_RESOURCE_STATES state, bool isUploadHeap )
 {
     StageBinding& binding = m_StageBindings.at( bindingIndex );
+
+    // Rebinding what is already bound (e.g. the same texture for the next mesh part) changes nothing
+    // ValidateStage looks at: the resource is already tracked and, unless an outside barrier touched
+    // it since (InvalidateStageIfBound), already in the right state.
+    const StageSubresourceRange& bound = binding.Subresources;
+    if ( binding.Bound && binding.Resource == resource && binding.State == state && binding.FixedUploadState == isUploadHeap &&
+         bound.FirstMip   == subresources.FirstMip   && bound.MipCount   == subresources.MipCount   &&
+         bound.FirstSlice == subresources.FirstSlice && bound.SliceCount == subresources.SliceCount &&
+         bound.MipLevels  == subresources.MipLevels  && bound.ArraySize  == subresources.ArraySize )
+    {
+        return;
+    }
+
     binding.Bound            = true;
     binding.Resource         = resource;
     binding.Subresources     = subresources;
     binding.State            = state;
     binding.FixedUploadState = isUploadHeap;
+    m_StageDirty             = true;
 
     TrackResource( Microsoft::WRL::ComPtr<ID3D12Object>( resource ) );
+}
+
+void CommandList::InvalidateStageIfBound( ID3D12Resource* resource )
+{
+    if ( !m_ActiveStage || m_StageDirty )
+    {
+        return;
+    }
+
+    for ( const StageBinding& binding : m_StageBindings )
+    {
+        if ( binding.Resource == resource )
+        {
+            m_StageDirty = true;
+            return;
+        }
+    }
 }
 
 void CommandList::AddStageAccess( uint32_t bindingIndex, ID3D12Resource* resource, UINT subresource, UINT numSubresources, D3D12_RESOURCE_STATES state )
@@ -1429,13 +1467,24 @@ void CommandList::ValidateStage( bool isCompute )
         throw std::runtime_error( "PipelineStage: Draw/Dispatch does not match the active pipeline type." );
     }
 
+    // Nothing changed since the last successful validation: every binding is still bound, and the
+    // bound resources are still in the states queued back then.
+    if ( !m_StageDirty )
+    {
+        return;
+    }
+
     // Validate everything before queuing any barrier.
     m_StageAccesses.clear();
+    m_StageWholeAccesses.clear();
     m_StageUAVResources.clear();
 
-    for ( uint32_t bindingIndex = 0; bindingIndex < (uint32_t)m_StageBindings.size(); ++bindingIndex )
+    const StageBinding* const bindings    = m_StageBindings.data();
+    const uint32_t            numBindings = (uint32_t)m_StageBindings.size();
+
+    for ( uint32_t bindingIndex = 0; bindingIndex < numBindings; ++bindingIndex )
     {
-        const StageBinding& binding = m_StageBindings[bindingIndex];
+        const StageBinding& binding = bindings[bindingIndex];
 
         if ( !binding.Bound )
         {
@@ -1450,15 +1499,51 @@ void CommandList::ValidateStage( bool isCompute )
             continue;
         }
 
-        const StageSubresourceRange& range           = binding.Subresources;
-        const UINT                   numSubresources = range.MipLevels * range.ArraySize;
-
-        for ( UINT slice = range.FirstSlice; slice < range.FirstSlice + range.SliceCount; ++slice )
+        // Is any view of this resource partial (single mips / slices, e.g. GenerateMips)?
+        bool hasPartialView = false;
+        for ( uint32_t i = 0; i < numBindings && !hasPartialView; ++i )
         {
-            for ( UINT mip = range.FirstMip; mip < range.FirstMip + range.MipCount; ++mip )
+            hasPartialView = bindings[i].Resource == binding.Resource && !bindings[i].FixedUploadState &&
+                             !bindings[i].Subresources.CoversWholeResource();
+        }
+
+        if ( !hasPartialView )
+        {
+            // Fast path, the common case: every view of the resource covers all of it, so one entry per resource is enough.
+            // Same rules as AddStageAccess, without expanding mips x slices.
+            bool merged = false;
+            for ( StageSubresourceAccess& access : m_StageWholeAccesses )
             {
-                const UINT subresource = D3D12CalcSubresource( mip, slice, 0, range.MipLevels, range.ArraySize );
-                AddStageAccess( bindingIndex, binding.Resource, subresource, numSubresources, binding.State );
+                if ( access.Resource == binding.Resource )
+                {
+                    if ( ( access.State | binding.State ) & D3D12_RESOURCE_STATE_UNORDERED_ACCESS )
+                    {
+                        throw std::runtime_error( "PipelineStage: overlapping writable views at '" + ( *m_StageBindingDescs )[bindingIndex].Name + "'." );
+                    }
+
+                    access.State = access.State | binding.State;
+                    merged       = true;
+                    break;
+                }
+            }
+
+            if ( !merged )
+            {
+                m_StageWholeAccesses.push_back( { binding.Resource, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, 0, binding.State } );
+            }
+        }
+        else
+        {
+            const StageSubresourceRange& range           = binding.Subresources;
+            const UINT                   numSubresources = range.MipLevels * range.ArraySize;
+
+            for ( UINT slice = range.FirstSlice; slice < range.FirstSlice + range.SliceCount; ++slice )
+            {
+                for ( UINT mip = range.FirstMip; mip < range.FirstMip + range.MipCount; ++mip )
+                {
+                    const UINT subresource = D3D12CalcSubresource( mip, slice, 0, range.MipLevels, range.ArraySize );
+                    AddStageAccess( bindingIndex, binding.Resource, subresource, numSubresources, binding.State );
+                }
             }
         }
 
@@ -1476,8 +1561,15 @@ void CommandList::ValidateStage( bool isCompute )
         m_ResourceStateTracker->ResourceBarrier( CD3DX12_RESOURCE_BARRIER::UAV( resource ) );
     }
 
-    // Per resource: a single ALL_SUBRESOURCES transition when every subresource is used in one state
-    // (the common case, same as the manual SetShaderResourceView path), otherwise one per subresource.
+    // Resources whose views all cover the whole resource: one ALL_SUBRESOURCES transition each
+    // (same as the manual SetShaderResourceView path).
+    for ( const StageSubresourceAccess& access : m_StageWholeAccesses )
+    {
+        m_ResourceStateTracker->TransitionResource( access.Resource, access.State );
+    }
+
+    // Resources with partial views: a single ALL_SUBRESOURCES transition when every subresource
+    // ends up used in one state, otherwise one transition per subresource.
     for ( size_t i = 0; i < m_StageAccesses.size(); ++i )
     {
         const StageSubresourceAccess& first = m_StageAccesses[i];
@@ -1518,4 +1610,7 @@ void CommandList::ValidateStage( bool isCompute )
             }
         }
     }
+
+    // Stages that write UAVs validate on every Draw/Dispatch, so each use gets its UAV barrier.
+    m_StageDirty = !m_StageUAVResources.empty();
 }
